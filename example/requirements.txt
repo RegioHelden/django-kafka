@@ -1,0 +1,8 @@
+django==5.0.6                                   # famous web framework
+confluent-kafka==2.4.0
+avro==1.11.3
+fastavro==1.9.4
+requests==2.32
+bump-my-version==0.21.1                         # for making releases
+ruff==0.4.8                                     # speed of light linter
+setuptools==70.0.0                              # without it PyCharm fails to index packages inside the Docker container

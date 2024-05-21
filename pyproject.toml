@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools==70.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-kafka"
+version = "0.0.1"
+dependencies = [
+    "django>=4.0,<6.0",
+    "confluent-kafka==2.4.0",
+    "avro==1.11.3",
+    "fastavro==1.9.4",
+    "requests==2.32.2"
+]
+requires-python = ">=3.11"
+authors = [
+    { name = "RegioHelden GmbH", email = "opensource@regiohelden.de" },
+]
+description = "Confluent's Kafka Python Client combined with Django"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+keywords = ["django", "kafka"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+]
+
+[project.urls]
+Repository = "https://github.com/RegioHelden/django-kafka"
+Issues = "https://github.com/RegioHelden/django-kafka/issues"
+Changelog = "https://github.com/RegioHelden/django-kafka/blob/main/CHANGELOG.md"

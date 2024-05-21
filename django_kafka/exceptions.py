@@ -1,0 +1,2 @@
+class DjangoKafkaError(Exception):
+    pass
