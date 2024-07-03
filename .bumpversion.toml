@@ -17,3 +17,9 @@ message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
 [[tool.bumpversion.files ]]
 filename = "./django_kafka/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+[[tool.bumpversion.files ]]
+filename = "./pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'

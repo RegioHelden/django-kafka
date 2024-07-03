@@ -7,10 +7,7 @@ name = "django-kafka"
 version = "0.0.1"
 dependencies = [
     "django>=4.0,<6.0",
-    "confluent-kafka==2.4.0",
-    "avro==1.11.3",
-    "fastavro==1.9.4",
-    "requests==2.32.2"
+    "confluent-kafka[avro, schema-registry]==2.4.0"
 ]
 requires-python = ">=3.11"
 authors = [
