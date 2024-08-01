@@ -12,41 +12,44 @@ class KafkaSkipModelTestCase(AbstractModelTestCase):
         """
         kafka_skip should be set to False when update_fields is not provided
         """
-        save_kwargs = {}
 
         instance = self.model(pk=1, kafka_skip=True)
 
-        instance.save(**save_kwargs)
+        instance.save()
 
         # save sets kafka_skip value to False
         self.assertFalse(instance.kafka_skip)
         # didn't forget to call super
         super_mock.assert_called_once_with()
-        # save kwargs are not changed
-        super_mock.return_value.save.assert_called_once_with(**save_kwargs)
+        # no update_fields set
+        super_mock.return_value.save.assert_called_once_with(
+            force_insert=False,
+            force_update=False,
+            using=None,
+            update_fields=None,
+        )
 
     @patch("django_kafka.models.super")
     def test_save_update_fields_in_kwargs_without_kafka_skip(self, super_mock):
         """
         kafka_skip should be set to False when update_fields does not contain kafka_skip
         """
-        save_kwargs = {
-            "update_fields": ["some_field"],
-        }
         instance = self.model(pk=1, kafka_skip=True)
 
-        instance.save(**save_kwargs)
+        update_fields = ["some_fields"]
+
+        instance.save(update_fields=update_fields)
 
         # save sets kafka_skip value to False
         self.assertFalse(instance.kafka_skip)
         # didn't forget to call super
         super_mock.assert_called_once_with()
-        # kafka_skip added to the update fields
+        # kafka_skip added to update_fields
         super_mock.return_value.save.assert_called_once_with(
-            **{
-                **save_kwargs,
-                "update_fields": ["kafka_skip", *save_kwargs["update_fields"]],
-            },
+            force_insert=False,
+            force_update=False,
+            using=None,
+            update_fields=["kafka_skip", *update_fields],
         )
 
     @patch("django_kafka.models.super")
@@ -54,19 +57,23 @@ class KafkaSkipModelTestCase(AbstractModelTestCase):
         """
         kafka_skip should not be changed if provided in update_fields
         """
-        save_kwargs = {
-            "update_fields": ["some_field", "kafka_skip"],
-        }
+        update_fields = ["some_field", "kafka_skip"]
+
         instance = self.model(pk=1, kafka_skip=True)
 
-        instance.save(**save_kwargs)
+        instance.save(update_fields=update_fields)
 
         # save does not change kafka_skip value
         self.assertTrue(instance.kafka_skip)
         # didn't forget to call super
         super_mock.assert_called_once_with()
-        # save kwargs are not changed
-        super_mock.return_value.save.assert_called_once_with(**save_kwargs)
+        # update_fields are not changed
+        super_mock.return_value.save.assert_called_once_with(
+            force_insert=False,
+            force_update=False,
+            using=None,
+            update_fields=update_fields,
+        )
 
     @patch("django_kafka.models.super")
     def test_queryset_update_sets_kafka_skip(self, super_mock):

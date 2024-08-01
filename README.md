@@ -166,7 +166,7 @@ Configuration for [confluent_kafka.schema_registry.SchemaRegistryClient](https:/
 Default: `django_kafka.error_handlers.ClientErrorHandler`
 
 This is an `error_cb` hook (see [Kafka Client Configuration](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#kafka-client-configuration) for reference).
-It is triggered for client global errors and in case of fatal error it raises `DjangoKafkaException`.
+It is triggered for client global errors and in case of fatal error it raises `DjangoKafkaError`.
 
 
 ## Bidirectional data sync with no infinite event loop.
