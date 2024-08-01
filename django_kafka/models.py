@@ -37,12 +37,23 @@ class KafkaSkipMixin(models.Model):
         abstract = True
         base_manager_name = "objects"
 
-    def save(self, **kwargs):
-        if "update_fields" not in kwargs:
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        if update_fields is None:
             self.kafka_skip = False
 
-        elif "kafka_skip" not in kwargs["update_fields"]:
+        elif "kafka_skip" not in update_fields:
             self.kafka_skip = False
-            kwargs["update_fields"] = ["kafka_skip", *kwargs["update_fields"]]
+            update_fields = ["kafka_skip", *update_fields]
 
-        super().save(**kwargs)
+        super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )

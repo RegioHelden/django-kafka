@@ -92,4 +92,4 @@ class Consumer:
             self.store_offsets(msg)
 
     def handle_error(self, error):
-        logger.error(error)
+        logger.error(error, exc_info=True)
