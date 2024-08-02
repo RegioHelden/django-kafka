@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from confluent_kafka import cimpl
+from confluent_kafka.schema_registry import Schema
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import (
     Deserializer,
@@ -48,7 +49,10 @@ class Topic(ABC):
         )
 
     def deserialize(
-        self, value, field: MessageField, headers: Optional[dict | list] = None,
+        self,
+        value,
+        field: MessageField,
+        headers: Optional[dict | list] = None,
     ):
         if field == MessageField.VALUE:
             return self.value_deserializer(
@@ -62,7 +66,10 @@ class Topic(ABC):
         raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
 
     def serialize(
-        self, value, field: MessageField, headers: Optional[dict | list] = None,
+        self,
+        value,
+        field: MessageField,
+        headers: Optional[dict | list] = None,
     ):
         if field == MessageField.VALUE:
             return self.value_serializer(
@@ -84,38 +91,36 @@ class Topic(ABC):
 
 
 class AvroTopic(Topic):
-    @property
-    def key_schema(self):
-        return kafka.schema_client.get_latest_version(f"{self.name}-key")
+    serializer_conf: dict = None
 
     @property
-    def value_schema(self):
-        return kafka.schema_client.get_latest_version(f"{self.name}-value")
+    def key_schema(self) -> Optional[Schema | str]:
+        return None
+
+    @property
+    def value_schema(self) -> Optional[Schema | str]:
+        return None
 
     @property
     def key_serializer(self):
         return AvroSerializer(
             kafka.schema_client,
-            schema_str=self.key_schema.schema.schema_str,
-        )
-
-    @property
-    def key_deserializer(self):
-        return AvroDeserializer(
-            kafka.schema_client,
-            schema_str=self.key_schema.schema.schema_str,
+            schema_str=self.key_schema,
+            conf=self.serializer_conf,
         )
 
     @property
     def value_serializer(self):
         return AvroSerializer(
             kafka.schema_client,
-            schema_str=self.value_schema.schema.schema_str,
+            schema_str=self.value_schema,
+            conf=self.serializer_conf,
         )
 
     @property
+    def key_deserializer(self):
+        return AvroDeserializer(kafka.schema_client, schema_str=self.key_schema)
+
+    @property
     def value_deserializer(self):
-        return AvroDeserializer(
-            kafka.schema_client,
-            schema_str=self.value_schema.schema.schema_str,
-        )
+        return AvroDeserializer(kafka.schema_client, schema_str=self.value_schema)
