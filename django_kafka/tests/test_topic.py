@@ -186,31 +186,6 @@ class AvroTopicTestCase(TestCase):
     def setUp(self):
         self.topic = ATopic()
 
-    def test_key_schema(self, mock_kafka_schema_client):
-        schema = self.topic.key_schema
-
-        # return value of the schema.get_latest_version method call
-        self.assertEqual(
-            schema,
-            mock_kafka_schema_client.get_latest_version.return_value,
-        )
-        # get_latest_version called with right arguments
-        mock_kafka_schema_client.get_latest_version.assert_called_once_with(
-            f"{self.topic.name}-key",
-        )
-
-    def test_value_schema(self, mock_kafka_schema_client):
-        schema = self.topic.value_schema
-        # return value of the schema.get_latest_version method call
-        self.assertEqual(
-            schema,
-            mock_kafka_schema_client.get_latest_version.return_value,
-        )
-        # called with right arguments
-        mock_kafka_schema_client.get_latest_version.assert_called_once_with(
-            f"{self.topic.name}-value",
-        )
-
     @patch("django_kafka.topic.AvroSerializer")
     def test_key_serializer(self, mock_avro_serializer, mock_kafka_schema_client):
         key_serializer = self.topic.key_serializer
@@ -220,7 +195,8 @@ class AvroTopicTestCase(TestCase):
         # instance was initialized with right arguments
         mock_avro_serializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema.schema.schema_str,
+            schema_str=self.topic.key_schema,
+            conf=self.topic.serializer_conf,
         )
 
     @patch("django_kafka.topic.AvroDeserializer")
@@ -232,7 +208,7 @@ class AvroTopicTestCase(TestCase):
         # instance was initialized with right arguments
         mock_avro_deserializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema.schema.schema_str,
+            schema_str=self.topic.key_schema,
         )
 
     @patch("django_kafka.topic.AvroSerializer")
@@ -244,7 +220,8 @@ class AvroTopicTestCase(TestCase):
         # instance was initialized with right arguments
         mock_avro_serializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema.schema.schema_str,
+            schema_str=self.topic.key_schema,
+            conf=self.topic.serializer_conf,
         )
 
     @patch("django_kafka.topic.AvroDeserializer")
@@ -256,5 +233,5 @@ class AvroTopicTestCase(TestCase):
         # instance was initialized with right arguments
         mock_avro_deserializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema.schema.schema_str,
+            schema_str=self.topic.key_schema,
         )
