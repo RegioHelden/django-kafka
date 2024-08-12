@@ -113,7 +113,7 @@ DJANGO_KAFKA = {
 }
 ```
 
-**Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom Topic with your schema. 
+**Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom Topic with your schema.
 
 ## Settings:
 

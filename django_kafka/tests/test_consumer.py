@@ -7,14 +7,14 @@ from django_kafka.conf import SETTINGS_KEY, settings
 from django_kafka.consumer import Consumer, Topics
 
 
-class StopWhileTrueException(Exception):
+class StopWhileTrueError(Exception):
     pass
 
 
 class ConsumerTestCase(TestCase):
     @patch(
         "django_kafka.consumer.Consumer.process_message",
-        side_effect=StopWhileTrueException(),
+        side_effect=StopWhileTrueError(),
     )
     @patch(
         "django_kafka.consumer.ConfluentConsumer",
@@ -34,7 +34,7 @@ class ConsumerTestCase(TestCase):
         # hack to break infinite loop
         # `consumer.start` is using `while True:` loop which never ends
         # in order to test it we need to break it which is achievable with side_effect
-        with suppress(StopWhileTrueException):
+        with suppress(StopWhileTrueError):
             consumer.start()
 
         # subscribed to the topics defined by consumer class
