@@ -1,9 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Type
 
 from confluent_kafka import cimpl
-from confluent_kafka.schema_registry import Schema
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import (
     Deserializer,
@@ -21,66 +20,83 @@ logger = logging.getLogger(__name__)
 
 
 class Topic(ABC):
-    key_serializer: Serializer = StringSerializer()
-    key_deserializer: Deserializer = StringDeserializer()
+    key_serializer: Type[Serializer] = StringSerializer
+    value_serializer: Type[Serializer] = StringSerializer
 
-    value_serializer: Serializer = StringSerializer()
-    value_deserializer: Deserializer = StringDeserializer()
+    key_deserializer: Type[Deserializer] = StringDeserializer
+    value_deserializer: Type[Deserializer] = StringDeserializer
 
     @property
     @abstractmethod
     def name(self) -> str:
         """Define Kafka topic name"""
 
-    @abstractmethod
     def consume(self, msg: cimpl.Message):
         """Implement message processing"""
+        raise NotImplementedError
 
     def produce(self, value: any, **kwargs):
+        key_serializer_kwargs = kwargs.pop("key_serializer_kwargs", {}) or {}
+        value_serializer_kwargs = kwargs.pop("value_serializer_kwargs", {}) or {}
         headers = kwargs.get("headers")
 
         if "key" in kwargs:
-            kwargs["key"] = self.serialize(kwargs["key"], MessageField.KEY, headers)
+            kwargs["key"] = self.serialize(
+                kwargs["key"], MessageField.KEY, headers, **key_serializer_kwargs)
 
         kafka.producer.produce(
             self.name,
-            self.serialize(value, MessageField.VALUE, headers),
+            self.serialize(
+                value, MessageField.VALUE, headers, **value_serializer_kwargs,
+            ),
             **kwargs,
         )
-
-    def deserialize(
-        self,
-        value,
-        field: MessageField,
-        headers: Optional[dict | list] = None,
-    ):
-        if field == MessageField.VALUE:
-            return self.value_deserializer(
-                value,
-                self.context(MessageField.VALUE, headers),
-            )
-
-        if field == MessageField.KEY:
-            return self.key_deserializer(value, self.context(MessageField.KEY, headers))
-
-        raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
 
     def serialize(
         self,
         value,
         field: MessageField,
         headers: Optional[dict | list] = None,
+        **kwargs,
     ):
         if field == MessageField.VALUE:
-            return self.value_serializer(
-                value,
-                self.context(MessageField.VALUE, headers),
-            )
+            serializer = self.get_value_serializer(**kwargs)
+            return serializer(value, self.context(MessageField.VALUE, headers))
 
         if field == MessageField.KEY:
-            return self.key_serializer(value, self.context(MessageField.KEY, headers))
+            serializer = self.get_key_serializer(**kwargs)
+            return serializer(value, self.context(MessageField.KEY, headers))
 
         raise DjangoKafkaError(f"Unsupported serialization field {field}.")
+
+    def deserialize(
+        self,
+        value,
+        field: MessageField,
+        headers: Optional[dict | list] = None,
+        **kwargs,
+    ):
+        if field == MessageField.VALUE:
+            deserializer = self.get_value_deserializer(**kwargs)
+            return deserializer(value, self.context(MessageField.VALUE, headers))
+
+        if field == MessageField.KEY:
+            deserializer = self.get_key_deserializer(**kwargs)
+            return deserializer(value, self.context(MessageField.KEY, headers))
+
+        raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
+
+    def get_key_serializer(self, **kwargs):
+        return self.key_serializer(**kwargs)
+
+    def get_value_serializer(self, **kwargs):
+        return self.value_serializer(**kwargs)
+
+    def get_key_deserializer(self, **kwargs):
+        return self.key_deserializer(**kwargs)
+
+    def get_value_deserializer(self, **kwargs):
+        return self.value_deserializer(**kwargs)
 
     def context(
         self,
@@ -90,37 +106,51 @@ class Topic(ABC):
         return SerializationContext(self.name, field, headers=headers)
 
 
-class AvroTopic(Topic):
-    serializer_conf: dict = None
+class AvroTopic(Topic, ABC):
+    """
+    Consume.
+        Defining schemas is not necessary as it gets retrieved automatically from the Schema Registry.
 
-    @property
-    def key_schema(self) -> Optional[Schema | str]:
-        return None
+    Produce.
+        Defining `value_schema` is required (`key_schema` is required when using keys).
+        It gets submitted to the Schema Registry
 
-    @property
-    def value_schema(self) -> Optional[Schema | str]:
-        return None
+    Multiple schemas and one Topic:
+        `AvroTopic.produce` takes `serializer_kwargs` kw argument.
+        `AvroSerializer` then gets initialized with the provided kwargs.
+        When producing you can tell which schema to use for your message:
+        ```python
+        schema = {
+            "type": "record",
+            "name": "ValueTest",
+            "fields": [
+                {"name": "value", "type": "string"},
+            ]
+        }
+        topic.produce({"value": 1}, value_serializer_kwargs={"schema_str": json.dumps(schema)})
+        ```
 
-    @property
-    def key_serializer(self):
-        return AvroSerializer(
-            kafka.schema_client,
-            schema_str=self.key_schema,
-            conf=self.serializer_conf,
-        )
+    [Cofluent AvroSerializer Config](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#avroserializer)
+    [Avro schema definition](https://avro.apache.org/docs/1.11.1/specification/)
+    """  # noqa: E501
+    key_schema: str
+    value_schema: str
+    schema_config: dict
 
-    @property
-    def value_serializer(self):
-        return AvroSerializer(
-            kafka.schema_client,
-            schema_str=self.value_schema,
-            conf=self.serializer_conf,
-        )
+    def get_key_serializer(self, **kwargs):
+        kwargs.setdefault("schema_str", getattr(self, "key_schema", None))
+        kwargs.setdefault("conf", getattr(self, "schema_config", None))
 
-    @property
-    def key_deserializer(self):
-        return AvroDeserializer(kafka.schema_client, schema_str=self.key_schema)
+        return AvroSerializer(kafka.schema_client, **kwargs)
 
-    @property
-    def value_deserializer(self):
-        return AvroDeserializer(kafka.schema_client, schema_str=self.value_schema)
+    def get_value_serializer(self, **kwargs):
+        kwargs.setdefault("schema_str", getattr(self, "value_schema", None))
+        kwargs.setdefault("conf", getattr(self, "schema_config", None))
+
+        return AvroSerializer(kafka.schema_client, **kwargs)
+
+    def get_key_deserializer(self, **kwargs):
+        return AvroDeserializer(kafka.schema_client, **kwargs)
+
+    def get_value_deserializer(self, **kwargs):
+        return AvroDeserializer(kafka.schema_client, **kwargs)

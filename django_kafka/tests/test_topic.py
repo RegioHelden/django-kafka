@@ -21,6 +21,36 @@ class TopicTestCase(TestCase):
 
     @patch("django_kafka.topic.Topic.serialize")
     @patch("django_kafka.DjangoKafka.producer")
+    def test_produce_serializer_kwargs(self, mock_kafka_producer, mock_topic_serialize):
+        key = "key"
+        value = "message value"
+        headers = None  # default is None when not provided
+        key_serializer_kwargs = {"a": "b"}
+        value_serializer_kwargs = {"c": "d"}
+
+        self.topic.produce(
+            value,
+            key=key,
+            key_serializer_kwargs=key_serializer_kwargs,
+            value_serializer_kwargs=value_serializer_kwargs,
+        )
+
+        self.assertEqual(
+            mock_topic_serialize.call_args_list,
+            [
+                call(key, MessageField.KEY, headers, **key_serializer_kwargs),
+                call(value, MessageField.VALUE, headers, **value_serializer_kwargs),
+            ],
+        )
+
+        mock_kafka_producer.produce.assert_called_once_with(
+            self.topic.name,
+            mock_topic_serialize.return_value,
+            key=mock_topic_serialize.return_value,
+        )
+
+    @patch("django_kafka.topic.Topic.serialize")
+    @patch("django_kafka.DjangoKafka.producer")
     def test_produce_only_value(self, mock_kafka_producer, mock_topic_serialize):
         value = "message value"
         headers = None  # default is None when not provided
@@ -62,11 +92,13 @@ class TopicTestCase(TestCase):
     def test_deserialize_key(self, mock_topic_context, mock_key_deserializer):
         value = b"some key"
         field = MessageField.KEY
+        kwargs = {"key": "value"}
 
-        self.topic.deserialize(value, field)
+        self.topic.deserialize(value, field, **kwargs)
 
         mock_topic_context.assert_called_once_with(field, None)
-        mock_key_deserializer.assert_called_once_with(
+        mock_key_deserializer.assert_called_once_with(**kwargs)
+        mock_key_deserializer.return_value.assert_called_once_with(
             value,
             mock_topic_context.return_value,
         )
@@ -76,11 +108,13 @@ class TopicTestCase(TestCase):
     def test_deserialize_value(self, mock_topic_context, mock_value_deserializer):
         value = b"some value"
         field = MessageField.VALUE
+        kwargs = {"key": "value"}
 
-        self.topic.deserialize(value, field)
+        self.topic.deserialize(value, field, **kwargs)
 
         mock_topic_context.assert_called_once_with(field, None)
-        mock_value_deserializer.assert_called_once_with(
+        mock_value_deserializer.assert_called_once_with(**kwargs)
+        mock_value_deserializer.return_value.assert_called_once_with(
             value,
             mock_topic_context.return_value,
         )
@@ -111,11 +145,13 @@ class TopicTestCase(TestCase):
     def test_serialize_key(self, mock_topic_context, mock_key_serializer):
         value = "some key"
         field = MessageField.KEY
+        kwargs = {"key": "value"}
 
-        self.topic.serialize(value, field)
+        self.topic.serialize(value, field, **kwargs)
 
         mock_topic_context.assert_called_once_with(field, None)
-        mock_key_serializer.assert_called_once_with(
+        mock_key_serializer.assert_called_once_with(**kwargs)
+        mock_key_serializer.return_value.assert_called_once_with(
             value,
             mock_topic_context.return_value,
         )
@@ -125,11 +161,13 @@ class TopicTestCase(TestCase):
     def test_serialize_value(self, mock_topic_context, mock_value_serializer):
         value = "some value"
         field = MessageField.VALUE
+        kwargs = {"key": "value"}
 
-        self.topic.serialize(value, field)
+        self.topic.serialize(value, field, **kwargs)
 
         mock_topic_context.assert_called_once_with(field, None)
-        mock_value_serializer.assert_called_once_with(
+        mock_value_serializer.assert_called_once_with(**kwargs)
+        mock_value_serializer.return_value.assert_called_once_with(
             value,
             mock_topic_context.return_value,
         )
@@ -187,51 +225,62 @@ class AvroTopicTestCase(TestCase):
         self.topic = ATopic()
 
     @patch("django_kafka.topic.AvroSerializer")
-    def test_key_serializer(self, mock_avro_serializer, mock_kafka_schema_client):
-        key_serializer = self.topic.key_serializer
+    def test_get_key_serializer(self, mock_avro_serializer, mock_kafka_schema_client):
+        kwargs = {
+            "schema_str": "<some schema>",
+            "conf": {},
+        }
+        key_serializer = self.topic.get_key_serializer(**kwargs)
 
         # returns AvroSerializer instance
         self.assertEqual(key_serializer, mock_avro_serializer.return_value)
         # instance was initialized with right arguments
         mock_avro_serializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema,
-            conf=self.topic.serializer_conf,
+            **kwargs,
         )
 
     @patch("django_kafka.topic.AvroDeserializer")
-    def test_key_deserializer(self, mock_avro_deserializer, mock_kafka_schema_client):
-        key_deserializer = self.topic.key_deserializer
+    def test_get_key_deserializer(
+            self, mock_avro_deserializer, mock_kafka_schema_client):
+        kwargs = {}
+        key_deserializer = self.topic.get_key_deserializer(**kwargs)
 
         # returns mock_AvroDeserializer instance
         self.assertEqual(key_deserializer, mock_avro_deserializer.return_value)
         # instance was initialized with right arguments
         mock_avro_deserializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema,
+            **kwargs,
         )
 
     @patch("django_kafka.topic.AvroSerializer")
-    def test_value_serializer(self, mock_avro_serializer, mock_kafka_schema_client):
-        value_serializer = self.topic.value_serializer
+    def test_get_value_serializer(
+            self, mock_avro_serializer, mock_kafka_schema_client):
+        kwargs = {
+            "schema_str": "<some schema>",
+            "conf": {},
+        }
+        value_serializer = self.topic.get_value_serializer(**kwargs)
 
         # returns AvroSerializer instance
         self.assertEqual(value_serializer, mock_avro_serializer.return_value)
         # instance was initialized with right arguments
         mock_avro_serializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema,
-            conf=self.topic.serializer_conf,
+            **kwargs,
         )
 
     @patch("django_kafka.topic.AvroDeserializer")
-    def test_value_deserializer(self, mock_avro_deserializer, mock_kafka_schema_client):
-        value_deserializer = self.topic.value_deserializer
+    def test_get_value_deserializer(
+            self, mock_avro_deserializer, mock_kafka_schema_client):
+        kwargs = {}
+        value_deserializer = self.topic.get_value_deserializer(**kwargs)
 
         # returns mock_AvroDeserializer instance
         self.assertEqual(value_deserializer, mock_avro_deserializer.return_value)
         # instance was initialized with right arguments
         mock_avro_deserializer.assert_called_once_with(
             mock_kafka_schema_client,
-            schema_str=self.topic.key_schema,
+            **kwargs,
         )
