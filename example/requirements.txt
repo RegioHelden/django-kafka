@@ -1,4 +1,4 @@
-django==5.0.7                                   # famous web framework
+django==5.0.8                                   # famous web framework
 confluent-kafka[avro, schema-registry]==2.5.0
 bump-my-version==0.24.2                         # for making releases
 ruff==0.4.8                                     # speed of light linter
