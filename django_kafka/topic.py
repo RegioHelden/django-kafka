@@ -42,12 +42,19 @@ class Topic(ABC):
 
         if "key" in kwargs:
             kwargs["key"] = self.serialize(
-                kwargs["key"], MessageField.KEY, headers, **key_serializer_kwargs)
+                kwargs["key"],
+                MessageField.KEY,
+                headers,
+                **key_serializer_kwargs,
+            )
 
         kafka.producer.produce(
             self.name,
             self.serialize(
-                value, MessageField.VALUE, headers, **value_serializer_kwargs,
+                value,
+                MessageField.VALUE,
+                headers,
+                **value_serializer_kwargs,
             ),
             **kwargs,
         )
@@ -133,6 +140,7 @@ class AvroTopic(Topic, ABC):
     [Cofluent AvroSerializer Config](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#avroserializer)
     [Avro schema definition](https://avro.apache.org/docs/1.11.1/specification/)
     """  # noqa: E501
+
     key_schema: str
     value_schema: str
     schema_config: dict

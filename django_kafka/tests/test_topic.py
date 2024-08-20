@@ -225,7 +225,11 @@ class AvroTopicTestCase(TestCase):
         self.topic = ATopic()
 
     @patch("django_kafka.topic.AvroSerializer")
-    def test_get_key_serializer(self, mock_avro_serializer, mock_kafka_schema_client):
+    def test_get_key_serializer(
+        self,
+        mock_avro_serializer,
+        mock_kafka_schema_client,
+    ):
         kwargs = {
             "schema_str": "<some schema>",
             "conf": {},
@@ -242,7 +246,10 @@ class AvroTopicTestCase(TestCase):
 
     @patch("django_kafka.topic.AvroDeserializer")
     def test_get_key_deserializer(
-            self, mock_avro_deserializer, mock_kafka_schema_client):
+        self,
+        mock_avro_deserializer,
+        mock_kafka_schema_client,
+    ):
         kwargs = {}
         key_deserializer = self.topic.get_key_deserializer(**kwargs)
 
@@ -256,7 +263,10 @@ class AvroTopicTestCase(TestCase):
 
     @patch("django_kafka.topic.AvroSerializer")
     def test_get_value_serializer(
-            self, mock_avro_serializer, mock_kafka_schema_client):
+        self,
+        mock_avro_serializer,
+        mock_kafka_schema_client,
+    ):
         kwargs = {
             "schema_str": "<some schema>",
             "conf": {},
@@ -273,7 +283,10 @@ class AvroTopicTestCase(TestCase):
 
     @patch("django_kafka.topic.AvroDeserializer")
     def test_get_value_deserializer(
-            self, mock_avro_deserializer, mock_kafka_schema_client):
+        self,
+        mock_avro_deserializer,
+        mock_kafka_schema_client,
+    ):
         kwargs = {}
         value_deserializer = self.topic.get_value_deserializer(**kwargs)
 
