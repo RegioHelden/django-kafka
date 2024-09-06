@@ -21,4 +21,4 @@ class Command(BaseCommand):
         )
 
     def handle(self, consumers: Optional[list[str]] = None, *args, **options):
-        kafka.start_consumers(consumers)
+        kafka.run_consumers(consumers)

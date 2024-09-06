@@ -9,6 +9,11 @@ DEFAULTS = {
     "GLOBAL_CONFIG": {},
     "PRODUCER_CONFIG": {},
     "CONSUMER_CONFIG": {},
+    "RETRY_CONSUMER_CONFIG": {
+        "auto.offset.reset": "earliest",
+        "enable.auto.offset.store": False,
+        "topic.metadata.refresh.interval.ms": 10000,
+    },
     "POLLING_FREQUENCY": 1,  # seconds
     "SCHEMA_REGISTRY": {},
 }

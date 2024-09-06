@@ -12,6 +12,7 @@ class SettingsTestCase(TestCase):
         "GLOBAL_CONFIG",
         "PRODUCER_CONFIG",
         "CONSUMER_CONFIG",
+        "RETRY_CONSUMER_CONFIG",
         "POLLING_FREQUENCY",
         "SCHEMA_REGISTRY",
     )
@@ -34,6 +35,9 @@ class SettingsTestCase(TestCase):
             },
             "CONSUMER_CONFIG": {
                 "group.id": "group-1",
+            },
+            "RETRY_CONSUMER_CONFIG": {
+                "topic.metadata.refresh.interval.ms": 5000,
             },
             "POLLING_FREQUENCY": 0.5,
             "SCHEMA_REGISTRY": {

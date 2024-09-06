@@ -10,6 +10,7 @@ from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
 from django_kafka.registry import ConsumersRegistry
+from django_kafka.retry import RetrySettings
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ def autodiscover():
 
 class DjangoKafka:
     consumers = ConsumersRegistry()
+    retry = RetrySettings
 
     @cached_property
     def producer(self) -> Producer:
@@ -45,14 +47,15 @@ class DjangoKafka:
 
         return SchemaRegistryClient(settings.SCHEMA_REGISTRY)
 
-    def start_consumer(self, consumer: str):
-        self.consumers[consumer]().start()
+    def run_consumer(self, consumer_key: str):
+        consumer = self.consumers[consumer_key]()
+        consumer.run()
 
-    def start_consumers(self, consumers: Optional[list[str]] = None):
+    def run_consumers(self, consumers: Optional[list[str]] = None):
         consumers = consumers or list(self.consumers)
         with Pool(processes=len(consumers)) as pool:
             try:
-                pool.map(self.start_consumer, consumers)
+                pool.map(self.run_consumer, consumers)
             except KeyboardInterrupt:
                 # Stops the worker processes immediately without completing
                 #  outstanding work.

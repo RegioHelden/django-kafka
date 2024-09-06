@@ -1,6 +1,7 @@
 import logging
+import re
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from confluent_kafka import cimpl
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
@@ -16,6 +17,9 @@ from confluent_kafka.serialization import (
 from django_kafka import kafka
 from django_kafka.exceptions import DjangoKafkaError
 
+if TYPE_CHECKING:
+    from django_kafka.retry import RetrySettings
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,22 +30,53 @@ class Topic(ABC):
     key_deserializer: Type[Deserializer] = StringDeserializer
     value_deserializer: Type[Deserializer] = StringDeserializer
 
+    retry_settings: Optional["RetrySettings"] = None
+
     @property
     @abstractmethod
     def name(self) -> str:
-        """Define Kafka topic name"""
+        """Define Kafka topic name
+
+        Regexp pattern subscriptions are supported by prefixing the name with "^". If
+        used, then a name must always be supplied to .produce() method.
+        """
+
+    def is_regex(self):
+        """returns if the topic subscription is regex based"""
+        return self.name.startswith("^")
+
+    def validate_produce_name(self, name: Optional[str]) -> str:
+        """validates and returns the topic producing name"""
+        if name:
+            if self.matches(name):
+                return name
+            raise DjangoKafkaError(
+                f"topic producing name `{name}` is not valid for this topic",
+            )
+        if self.is_regex():
+            raise DjangoKafkaError(
+                "topic producing name must be supplied for regex-based topics",
+            )
+        return self.name
+
+    def matches(self, topic_name: str):
+        if self.is_regex():
+            return bool(re.search(self.name, topic_name))
+        return self.name == topic_name
 
     def consume(self, msg: cimpl.Message):
         """Implement message processing"""
         raise NotImplementedError
 
     def produce(self, value: any, **kwargs):
+        name = self.validate_produce_name(kwargs.pop("name", None))
         key_serializer_kwargs = kwargs.pop("key_serializer_kwargs", {}) or {}
         value_serializer_kwargs = kwargs.pop("value_serializer_kwargs", {}) or {}
         headers = kwargs.get("headers")
 
         if "key" in kwargs:
             kwargs["key"] = self.serialize(
+                name,
                 kwargs["key"],
                 MessageField.KEY,
                 headers,
@@ -49,8 +84,9 @@ class Topic(ABC):
             )
 
         kafka.producer.produce(
-            self.name,
+            name,
             self.serialize(
+                name,
                 value,
                 MessageField.VALUE,
                 headers,
@@ -58,38 +94,53 @@ class Topic(ABC):
             ),
             **kwargs,
         )
+        kafka.producer.poll(0)  # stops producer on_delivery callbacks buffer overflow
 
     def serialize(
         self,
+        name,
         value,
         field: MessageField,
-        headers: Optional[dict | list] = None,
+        headers: Optional[list] = None,
         **kwargs,
     ):
         if field == MessageField.VALUE:
             serializer = self.get_value_serializer(**kwargs)
-            return serializer(value, self.context(MessageField.VALUE, headers))
+            return serializer(
+                value,
+                self.context(name, MessageField.VALUE, headers),
+            )
 
         if field == MessageField.KEY:
             serializer = self.get_key_serializer(**kwargs)
-            return serializer(value, self.context(MessageField.KEY, headers))
+            return serializer(
+                value,
+                self.context(name, MessageField.KEY, headers),
+            )
 
         raise DjangoKafkaError(f"Unsupported serialization field {field}.")
 
     def deserialize(
         self,
+        name,
         value,
         field: MessageField,
-        headers: Optional[dict | list] = None,
+        headers: Optional[list] = None,
         **kwargs,
     ):
         if field == MessageField.VALUE:
             deserializer = self.get_value_deserializer(**kwargs)
-            return deserializer(value, self.context(MessageField.VALUE, headers))
+            return deserializer(
+                value,
+                self.context(name, MessageField.VALUE, headers),
+            )
 
         if field == MessageField.KEY:
             deserializer = self.get_key_deserializer(**kwargs)
-            return deserializer(value, self.context(MessageField.KEY, headers))
+            return deserializer(
+                value,
+                self.context(name, MessageField.KEY, headers),
+            )
 
         raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
 
@@ -107,10 +158,11 @@ class Topic(ABC):
 
     def context(
         self,
+        name: str,
         field: MessageField,
-        headers: Optional[dict | list] = None,
+        headers: Optional[list] = None,
     ) -> SerializationContext:
-        return SerializationContext(self.name, field, headers=headers)
+        return SerializationContext(name, field, headers=headers)
 
 
 class AvroTopic(Topic, ABC):

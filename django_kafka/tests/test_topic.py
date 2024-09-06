@@ -19,9 +19,60 @@ class TopicTestCase(TestCase):
     def setUp(self):
         self.topic = SomeTopic()
 
+    def test_is_regex(self):
+        self.topic.name = "^some-topic"
+
+        self.assertTrue(self.topic.is_regex())
+
+    def test_matches(self):
+        self.topic.name = "some-topic"
+
+        self.assertTrue(self.topic.matches("some-topic"))
+        self.assertFalse(self.topic.matches("some-topic.extra"))
+
+    def test_matches__regex(self):
+        self.topic.name = "^some-topic"
+
+        self.assertTrue(self.topic.matches("some-topic"))
+        self.assertTrue(self.topic.matches("some-topic.extra"))
+        self.assertFalse(self.topic.matches("other-topic"))
+
+    def test_validate_produce_name(self):
+        """validates and returns expected producing name for non-regex based topics"""
+        self.assertEqual(self.topic.name, self.topic.validate_produce_name(None))
+        self.assertEqual(
+            self.topic.name, self.topic.validate_produce_name(self.topic.name)
+        )
+        with self.assertRaisesMessage(
+            DjangoKafkaError,
+            "topic producing name `invalid-topic` is not valid for this topic",
+        ):
+            self.topic.validate_produce_name("invalid-topic")
+
+    def test_validate_produce_name__regex(self):
+        """validates supplied producing name when topic is regex based"""
+        self.topic.name = "^some-topic"
+
+        self.assertEqual(
+            "some-topic.extra",
+            self.topic.validate_produce_name("some-topic.extra"),
+        )
+        with self.assertRaisesMessage(
+            DjangoKafkaError,
+            "topic producing name `invalid-topic` is not valid for this topic",
+        ):
+            self.topic.validate_produce_name("invalid-topic")
+        with self.assertRaisesMessage(
+            DjangoKafkaError,
+            "topic producing name must be supplied for regex-based topics",
+        ):
+            self.topic.validate_produce_name(None)
+
     @patch("django_kafka.topic.Topic.serialize")
-    @patch("django_kafka.DjangoKafka.producer")
+    @patch("django_kafka.kafka.producer")
     def test_produce_serializer_kwargs(self, mock_kafka_producer, mock_topic_serialize):
+        self.topic.name = "^some-topic"
+        name = "some-topic.extra"
         key = "key"
         value = "message value"
         headers = None  # default is None when not provided
@@ -30,6 +81,7 @@ class TopicTestCase(TestCase):
 
         self.topic.produce(
             value,
+            name=name,
             key=key,
             key_serializer_kwargs=key_serializer_kwargs,
             value_serializer_kwargs=value_serializer_kwargs,
@@ -38,33 +90,66 @@ class TopicTestCase(TestCase):
         self.assertEqual(
             mock_topic_serialize.call_args_list,
             [
-                call(key, MessageField.KEY, headers, **key_serializer_kwargs),
-                call(value, MessageField.VALUE, headers, **value_serializer_kwargs),
+                call(
+                    name,
+                    key,
+                    MessageField.KEY,
+                    headers,
+                    **key_serializer_kwargs,
+                ),
+                call(
+                    name,
+                    value,
+                    MessageField.VALUE,
+                    headers,
+                    **value_serializer_kwargs,
+                ),
             ],
         )
 
         mock_kafka_producer.produce.assert_called_once_with(
-            self.topic.name,
+            name,
             mock_topic_serialize.return_value,
             key=mock_topic_serialize.return_value,
         )
 
     @patch("django_kafka.topic.Topic.serialize")
-    @patch("django_kafka.DjangoKafka.producer")
+    @patch("django_kafka.kafka.producer")
+    def test_produce_requires_kwargs_supplied_name_for_regex_names(
+        self,
+        mock_kafka_producer,
+        mock_topic_serialize,
+    ):
+        self.topic.name = "^some-topic"
+        value = "message value"
+
+        with self.assertRaisesMessage(
+            DjangoKafkaError,
+            "topic producing name must be supplied for regex-based topics",
+        ):
+            self.topic.produce(value)
+
+    @patch("django_kafka.topic.Topic.serialize")
+    @patch("django_kafka.kafka.producer")
     def test_produce_only_value(self, mock_kafka_producer, mock_topic_serialize):
         value = "message value"
         headers = None  # default is None when not provided
 
         self.topic.produce(value)
 
-        mock_topic_serialize.assert_called_once_with(value, MessageField.VALUE, headers)
+        mock_topic_serialize.assert_called_once_with(
+            self.topic.name,
+            value,
+            MessageField.VALUE,
+            headers,
+        )
         mock_kafka_producer.produce.assert_called_once_with(
             self.topic.name,
             mock_topic_serialize.return_value,
         )
 
     @patch("django_kafka.topic.Topic.serialize")
-    @patch("django_kafka.DjangoKafka.producer")
+    @patch("django_kafka.kafka.producer")
     def test_produce_key_is_serialized(self, mock_kafka_producer, mock_topic_serialize):
         value = "message value"
         key = "some key"
@@ -75,8 +160,8 @@ class TopicTestCase(TestCase):
         self.assertEqual(
             mock_topic_serialize.call_args_list,
             [
-                call(key, MessageField.KEY, headers),
-                call(value, MessageField.VALUE, headers),
+                call(self.topic.name, key, MessageField.KEY, headers),
+                call(self.topic.name, value, MessageField.VALUE, headers),
             ],
         )
 
@@ -90,13 +175,14 @@ class TopicTestCase(TestCase):
     @patch("django_kafka.topic.Topic.key_deserializer")
     @patch("django_kafka.topic.Topic.context")
     def test_deserialize_key(self, mock_topic_context, mock_key_deserializer):
+        name = "name"
         value = b"some key"
         field = MessageField.KEY
         kwargs = {"key": "value"}
 
-        self.topic.deserialize(value, field, **kwargs)
+        self.topic.deserialize(name, value, field, **kwargs)
 
-        mock_topic_context.assert_called_once_with(field, None)
+        mock_topic_context.assert_called_once_with(name, field, None)
         mock_key_deserializer.assert_called_once_with(**kwargs)
         mock_key_deserializer.return_value.assert_called_once_with(
             value,
@@ -106,13 +192,14 @@ class TopicTestCase(TestCase):
     @patch("django_kafka.topic.Topic.value_deserializer")
     @patch("django_kafka.topic.Topic.context")
     def test_deserialize_value(self, mock_topic_context, mock_value_deserializer):
+        name = "name"
         value = b"some value"
         field = MessageField.VALUE
         kwargs = {"key": "value"}
 
-        self.topic.deserialize(value, field, **kwargs)
+        self.topic.deserialize(name, value, field, **kwargs)
 
-        mock_topic_context.assert_called_once_with(field, None)
+        mock_topic_context.assert_called_once_with(name, field, None)
         mock_value_deserializer.assert_called_once_with(**kwargs)
         mock_value_deserializer.return_value.assert_called_once_with(
             value,
@@ -134,7 +221,7 @@ class TopicTestCase(TestCase):
             DjangoKafkaError,
             f"Unsupported deserialization field {field}.",
         ):
-            self.topic.deserialize("some value", field)
+            self.topic.deserialize("name", "some value", field)
 
         mock_topic_context.assert_not_called()
         mock_value_deserializer.assert_not_called()
@@ -143,13 +230,14 @@ class TopicTestCase(TestCase):
     @patch("django_kafka.topic.Topic.key_serializer")
     @patch("django_kafka.topic.Topic.context")
     def test_serialize_key(self, mock_topic_context, mock_key_serializer):
+        name = "name"
         value = "some key"
         field = MessageField.KEY
         kwargs = {"key": "value"}
 
-        self.topic.serialize(value, field, **kwargs)
+        self.topic.serialize(name, value, field, **kwargs)
 
-        mock_topic_context.assert_called_once_with(field, None)
+        mock_topic_context.assert_called_once_with(name, field, None)
         mock_key_serializer.assert_called_once_with(**kwargs)
         mock_key_serializer.return_value.assert_called_once_with(
             value,
@@ -159,13 +247,14 @@ class TopicTestCase(TestCase):
     @patch("django_kafka.topic.Topic.value_serializer")
     @patch("django_kafka.topic.Topic.context")
     def test_serialize_value(self, mock_topic_context, mock_value_serializer):
+        name = "name"
         value = "some value"
         field = MessageField.VALUE
         kwargs = {"key": "value"}
 
-        self.topic.serialize(value, field, **kwargs)
+        self.topic.serialize(name, value, field, **kwargs)
 
-        mock_topic_context.assert_called_once_with(field, None)
+        mock_topic_context.assert_called_once_with(name, field, None)
         mock_value_serializer.assert_called_once_with(**kwargs)
         mock_value_serializer.return_value.assert_called_once_with(
             value,
@@ -187,7 +276,7 @@ class TopicTestCase(TestCase):
             DjangoKafkaError,
             f"Unsupported serialization field {field}.",
         ):
-            self.topic.serialize("some value", field)
+            self.topic.serialize("name", "some value", field)
 
         mock_topic_context.assert_not_called()
         mock_value_serializer.assert_not_called()
@@ -201,7 +290,7 @@ class TopicTestCase(TestCase):
             with patch(
                 "django_kafka.topic.SerializationContext",
             ) as mock_serialization_context:
-                self.topic.context(field, headers)
+                self.topic.context(self.topic.name, field, headers)
                 mock_serialization_context.assert_called_once_with(
                     self.topic.name,
                     field,
