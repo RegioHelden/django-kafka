@@ -6,11 +6,9 @@ from typing import TYPE_CHECKING, Optional, Type
 from confluent_kafka import cimpl
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import (
-    Deserializer,
     MessageField,
     SerializationContext,
     Serializer,
-    StringDeserializer,
     StringSerializer,
 )
 
@@ -23,60 +21,57 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Topic(ABC):
+class TopicProducer(ABC):
     key_serializer: Type[Serializer] = StringSerializer
     value_serializer: Type[Serializer] = StringSerializer
-
-    key_deserializer: Type[Deserializer] = StringDeserializer
-    value_deserializer: Type[Deserializer] = StringDeserializer
-
-    retry_settings: Optional["RetrySettings"] = None
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Define Kafka topic name
+        """Define Kafka topic producing topic name"""
 
-        Regexp pattern subscriptions are supported by prefixing the name with "^". If
-        used, then a name must always be supplied to .produce() method.
-        """
+    def __init__(self):
+        super().__init__()
+        if self.name.startswith("^"):
+            raise DjangoKafkaError(f"TopicProducer name cannot be regex: {self.name}")
 
-    def is_regex(self):
-        """returns if the topic subscription is regex based"""
-        return self.name.startswith("^")
+    def get_key_serializer(self, **kwargs):
+        return self.key_serializer(**kwargs)
 
-    def validate_produce_name(self, name: Optional[str]) -> str:
-        """validates and returns the topic producing name"""
-        if name:
-            if self.matches(name):
-                return name
-            raise DjangoKafkaError(
-                f"topic producing name `{name}` is not valid for this topic",
-            )
-        if self.is_regex():
-            raise DjangoKafkaError(
-                "topic producing name must be supplied for regex-based topics",
-            )
-        return self.name
+    def get_value_serializer(self, **kwargs):
+        return self.value_serializer(**kwargs)
 
-    def matches(self, topic_name: str):
-        if self.is_regex():
-            return bool(re.search(self.name, topic_name))
-        return self.name == topic_name
+    def context(
+        self,
+        field: MessageField,
+        headers: Optional[list] = None,
+    ) -> SerializationContext:
+        return SerializationContext(self.name, field, headers=headers)
 
-    def consume(self, msg: cimpl.Message):
-        """Implement message processing"""
-        raise NotImplementedError
+    def serialize(
+        self,
+        value,
+        field: MessageField,
+        headers: Optional[list] = None,
+        **kwargs,
+    ):
+        if field == MessageField.VALUE:
+            serializer = self.get_value_serializer(**kwargs)
+            return serializer(value, self.context(MessageField.VALUE, headers))
+
+        if field == MessageField.KEY:
+            serializer = self.get_key_serializer(**kwargs)
+            return serializer(value, self.context(MessageField.KEY, headers))
+
+        raise DjangoKafkaError(f"Unsupported serialization field {field}.")
 
     def produce(self, value: any, **kwargs):
-        name = self.validate_produce_name(kwargs.pop("name", None))
         key_serializer_kwargs = kwargs.pop("key_serializer_kwargs", {}) or {}
         value_serializer_kwargs = kwargs.pop("value_serializer_kwargs", {}) or {}
         headers = kwargs.get("headers")
 
         if "key" in kwargs:
             kwargs["key"] = self.serialize(
-                name,
                 kwargs["key"],
                 MessageField.KEY,
                 headers,
@@ -84,9 +79,8 @@ class Topic(ABC):
             )
 
         kafka.producer.produce(
-            name,
+            self.name,
             self.serialize(
-                name,
                 value,
                 MessageField.VALUE,
                 headers,
@@ -96,59 +90,30 @@ class Topic(ABC):
         )
         kafka.producer.poll(0)  # stops producer on_delivery callbacks buffer overflow
 
-    def serialize(
-        self,
-        name,
-        value,
-        field: MessageField,
-        headers: Optional[list] = None,
-        **kwargs,
-    ):
-        if field == MessageField.VALUE:
-            serializer = self.get_value_serializer(**kwargs)
-            return serializer(
-                value,
-                self.context(name, MessageField.VALUE, headers),
-            )
 
-        if field == MessageField.KEY:
-            serializer = self.get_key_serializer(**kwargs)
-            return serializer(
-                value,
-                self.context(name, MessageField.KEY, headers),
-            )
+class TopicConsumer(ABC):
+    key_deserializer: Type[Serializer] = StringSerializer
+    value_deserializer: Type[Serializer] = StringSerializer
 
-        raise DjangoKafkaError(f"Unsupported serialization field {field}.")
+    retry_settings: Optional["RetrySettings"] = None
 
-    def deserialize(
-        self,
-        name,
-        value,
-        field: MessageField,
-        headers: Optional[list] = None,
-        **kwargs,
-    ):
-        if field == MessageField.VALUE:
-            deserializer = self.get_value_deserializer(**kwargs)
-            return deserializer(
-                value,
-                self.context(name, MessageField.VALUE, headers),
-            )
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """
+        Defines Kafka topic consumer subscription name.
 
-        if field == MessageField.KEY:
-            deserializer = self.get_key_deserializer(**kwargs)
-            return deserializer(
-                value,
-                self.context(name, MessageField.KEY, headers),
-            )
+        Regexp pattern subscriptions are supported by prefixing the name with "^".
+        """
 
-        raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
+    def is_regex(self) -> bool:
+        """Returns if the subscription name is regex based"""
+        return self.name.startswith("^")
 
-    def get_key_serializer(self, **kwargs):
-        return self.key_serializer(**kwargs)
-
-    def get_value_serializer(self, **kwargs):
-        return self.value_serializer(**kwargs)
+    def matches(self, topic_name: str) -> bool:
+        if self.is_regex():
+            return bool(re.search(self.name, topic_name))
+        return self.name == topic_name
 
     def get_key_deserializer(self, **kwargs):
         return self.key_deserializer(**kwargs)
@@ -158,24 +123,44 @@ class Topic(ABC):
 
     def context(
         self,
-        name: str,
         field: MessageField,
         headers: Optional[list] = None,
     ) -> SerializationContext:
-        return SerializationContext(name, field, headers=headers)
+        return SerializationContext(self.name, field, headers=headers)
+
+    def deserialize(
+        self,
+        value,
+        field: MessageField,
+        headers: Optional[list] = None,
+        **kwargs,
+    ):
+        if field == MessageField.VALUE:
+            deserializer = self.get_value_deserializer(**kwargs)
+            return deserializer(value, self.context(MessageField.VALUE, headers))
+
+        if field == MessageField.KEY:
+            deserializer = self.get_key_deserializer(**kwargs)
+            return deserializer(value, self.context(MessageField.KEY, headers))
+
+        raise DjangoKafkaError(f"Unsupported deserialization field {field}.")
+
+    def consume(self, msg: cimpl.Message):
+        """Implement message processing"""
+        raise NotImplementedError
 
 
-class AvroTopic(Topic, ABC):
+class Topic(TopicConsumer, TopicProducer, ABC):
+    """Combined Topic class for when topic consume and produce names are the same"""
+
+
+class AvroTopicProducer(TopicProducer, ABC):
     """
-    Consume.
-        Defining schemas is not necessary as it gets retrieved automatically from the Schema Registry.
-
-    Produce.
-        Defining `value_schema` is required (`key_schema` is required when using keys).
-        It gets submitted to the Schema Registry
+    Defining `value_schema` is required (`key_schema` is required when using keys).
+    It gets submitted to the Schema Registry.
 
     Multiple schemas and one Topic:
-        `AvroTopic.produce` takes `serializer_kwargs` kw argument.
+        `.produce(...)` takes `{key|value}_serializer_kwargs` kw argument.
         `AvroSerializer` then gets initialized with the provided kwargs.
         When producing you can tell which schema to use for your message:
         ```python
@@ -209,8 +194,18 @@ class AvroTopic(Topic, ABC):
 
         return AvroSerializer(kafka.schema_client, **kwargs)
 
+
+class AvroTopicConsumer(TopicConsumer, ABC):
+    """
+    Defining schemas is not necessary as it gets retrieved automatically from the Schema Registry.
+    """  # noqa: E501
+
     def get_key_deserializer(self, **kwargs):
         return AvroDeserializer(kafka.schema_client, **kwargs)
 
     def get_value_deserializer(self, **kwargs):
         return AvroDeserializer(kafka.schema_client, **kwargs)
+
+
+class AvroTopic(AvroTopicConsumer, AvroTopicProducer, Topic, ABC):
+    """Combined AvroTopic class for when topic consume and produce names are the same"""

@@ -7,17 +7,22 @@ from django.utils import timezone
 
 from django_kafka.conf import settings
 from django_kafka.consumer import Consumer, Topics
-from django_kafka.dead_letter.topic import DeadLetterTopic
+from django_kafka.dead_letter.topic import DeadLetterTopicProducer
 from django_kafka.retry.headers import RetryHeader
-from django_kafka.retry.topic import RetryTopic
+from django_kafka.retry.topic import RetryTopicConsumer
 
 if TYPE_CHECKING:
-    from django_kafka.topic import Topic
+    from django_kafka.topic import TopicConsumer
 
 
 class RetryTopics(Topics):
-    def __init__(self, group_id: str, *topics: "Topic"):
-        super().__init__(*(RetryTopic(group_id=group_id, main_topic=t) for t in topics))
+    def __init__(self, group_id: str, *topic_consumers: "TopicConsumer"):
+        super().__init__(
+            *(
+                RetryTopicConsumer(group_id=group_id, topic_consumer=t)
+                for t in topic_consumers
+            ),
+        )
 
 
 class RetryConsumer(Consumer):
@@ -31,8 +36,8 @@ class RetryConsumer(Consumer):
     @classmethod
     def build(cls, consumer_cls: Type["Consumer"]) -> Optional[Type["RetryConsumer"]]:
         """Generates RetryConsumer subclass linked to consumer class retryable topics"""
-        retryable_topics = [t for t in consumer_cls.topics if t.retry_settings]
-        if not retryable_topics:
+        retryable_tcs = [t for t in consumer_cls.topics if t.retry_settings]
+        if not retryable_tcs:
             return None
 
         group_id = consumer_cls.build_config()["group.id"]
@@ -45,7 +50,7 @@ class RetryConsumer(Consumer):
                     **getattr(cls, "config", {}),
                     "group.id": f"{group_id}.retry",
                 },
-                "topics": RetryTopics(group_id, *retryable_topics),
+                "topics": RetryTopics(group_id, *retryable_tcs),
             },
         )
 
@@ -58,16 +63,12 @@ class RetryConsumer(Consumer):
         }
 
     def retry_msg(self, msg: cimpl.Message, exc: Exception) -> bool:
-        retry_topic = cast(RetryTopic, self.get_topic(msg))
-        return retry_topic.retry_for(msg=msg, exc=exc)
+        rt_consumer = cast(RetryTopicConsumer, self.get_topic_consumer(msg))
+        return rt_consumer.producer_for(msg).retry_for(exc)
 
     def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
-        retry_topic = cast(RetryTopic, self.get_topic(msg))
-        DeadLetterTopic(
-            group_id=retry_topic.group_id,
-            main_topic=retry_topic.main_topic,
-        ).produce_for(
-            msg=msg,
+        rt_consumer = cast(RetryTopicConsumer, self.get_topic_consumer(msg))
+        DeadLetterTopicProducer(group_id=rt_consumer.group_id, msg=msg).produce_for(
             header_message=str(exc),
             header_detail=traceback.format_exc(),
         )

@@ -76,7 +76,7 @@ class ConsumerTestCase(TestCase):
         # check if msg has error before processing
         msg.error.assert_called_once_with()
         # Topic.consume called
-        consumer.get_topic(msg.topic()).consume.assert_called_once_with(msg)
+        consumer.get_topic_consumer(msg.topic()).consume.assert_called_once_with(msg)
         # commit_offset triggered
         mock_commit_offset.assert_called_once_with(msg)
 
@@ -118,16 +118,18 @@ class ConsumerTestCase(TestCase):
         handle_exception,
     ):
         topic_consume_side_effect = TypeError("test")
-        topic = Mock(
+        topic_consumer = Mock(
             **{
                 "name": "topic",
                 "consume.side_effect": topic_consume_side_effect,
             },
         )
-        msg = Mock(**{"topic.return_value": topic.name, "error.return_value": False})
+        msg = Mock(
+            **{"topic.return_value": topic_consumer.name, "error.return_value": False},
+        )
 
         class SomeConsumer(Consumer):
-            topics = Topics(topic)
+            topics = Topics(topic_consumer)
             config = {}
 
         consumer = SomeConsumer()
@@ -137,7 +139,7 @@ class ConsumerTestCase(TestCase):
         # check if msg has error before processing
         msg.error.assert_called_once_with()
         # Topic.consume was triggered
-        topic.consume.assert_called_once_with(msg)
+        topic_consumer.consume.assert_called_once_with(msg)
         # error handler was triggered on exception
         handle_exception.assert_called_once_with(msg, topic_consume_side_effect)
         # Consumer.commit_offset is not called
@@ -181,67 +183,67 @@ class ConsumerTestCase(TestCase):
         consumer.dead_letter_msg.assert_called_once_with(msg, exc)
         consumer.log_error.assert_called_once_with(exc)
 
-    @patch("django_kafka.retry.topic.RetryTopic")
-    def test_retry_msg(self, mock_retry_topic_cls):
-        topic = Mock(name="topic", retry_settings=Mock())
-        msg = Mock(**{"topic.return_value": topic.name})
-        retry_for = mock_retry_topic_cls.return_value.retry_for
-        retry_for.return_value = True
+    @patch("django_kafka.retry.topic.RetryTopicProducer")
+    def test_retry_msg(self, mock_rt_producer_cls):
+        mock_topic_consumer = Mock(retry_settings=Mock())
+        mock_retry_for = mock_rt_producer_cls.return_value.retry_for
+        msg_mock = Mock()
 
         class SomeConsumer(Consumer):
-            topics = Topics(topic)
+            topics = Topics()
             config = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
+        consumer.get_topic_consumer = Mock(return_value=mock_topic_consumer)
         exc = ValueError()
 
-        retried = consumer.retry_msg(msg, exc)
+        retried = consumer.retry_msg(msg_mock, exc)
 
-        mock_retry_topic_cls.assert_called_once_with(
+        mock_rt_producer_cls.assert_called_once_with(
             group_id=consumer.group_id,
-            main_topic=topic,
+            settings=mock_topic_consumer.retry_settings,
+            msg=msg_mock,
         )
-        retry_for.assert_called_once_with(msg=msg, exc=exc)
-        self.assertEqual(retried, True)
+        mock_retry_for.assert_called_once_with(exc=exc)
+        self.assertEqual(retried, mock_retry_for.return_value)
 
-    @patch("django_kafka.retry.topic.RetryTopic")
-    def test_retry_msg__no_retry(self, mock_retry_topic_cls):
-        topic = Mock(name="topic", retry_settings=None)
-        msg = Mock(**{"topic.return_value": topic.name})
+    @patch("django_kafka.retry.topic.RetryTopicProducer")
+    def test_retry_msg__no_retry(self, mock_rt_producer_cls):
+        mock_topic_consumer = Mock(retry_settings=None)
+        msg_mock = Mock()
 
         class SomeConsumer(Consumer):
-            topics = Topics(topic)
+            topics = Topics()
             config = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
+        consumer.get_topic_consumer = Mock(return_value=mock_topic_consumer)
         exc = ValueError()
 
-        retried = consumer.retry_msg(msg, exc)
+        retried = consumer.retry_msg(msg_mock, exc)
 
-        mock_retry_topic_cls.assert_not_called()
+        mock_rt_producer_cls.assert_not_called()
         self.assertEqual(retried, False)
 
-    @patch("django_kafka.dead_letter.topic.DeadLetterTopic")
+    @patch("django_kafka.dead_letter.topic.DeadLetterTopicProducer")
     def test_dead_letter_msg(self, mock_dead_letter_topic_cls):
-        topic = Mock(name="topic")
-        msg = Mock(**{"topic.return_value": topic.name})
-        produce_for = mock_dead_letter_topic_cls.return_value.produce_for
+        mock_produce_for = mock_dead_letter_topic_cls.return_value.produce_for
+        msg_mock = Mock()
 
         class SomeConsumer(Consumer):
-            topics = Topics(topic)
+            topics = Topics()
             config = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         exc = ValueError()
 
-        consumer.dead_letter_msg(msg, exc)
+        consumer.dead_letter_msg(msg_mock, exc)
 
         mock_dead_letter_topic_cls.assert_called_once_with(
             group_id=consumer.group_id,
-            main_topic=topic,
+            msg=msg_mock,
         )
-        produce_for.assert_called_once_with(
-            msg=msg,
+        mock_produce_for.assert_called_once_with(
             header_message=str(exc),
             header_detail=traceback.format_exc(),
         )

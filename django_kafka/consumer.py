@@ -10,34 +10,34 @@ from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 
 if TYPE_CHECKING:
-    from django_kafka.topic import Topic
+    from django_kafka.topic import TopicConsumer
 
 logger = logging.getLogger(__name__)
 
 
 class Topics:
-    _topics: tuple["Topic", ...]
-    _match: dict[str, "Topic"]
+    _topic_consumers: tuple["TopicConsumer", ...]
+    _match: dict[str, "TopicConsumer"]
 
-    def __init__(self, *topics: "Topic"):
-        self._topics = topics
-        self._match: dict[str, "Topic"] = {}
+    def __init__(self, *topic_consumers: "TopicConsumer"):
+        self._topic_consumers = topic_consumers
+        self._match: dict[str, "TopicConsumer"] = {}
 
-    def get_topic(self, name: str) -> "Topic":
-        if name not in self._match:
-            topic = next((t for t in self if t.matches(name)), None)
-            if not topic:
-                raise DjangoKafkaError(f"No topic registered for `{name}`")
-            self._match[name] = topic
+    def get(self, topic_name: str) -> "TopicConsumer":
+        if topic_name not in self._match:
+            topic_consumer = next((t for t in self if t.matches(topic_name)), None)
+            if not topic_consumer:
+                raise DjangoKafkaError(f"No topic registered for `{topic_name}`")
+            self._match[topic_name] = topic_consumer
 
-        return self._match[name]
+        return self._match[topic_name]
 
     @property
     def names(self) -> list[str]:
         return [topic.name for topic in self]
 
     def __iter__(self):
-        yield from self._topics
+        yield from self._topic_consumers
 
 
 class Consumer:
@@ -91,23 +91,22 @@ class Consumer:
             self.store_offsets(msg)
 
     def retry_msg(self, msg: cimpl.Message, exc: Exception) -> bool:
-        from django_kafka.retry.topic import RetryTopic
+        from django_kafka.retry.topic import RetryTopicProducer
 
-        topic = self.get_topic(msg)
-        if not topic.retry_settings:
+        topic_consumer = self.get_topic_consumer(msg)
+        if not topic_consumer.retry_settings:
             return False
 
-        return RetryTopic(group_id=self.group_id, main_topic=topic).retry_for(
+        return RetryTopicProducer(
+            group_id=self.group_id,
+            settings=topic_consumer.retry_settings,
             msg=msg,
-            exc=exc,
-        )
+        ).retry_for(exc=exc)
 
     def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
-        from django_kafka.dead_letter.topic import DeadLetterTopic
+        from django_kafka.dead_letter.topic import DeadLetterTopicProducer
 
-        topic = self.get_topic(msg)
-        DeadLetterTopic(group_id=self.group_id, main_topic=topic).produce_for(
-            msg=msg,
+        DeadLetterTopicProducer(group_id=self.group_id, msg=msg).produce_for(
             header_message=str(exc),
             header_detail=traceback.format_exc(),
         )
@@ -118,8 +117,8 @@ class Consumer:
             self.dead_letter_msg(msg, exc)
             self.log_error(exc)
 
-    def get_topic(self, msg: cimpl.Message) -> "Topic":
-        return self.topics.get_topic(name=msg.topic())
+    def get_topic_consumer(self, msg: cimpl.Message) -> "TopicConsumer":
+        return self.topics.get(topic_name=msg.topic())
 
     def log_error(self, error):
         logger.error(error, exc_info=True)
@@ -130,7 +129,7 @@ class Consumer:
             return
 
         try:
-            self.get_topic(msg).consume(msg)
+            self.get_topic_consumer(msg).consume(msg)
         # ruff: noqa: BLE001 (we do not want consumer to stop if message consumption fails in any circumstances)
         except Exception as exc:
             self.handle_exception(msg, exc)

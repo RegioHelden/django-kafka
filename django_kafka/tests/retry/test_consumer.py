@@ -1,6 +1,7 @@
 import datetime
 import traceback
-from unittest import mock
+from typing import Type
+from unittest.mock import Mock, patch
 
 from confluent_kafka import TopicPartition
 from django.test import TestCase, override_settings
@@ -11,33 +12,36 @@ from django_kafka.consumer import Consumer, Topics
 from django_kafka.retry import RetrySettings
 from django_kafka.retry.consumer import RetryConsumer, RetryTopics
 from django_kafka.retry.headers import RetryHeader
-from django_kafka.topic import Topic
+from django_kafka.topic import TopicConsumer
 
 
 class RetryConsumerTestCase(TestCase):
-    def _get_topic(self):
-        class NormalTopic(Topic):
+    def _get_topic_consumer(self):
+        class SomeTopicConsumer(TopicConsumer):
             name = "normal_topic"
 
-        return NormalTopic()
+        return SomeTopicConsumer()
 
-    def _get_retryable_topic(self):
-        class RetryableTopic(Topic):
+    def _get_retryable_topic_consumer(self):
+        class RetryableTopicConsumer(TopicConsumer):
             name = "retry_topic"
 
         retry = RetrySettings(max_retries=5, delay=60)
-        retry(RetryableTopic)
+        retry(RetryableTopicConsumer)
 
-        return RetryableTopic()
+        return RetryableTopicConsumer()
 
-    def _get_retryable_consumer_cls(self, group_id="group_id"):
-        class TestConsumer(Consumer):
-            topics = Topics(self._get_topic(), self._get_retryable_topic())
+    def _get_retryable_consumer_cls(self, group_id="group_id") -> Type[Consumer]:
+        class SomeConsumer(Consumer):
+            topics = Topics(
+                self._get_topic_consumer(),
+                self._get_retryable_topic_consumer(),
+            )
             config = {"group.id": group_id}
 
-        return TestConsumer
+        return SomeConsumer
 
-    def _get_retry_consumer(self, consumer_group_id="group_id"):
+    def _get_retry_consumer(self, consumer_group_id="group_id") -> RetryConsumer:
         return RetryConsumer.build(
             self._get_retryable_consumer_cls(group_id=consumer_group_id),
         )()
@@ -53,8 +57,8 @@ class RetryConsumerTestCase(TestCase):
             },
         },
     )
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
-    @mock.patch("django_kafka.retry.consumer.Consumer.build_config")
+    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.retry.consumer.Consumer.build_config")
     def test_config_merge_override(
         self,
         mock_consumer_build_config,
@@ -106,7 +110,7 @@ class RetryConsumerTestCase(TestCase):
         self.assertIsInstance(retry_consumer_cls.topics, RetryTopics)
         self.assertCountEqual(
             [t for t in consumer_cls.topics if t.retry_settings],
-            [t.main_topic for t in retry_consumer_cls.topics],
+            [t.topic_consumer for t in retry_consumer_cls.topics],
         )
 
     def test_build__no_retry_topics(self):
@@ -117,54 +121,46 @@ class RetryConsumerTestCase(TestCase):
         self.assertIsNone(RetryConsumer.build(TestConsumer))
 
     def test_retry_msg(self):
+        mock_retry_topic_consumer = Mock()
+        mock_producer_for = mock_retry_topic_consumer.producer_for
+        mock_retry_for = mock_producer_for.return_value.retry_for
+        msg_mock = Mock()
+
         retry_consumer = self._get_retry_consumer()
-        retry_topic = next(iter(retry_consumer.topics))
-        retry_topic.retry_for = mock.Mock()
+        retry_consumer.get_topic_consumer = Mock(return_value=mock_retry_topic_consumer)
         exc = ValueError()
-        msg_mock = mock.Mock(
-            **{
-                "topic.return_value": retry_topic.get_produce_name(
-                    retry_topic.main_topic.name,
-                    attempt=1,
-                ),
-            },
-        )
 
         retried = retry_consumer.retry_msg(msg_mock, exc)
 
-        retry_topic.retry_for.assert_called_once_with(msg=msg_mock, exc=exc)
-        self.assertEqual(retried, retry_topic.retry_for.return_value)
+        mock_producer_for.assert_called_once_with(msg_mock)
+        mock_retry_for.assert_called_once_with(exc)
+        self.assertEqual(retried, mock_retry_for.return_value)
 
-    @mock.patch("django_kafka.retry.consumer.DeadLetterTopic")
-    def test_dead_letter_msg(self, mock_dead_letter_topic_cls):
+    @patch("django_kafka.retry.consumer.DeadLetterTopicProducer")
+    def test_dead_letter_msg(self, mock_dlt_topic_producer_cls):
+        mock_retry_topic_consumer = Mock()
+        mock_produce_for = mock_dlt_topic_producer_cls.return_value.produce_for
+        msg_mock = Mock()
+
         retry_consumer = self._get_retry_consumer()
-        retry_topic = next(iter(retry_consumer.topics))
+        retry_consumer.get_topic_consumer = Mock(return_value=mock_retry_topic_consumer)
         exc = ValueError()
-        msg_mock = mock.Mock(
-            **{
-                "topic.return_value": retry_topic.get_produce_name(
-                    retry_topic.main_topic.name,
-                    attempt=1,
-                ),
-            },
-        )
 
         retry_consumer.dead_letter_msg(msg_mock, exc)
 
-        mock_dead_letter_topic_cls.assert_called_once_with(
-            group_id=retry_topic.group_id,
-            main_topic=retry_topic.main_topic,
-        )
-        mock_dead_letter_topic_cls.return_value.produce_for.assert_called_once_with(
+        mock_dlt_topic_producer_cls.assert_called_once_with(
+            group_id=mock_retry_topic_consumer.group_id,
             msg=msg_mock,
+        )
+        mock_produce_for.assert_called_once_with(
             header_message=str(exc),
             header_detail=traceback.format_exc(),
         )
 
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_pause_partition(self, mock_confluent_consumer):
         retry_consumer = self._get_retry_consumer()
-        mock_msg = mock.Mock(
+        mock_msg = Mock(
             **{
                 "topic.return_value": "msg_topic",
                 "partition.return_value": 0,
@@ -183,10 +179,10 @@ class RetryConsumerTestCase(TestCase):
         mock_confluent_consumer.return_value.seek.assert_called_once_with(partition)
         mock_confluent_consumer.return_value.pause.assert_called_once_with([partition])
 
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_resume_partition__before_retry_time(self, mock_confluent_consumer):
         retry_consumer = self._get_retry_consumer()
-        mock_msg = mock.Mock(
+        mock_msg = Mock(
             **{
                 "topic.return_value": "msg_topic",
                 "partition.return_value": 0,
@@ -200,10 +196,10 @@ class RetryConsumerTestCase(TestCase):
 
         mock_confluent_consumer.return_value.resume.assert_not_called()
 
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_resume_ready_partitions__after_retry_time(self, mock_confluent_consumer):
         retry_consumer = self._get_retry_consumer()
-        mock_msg = mock.Mock(
+        mock_msg = Mock(
             **{
                 "topic.return_value": "msg_topic",
                 "partition.return_value": 0,
@@ -222,12 +218,12 @@ class RetryConsumerTestCase(TestCase):
 
         mock_confluent_consumer.return_value.resume.assert_called_once_with([partition])
 
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_poll(self, mock_confluent_consumer):
         """tests poll resumes partitions"""
         retry_consumer = self._get_retry_consumer()
-        retry_consumer.resume_ready_partitions = mock.Mock()
-        mock_msg = mock.Mock()
+        retry_consumer.resume_ready_partitions = Mock()
+        mock_msg = Mock()
         mock_confluent_consumer.return_value.poll.return_value = mock_msg
 
         msg = retry_consumer.poll()
@@ -235,17 +231,17 @@ class RetryConsumerTestCase(TestCase):
         self.assertEqual(msg, mock_msg)
         retry_consumer.resume_ready_partitions.assert_called_once()  # always called
 
-    @mock.patch("django_kafka.consumer.Consumer.process_message")
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.Consumer.process_message")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_process_message__before_retry_time(
         self,
         mock_confluent_consumer,
         mock_consumer_process_message,
     ):
         retry_consumer = self._get_retry_consumer()
-        retry_consumer.pause_partition = mock.Mock()
+        retry_consumer.pause_partition = Mock()
         retry_time = timezone.now() + datetime.timedelta(minutes=1)
-        mock_msg = mock.Mock(
+        mock_msg = Mock(
             **{
                 "error.return_value": None,
                 "headers.return_value": [
@@ -258,17 +254,17 @@ class RetryConsumerTestCase(TestCase):
         retry_consumer.pause_partition.assert_called_once_with(mock_msg, retry_time)
         mock_consumer_process_message.process_message.assert_not_called()
 
-    @mock.patch("django_kafka.consumer.Consumer.process_message")
-    @mock.patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.Consumer.process_message")
+    @patch("django_kafka.consumer.ConfluentConsumer")
     def test_process_message__after_retry_time(
         self,
         mock_confluent_consumer,
         mock_consumer_process_message,
     ):
         retry_consumer = self._get_retry_consumer()
-        retry_consumer.pause_partition = mock.Mock()
+        retry_consumer.pause_partition = Mock()
         retry_time = timezone.now() - datetime.timedelta(minutes=1)
-        mock_msg = mock.Mock(
+        mock_msg = Mock(
             **{
                 "error.return_value": None,
                 "headers.return_value": [

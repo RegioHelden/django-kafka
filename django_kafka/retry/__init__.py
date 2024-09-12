@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional, Type
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    from django_kafka.topic import Topic
+    from django_kafka.topic import TopicConsumer
 
 
 class RetrySettings:
@@ -35,7 +35,7 @@ class RetrySettings:
         self.include = include
         self.exclude = exclude
 
-    def __call__(self, topic_cls: Type["Topic"]):
+    def __call__(self, topic_cls: Type["TopicConsumer"]):
         topic_cls.retry_settings = self
         return topic_cls
 

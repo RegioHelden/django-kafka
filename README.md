@@ -43,6 +43,8 @@ class Topic1(Topic):
         # ... process values
 ```
 
+`Topic` inherits from the `TopicProducer` and `TopicConsumer` classes. If you only need to consume or produce messages, inherit from one of these classes instead to avoid defining unnecessary abstract methods. 
+
 ### Define a Consumer:
 
 Consumers define which topics they take care of. Usually you want one consumer per project. If 2 consumers are defined, then they will be started in parallel.
