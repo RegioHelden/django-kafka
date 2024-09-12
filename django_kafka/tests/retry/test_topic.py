@@ -4,8 +4,8 @@ from django.test import TestCase, override_settings
 
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.retry import RetrySettings
-from django_kafka.retry.headers import RetryHeader
+from django_kafka.retry.header import RetryHeader
+from django_kafka.retry.settings import RetrySettings
 from django_kafka.retry.topic import (
     RetryTopicConsumer,
     RetryTopicProducer,
@@ -90,7 +90,7 @@ class RetryTopicProducerTestCase(TestCase):
 
         self.assertEqual(rt_producer.name, "group.id.topic.name.test-retry.1")
 
-    @mock.patch("django_kafka.retry.RetrySettings.get_retry_timestamp")
+    @mock.patch("django_kafka.retry.settings.RetrySettings.get_retry_timestamp")
     def test_retry__first_retry(self, mock_get_retry_timestamp: mock.Mock):
         mock_msg = mock.Mock(**{"topic.return_value": "msg_topic"})
         retry_settings = RetrySettings(max_retries=5, delay=60)
@@ -114,7 +114,7 @@ class RetryTopicProducerTestCase(TestCase):
         )
         mock_get_retry_timestamp.assert_called_once_with(1)
 
-    @mock.patch("django_kafka.retry.RetrySettings.get_retry_timestamp")
+    @mock.patch("django_kafka.retry.settings.RetrySettings.get_retry_timestamp")
     def test_retry__last_retry(self, mock_get_retry_timestamp):
         mock_msg = mock.Mock(
             **{"topic.return_value": "group.id.msg_topic.test-retry.4"},

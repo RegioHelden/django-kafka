@@ -9,9 +9,9 @@ from django.utils import timezone
 
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.consumer import Consumer, Topics
-from django_kafka.retry import RetrySettings
 from django_kafka.retry.consumer import RetryConsumer, RetryTopics
-from django_kafka.retry.headers import RetryHeader
+from django_kafka.retry.header import RetryHeader
+from django_kafka.retry.settings import RetrySettings
 from django_kafka.topic import TopicConsumer
 
 

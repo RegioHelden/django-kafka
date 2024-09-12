@@ -10,7 +10,7 @@ from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
 from django_kafka.registry import ConsumersRegistry
-from django_kafka.retry import RetrySettings
+from django_kafka.retry.settings import RetrySettings
 
 logger = logging.getLogger(__name__)
 

@@ -3,14 +3,14 @@ from typing import TYPE_CHECKING
 
 from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.retry.headers import RetryHeader
+from django_kafka.retry.header import RetryHeader
 from django_kafka.serialization import NoOpSerializer
 from django_kafka.topic import TopicConsumer, TopicProducer
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
 
-    from django_kafka.retry import RetrySettings
+    from django_kafka.retry.settings import RetrySettings
 
 
 class RetryTopicProducer(TopicProducer):
