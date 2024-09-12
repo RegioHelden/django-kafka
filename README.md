@@ -43,6 +43,8 @@ class Topic1(Topic):
         # ... process values
 ```
 
+`Topic` inherits from the `TopicProducer` and `TopicConsumer` classes. If you only need to consume or produce messages, inherit from one of these classes instead to avoid defining unnecessary abstract methods. 
+
 ### Define a Consumer:
 
 Consumers define which topics they take care of. Usually you want one consumer per project. If 2 consumers are defined, then they will be started in parallel.
@@ -83,7 +85,7 @@ Or you can use `DjangoKafka` class API.
 ```python
 from django_kafka import kafka
 
-kafka.start_consumers()
+kafka.run_consumers()
 ```
 Check [Confluent Python Consumer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#consumer) for API documentation.
 
@@ -114,6 +116,31 @@ DJANGO_KAFKA = {
 ```
 
 **Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom Topic with your schema.
+
+## Non-Blocking Retries:
+
+Add non-blocking retry behaviour to a topic by using the `retry` decorator:
+
+```python
+from django_kafka import kafka
+from django_kafka.topic import Topic
+
+
+@kafka.retry(max_retries=3, delay=120, include=[ValueError])
+class RetryableTopic(Topic):
+    name = "topic"
+    ...
+```
+
+When the consumption of a message in a retryable topic fails, the message is re-sent to a topic with a name combined of the consumer group id, the original topic name, a `.retry` suffix, and the retry number. Subsequent failed retries will then be sent to retry topics of incrementing retry number until the maximum attempts are reached, after which it will be sent to a dead letter topic suffixed by `.dlt`. So for a failed message in topic `topic` received by consumer group `group`, the expected topic sequence would be: 
+
+1. `topic`
+2. `group.topic.retry.1`
+3. `group.topic.retry.2`
+4. `group.topic.retry.3`
+5. `group.topic.dlt`
+
+When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
 
 ## Settings:
 
@@ -230,7 +257,7 @@ docker compose run --rm app bump-my-version bump <major|minor|patch>
 ```
 This will update version major/minor/patch version respectively and add a tag for release.
 
-- Push including new tag to publish the release to pypi.
+- Once the changes are approved and merged, push the tag to publish the release to pypi.
 ```bash
 git push origin tag <tag_name>
 ```
