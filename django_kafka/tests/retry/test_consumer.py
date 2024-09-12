@@ -123,7 +123,7 @@ class RetryConsumerTestCase(TestCase):
     def test_retry_msg(self):
         mock_retry_topic_consumer = Mock()
         mock_producer_for = mock_retry_topic_consumer.producer_for
-        mock_retry_for = mock_producer_for.return_value.retry_for
+        mock_retry = mock_producer_for.return_value.retry
         msg_mock = Mock()
 
         retry_consumer = self._get_retry_consumer()
@@ -133,8 +133,8 @@ class RetryConsumerTestCase(TestCase):
         retried = retry_consumer.retry_msg(msg_mock, exc)
 
         mock_producer_for.assert_called_once_with(msg_mock)
-        mock_retry_for.assert_called_once_with(exc)
-        self.assertEqual(retried, mock_retry_for.return_value)
+        mock_retry.assert_called_once_with(exc)
+        self.assertEqual(retried, mock_retry.return_value)
 
     @patch("django_kafka.retry.consumer.DeadLetterTopicProducer")
     def test_dead_letter_msg(self, mock_dlt_topic_producer_cls):

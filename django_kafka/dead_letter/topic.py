@@ -1,15 +1,14 @@
 import re
 from typing import TYPE_CHECKING
 
+from django_kafka import settings
 from django_kafka.dead_letter.headers import DeadLetterHeader
-from django_kafka.retry.topic import RETRY_TOPIC_PATTERN
+from django_kafka.retry.topic import RetryTopicProducer
 from django_kafka.serialization import NoOpSerializer
 from django_kafka.topic import TopicProducer
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
-
-DEAD_LETTER_TOPIC_SUFFIX = "dlt"
 
 
 class DeadLetterTopicProducer(TopicProducer):
@@ -19,15 +18,19 @@ class DeadLetterTopicProducer(TopicProducer):
     def __init__(self, group_id: str, msg: "cimpl.Message"):
         self.group_id = group_id
         self.msg = msg
+        super().__init__()
+
+    @classmethod
+    def suffix(cls):
+        return settings.DEAD_LETTER_TOPIC_SUFFIX
 
     @property
     def name(self) -> str:
         topic = self.msg.topic()
-        suffix = DEAD_LETTER_TOPIC_SUFFIX
 
-        if re.search(RETRY_TOPIC_PATTERN, topic):
-            return re.sub(RETRY_TOPIC_PATTERN, suffix, topic)
-        return f"{self.group_id}.{topic}.{suffix}"
+        if re.search(RetryTopicProducer.pattern(), topic):
+            return re.sub(RetryTopicProducer.pattern(), self.suffix(), topic)
+        return f"{self.group_id}.{topic}.{self.suffix()}"
 
     def produce_for(self, header_message, header_detail):
         headers = [

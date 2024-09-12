@@ -99,9 +99,9 @@ class Consumer:
 
         return RetryTopicProducer(
             group_id=self.group_id,
-            settings=topic_consumer.retry_settings,
+            retry_settings=topic_consumer.retry_settings,
             msg=msg,
-        ).retry_for(exc=exc)
+        ).retry(exc=exc)
 
     def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
         from django_kafka.dead_letter.topic import DeadLetterTopicProducer

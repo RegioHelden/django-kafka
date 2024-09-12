@@ -186,7 +186,7 @@ class ConsumerTestCase(TestCase):
     @patch("django_kafka.retry.topic.RetryTopicProducer")
     def test_retry_msg(self, mock_rt_producer_cls):
         mock_topic_consumer = Mock(retry_settings=Mock())
-        mock_retry_for = mock_rt_producer_cls.return_value.retry_for
+        mock_retry = mock_rt_producer_cls.return_value.retry
         msg_mock = Mock()
 
         class SomeConsumer(Consumer):
@@ -201,11 +201,11 @@ class ConsumerTestCase(TestCase):
 
         mock_rt_producer_cls.assert_called_once_with(
             group_id=consumer.group_id,
-            settings=mock_topic_consumer.retry_settings,
+            retry_settings=mock_topic_consumer.retry_settings,
             msg=msg_mock,
         )
-        mock_retry_for.assert_called_once_with(exc=exc)
-        self.assertEqual(retried, mock_retry_for.return_value)
+        mock_retry.assert_called_once_with(exc=exc)
+        self.assertEqual(retried, mock_retry.return_value)
 
     @patch("django_kafka.retry.topic.RetryTopicProducer")
     def test_retry_msg__no_retry(self, mock_rt_producer_cls):

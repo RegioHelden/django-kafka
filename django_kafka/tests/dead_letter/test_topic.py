@@ -1,20 +1,25 @@
 from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
+from django_kafka.conf import SETTINGS_KEY
 from django_kafka.dead_letter.headers import DeadLetterHeader
-from django_kafka.dead_letter.topic import (
-    DEAD_LETTER_TOPIC_SUFFIX,
-    DeadLetterTopicProducer,
+from django_kafka.dead_letter.topic import DeadLetterTopicProducer
+
+
+@override_settings(
+    **{
+        SETTINGS_KEY: {
+            "RETRY_TOPIC_SUFFIX": "test-retry",
+            "DEAD_LETTER_TOPIC_SUFFIX": "test-dlt",
+        },
+    },
 )
-from django_kafka.retry.topic import RETRY_TOPIC_SUFFIX
-
-
 class DeadLetterTopicProducerTestCase(TestCase):
     def test_name(self):
         mock_msg_topic_consumer = mock.Mock(**{"topic.return_value": "topic.name"})
         mock_msg_retry_topic = mock.Mock(
-            **{"topic.return_value": f"group.id.topic.name.{RETRY_TOPIC_SUFFIX}.10"},
+            **{"topic.return_value": "group.id.topic.name.test-retry.10"},
         )
 
         dlt_producer_1 = DeadLetterTopicProducer(
@@ -27,14 +32,8 @@ class DeadLetterTopicProducerTestCase(TestCase):
             msg=mock_msg_retry_topic,
         )
 
-        self.assertEqual(
-            dlt_producer_1.name,
-            f"group.id.topic.name.{DEAD_LETTER_TOPIC_SUFFIX}",
-        )
-        self.assertEqual(
-            dlt_producer_2.name,
-            f"group.id.topic.name.{DEAD_LETTER_TOPIC_SUFFIX}",
-        )
+        self.assertEqual(dlt_producer_1.name, "group.id.topic.name.test-dlt")
+        self.assertEqual(dlt_producer_2.name, "group.id.topic.name.test-dlt")
 
     def test_produce_for(self):
         msg_mock = mock.Mock(**{"topic.return_value": "msg_topic"})

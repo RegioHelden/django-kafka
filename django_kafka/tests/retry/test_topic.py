@@ -1,19 +1,19 @@
 from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
+from django_kafka.conf import SETTINGS_KEY
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.retry import RetrySettings
 from django_kafka.retry.headers import RetryHeader
 from django_kafka.retry.topic import (
-    RETRY_TOPIC_PATTERN,
-    RETRY_TOPIC_SUFFIX,
     RetryTopicConsumer,
     RetryTopicProducer,
 )
 from django_kafka.topic import TopicConsumer
 
 
+@override_settings(**{SETTINGS_KEY: {"RETRY_TOPIC_SUFFIX": "test-retry"}})
 class RetryTopicProducerTestCase(TestCase):
     def test__get_next_attempt(self):
         self.assertEqual(RetryTopicProducer.get_next_attempt("topic"), 1)
@@ -22,25 +22,19 @@ class RetryTopicProducerTestCase(TestCase):
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt(f"group.id.topic.{RETRY_TOPIC_SUFFIX}"),
+            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry"),
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt(
-                f"group.id.topic.{RETRY_TOPIC_SUFFIX}.0",
-            ),
+            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.0"),
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt(
-                f"group.id.topic.{RETRY_TOPIC_SUFFIX}.2",
-            ),
+            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.2"),
             3,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt(
-                f"group.id.topic.{RETRY_TOPIC_SUFFIX}.10",
-            ),
+            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.10"),
             11,
         )
 
@@ -50,7 +44,7 @@ class RetryTopicProducerTestCase(TestCase):
 
         rt_producer = RetryTopicProducer(
             group_id="group.id",
-            settings=retry_settings,
+            retry_settings=retry_settings,
             msg=mock_msg_topic_consumer,
         )
 
@@ -63,42 +57,51 @@ class RetryTopicProducerTestCase(TestCase):
         retry_settings = RetrySettings(max_retries=5, delay=60)
         mock_msg_topic_consumer = mock.Mock(**{"topic.return_value": "topic.name"})
         mock_msg_rt_producer = mock.Mock(
-            **{"topic.return_value": f"group.id.topic.name.{RETRY_TOPIC_SUFFIX}.1"},
+            **{
+                "topic.return_value": "group.id.topic.name.test-retry.1",
+            },
         )
 
         rt_producer_1 = RetryTopicProducer(
             group_id="group.id",
-            settings=retry_settings,
+            retry_settings=retry_settings,
             msg=mock_msg_topic_consumer,
         )
 
         rt_producer_2 = RetryTopicProducer(
             group_id="group.id",
-            settings=retry_settings,
+            retry_settings=retry_settings,
             msg=mock_msg_rt_producer,
         )
 
-        self.assertEqual(
-            rt_producer_1.name,
-            f"group.id.topic.name.{RETRY_TOPIC_SUFFIX}.1",
-        )
-        self.assertEqual(
-            rt_producer_2.name,
-            f"group.id.topic.name.{RETRY_TOPIC_SUFFIX}.2",
+        self.assertEqual(rt_producer_1.name, "group.id.topic.name.test-retry.1")
+        self.assertEqual(rt_producer_2.name, "group.id.topic.name.test-retry.2")
+
+    @override_settings(**{SETTINGS_KEY: {"RETRY_TOPIC_SUFFIX": "test-retry"}})
+    def test_name__uses_settings(self):
+        retry_settings = RetrySettings(max_retries=5, delay=60)
+        mock_msg_topic_consumer = mock.Mock(**{"topic.return_value": "topic.name"})
+
+        rt_producer = RetryTopicProducer(
+            group_id="group.id",
+            retry_settings=retry_settings,
+            msg=mock_msg_topic_consumer,
         )
 
+        self.assertEqual(rt_producer.name, "group.id.topic.name.test-retry.1")
+
     @mock.patch("django_kafka.retry.RetrySettings.get_retry_timestamp")
-    def test_retry_for__first_retry(self, mock_get_retry_timestamp: mock.Mock):
+    def test_retry__first_retry(self, mock_get_retry_timestamp: mock.Mock):
         mock_msg = mock.Mock(**{"topic.return_value": "msg_topic"})
         retry_settings = RetrySettings(max_retries=5, delay=60)
         rt_producer = RetryTopicProducer(
             group_id="group.id",
-            settings=retry_settings,
+            retry_settings=retry_settings,
             msg=mock_msg,
         )
         rt_producer.produce = mock.Mock()
 
-        retried = rt_producer.retry_for(exc=ValueError("error message"))
+        retried = rt_producer.retry(exc=ValueError("error message"))
 
         self.assertTrue(retried)
         rt_producer.produce.assert_called_with(
@@ -112,18 +115,18 @@ class RetryTopicProducerTestCase(TestCase):
         mock_get_retry_timestamp.assert_called_once_with(1)
 
     @mock.patch("django_kafka.retry.RetrySettings.get_retry_timestamp")
-    def test_retry_for__last_retry(self, mock_get_retry_timestamp):
+    def test_retry__last_retry(self, mock_get_retry_timestamp):
         mock_msg = mock.Mock(
-            **{"topic.return_value": f"group.id.msg_topic.{RETRY_TOPIC_SUFFIX}.4"},
+            **{"topic.return_value": "group.id.msg_topic.test-retry.4"},
         )
         rt_producer = RetryTopicProducer(
             group_id="group.id",
-            settings=RetrySettings(max_retries=5, delay=60),
+            retry_settings=RetrySettings(max_retries=5, delay=60),
             msg=mock_msg,
         )
         rt_producer.produce = mock.Mock()
 
-        retried = rt_producer.retry_for(exc=ValueError("error message"))
+        retried = rt_producer.retry(exc=ValueError("error message"))
 
         self.assertTrue(retried)
         rt_producer.produce.assert_called_with(
@@ -136,35 +139,34 @@ class RetryTopicProducerTestCase(TestCase):
         )
         mock_get_retry_timestamp.assert_called_once_with(5)
 
-    def test_retry_for__no_more_retries(self):
+    def test_retry__no_more_retries(self):
         rt_producer = RetryTopicProducer(
             group_id="group.id",
-            settings=RetrySettings(max_retries=5, delay=60),
-            msg=mock.Mock(
-                **{"topic.return_value": f"group.id.msg_topic.{RETRY_TOPIC_SUFFIX}.5"},
-            ),
+            retry_settings=RetrySettings(max_retries=5, delay=60),
+            msg=mock.Mock(**{"topic.return_value": "group.id.msg_topic.test-retry.5"}),
         )
         rt_producer.produce = mock.Mock()
 
-        retried = rt_producer.retry_for(exc=ValueError())
+        retried = rt_producer.retry(exc=ValueError())
 
         self.assertFalse(retried)
         rt_producer.produce.assert_not_called()
 
-    def test_retry_for__no_retry_for_excluded_error(self):
+    def test_retry__no_retry_excluded_error(self):
         rt_producer = RetryTopicProducer(
             group_id="group.id",
-            settings=RetrySettings(max_retries=5, delay=60, exclude=[ValueError]),
+            retry_settings=RetrySettings(max_retries=5, delay=60, exclude=[ValueError]),
             msg=mock.Mock(**{"topic.return_value": "msg_topic"}),
         )
         rt_producer.produce = mock.Mock()
 
-        retried = rt_producer.retry_for(exc=ValueError())
+        retried = rt_producer.retry(exc=ValueError())
 
         self.assertFalse(retried)
         rt_producer.produce.assert_not_called()
 
 
+@override_settings(**{SETTINGS_KEY: {"RETRY_TOPIC_SUFFIX": "test-retry"}})
 class RetryTopicConsumerTestCase(TestCase):
     def _get_retryable_topic_consumer(
         self,
@@ -195,7 +197,7 @@ class RetryTopicConsumerTestCase(TestCase):
 
         self.assertEqual(
             rt_consumer.name,
-            rf"^group\.id\.topic\.name\.{RETRY_TOPIC_PATTERN}",
+            r"^group\.id\.topic\.name\.test\-retry\.([0-9]+)$",
         )
 
     def test_name__regex(self):
@@ -210,7 +212,7 @@ class RetryTopicConsumerTestCase(TestCase):
 
         self.assertEqual(
             rt_consumer.name,
-            rf"^group\.id\.(topic_name|other_name)\.{RETRY_TOPIC_PATTERN}",
+            r"^group\.id\.(topic_name|other_name)\.test\-retry\.([0-9]+)$",
         )
 
     def test_consume(self):
@@ -239,6 +241,6 @@ class RetryTopicConsumerTestCase(TestCase):
         self.assertEqual(rt_producer, mock_rt_producer.return_value)
         mock_rt_producer.assert_called_once_with(
             group_id=rt_consumer.group_id,
-            settings=topic_consumer.retry_settings,
+            retry_settings=topic_consumer.retry_settings,
             msg=mock_msg,
         )

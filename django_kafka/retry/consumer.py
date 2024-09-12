@@ -64,7 +64,7 @@ class RetryConsumer(Consumer):
 
     def retry_msg(self, msg: cimpl.Message, exc: Exception) -> bool:
         rt_consumer = cast(RetryTopicConsumer, self.get_topic_consumer(msg))
-        return rt_consumer.producer_for(msg).retry_for(exc)
+        return rt_consumer.producer_for(msg).retry(exc)
 
     def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
         rt_consumer = cast(RetryTopicConsumer, self.get_topic_consumer(msg))

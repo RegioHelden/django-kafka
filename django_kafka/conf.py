@@ -14,6 +14,8 @@ DEFAULTS = {
         "enable.auto.offset.store": False,
         "topic.metadata.refresh.interval.ms": 10000,
     },
+    "RETRY_TOPIC_SUFFIX": "retry",
+    "DEAD_LETTER_TOPIC_SUFFIX": "dlt",
     "POLLING_FREQUENCY": 1,  # seconds
     "SCHEMA_REGISTRY": {},
 }

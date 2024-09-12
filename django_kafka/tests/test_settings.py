@@ -13,6 +13,8 @@ class SettingsTestCase(TestCase):
         "PRODUCER_CONFIG",
         "CONSUMER_CONFIG",
         "RETRY_CONSUMER_CONFIG",
+        "RETRY_TOPIC_SUFFIX",
+        "DEAD_LETTER_TOPIC_SUFFIX",
         "POLLING_FREQUENCY",
         "SCHEMA_REGISTRY",
     )
@@ -39,6 +41,8 @@ class SettingsTestCase(TestCase):
             "RETRY_CONSUMER_CONFIG": {
                 "topic.metadata.refresh.interval.ms": 5000,
             },
+            "RETRY_TOPIC_SUFFIX": "retry-extra",
+            "DEAD_LETTER_TOPIC_SUFFIX": "dlt-extra",
             "POLLING_FREQUENCY": 0.5,
             "SCHEMA_REGISTRY": {
                 "url": "https://schema-registry",

@@ -257,7 +257,7 @@ docker compose run --rm app bump-my-version bump <major|minor|patch>
 ```
 This will update version major/minor/patch version respectively and add a tag for release.
 
-- Push including new tag to publish the release to pypi.
+- Once the changes are approved and merged, push the tag to publish the release to pypi.
 ```bash
 git push origin tag <tag_name>
 ```

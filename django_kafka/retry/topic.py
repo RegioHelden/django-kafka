@@ -1,6 +1,7 @@
 import re
 from typing import TYPE_CHECKING
 
+from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.retry.headers import RetryHeader
 from django_kafka.serialization import NoOpSerializer
@@ -11,37 +12,48 @@ if TYPE_CHECKING:
 
     from django_kafka.retry import RetrySettings
 
-RETRY_TOPIC_SUFFIX = "retry"
-RETRY_TOPIC_PATTERN = rf"{re.escape(RETRY_TOPIC_SUFFIX)}\.([0-9]+)$"
-
 
 class RetryTopicProducer(TopicProducer):
     key_serializer = NoOpSerializer
     value_serializer = NoOpSerializer
 
-    def __init__(self, group_id: str, settings: "RetrySettings", msg: "cimpl.Message"):
-        self.settings = settings
+    def __init__(
+        self,
+        group_id: str,
+        retry_settings: "RetrySettings",
+        msg: "cimpl.Message",
+    ):
+        self.settings = retry_settings
         self.group_id = group_id
         self.msg = msg
         self.attempt = self.get_next_attempt(msg.topic())
         super().__init__()
 
     @classmethod
+    def suffix(cls):
+        return settings.RETRY_TOPIC_SUFFIX
+
+    @classmethod
+    def pattern(cls):
+        """returns regex pattern to match topics producing by this class"""
+        return rf"{re.escape(cls.suffix())}\.([0-9]+)$"
+
+    @classmethod
     def get_next_attempt(cls, topic_name: str) -> int:
-        match = re.search(RETRY_TOPIC_PATTERN, topic_name)
+        match = re.search(cls.pattern(), topic_name)
         attempt = int(match.group(1)) if match else 0
         return attempt + 1
 
     @property
     def name(self) -> str:
         topic = self.msg.topic()
-        suffix = f"{RETRY_TOPIC_SUFFIX}.{self.attempt}"
+        suffix = f"{self.suffix()}.{self.attempt}"
 
-        if re.search(RETRY_TOPIC_PATTERN, topic):
-            return re.sub(RETRY_TOPIC_PATTERN, suffix, topic)
+        if re.search(self.pattern(), topic):
+            return re.sub(self.pattern(), suffix, topic)
         return f"{self.group_id}.{self.msg.topic()}.{suffix}"
 
-    def retry_for(self, exc: Exception) -> bool:
+    def retry(self, exc: Exception) -> bool:
         if not self.settings.should_retry(exc=exc):
             return False
 
@@ -84,7 +96,7 @@ class RetryTopicConsumer(TopicConsumer):
         else:
             topic_name = re.escape(self.topic_consumer.name)
 
-        return rf"^{group_id}\.{topic_name}\.{RETRY_TOPIC_PATTERN}"
+        return rf"^{group_id}\.{topic_name}\.{RetryTopicProducer.pattern()}"
 
     def consume(self, msg: "cimpl.Message"):
         self.topic_consumer.consume(msg)
@@ -92,6 +104,6 @@ class RetryTopicConsumer(TopicConsumer):
     def producer_for(self, msg: "cimpl.Message") -> RetryTopicProducer:
         return RetryTopicProducer(
             group_id=self.group_id,
-            settings=self.topic_consumer.retry_settings,
+            retry_settings=self.topic_consumer.retry_settings,
             msg=msg,
         )
