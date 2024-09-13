@@ -36,7 +36,6 @@ class ConsumerTestCase(TestCase):
     def test_run(self, mock_consumer_client, mock_process_message):
         class SomeConsumer(Consumer):
             topics = MagicMock()
-            config = {}
             log_error = Mock()
 
         consumer = SomeConsumer()
@@ -65,7 +64,6 @@ class ConsumerTestCase(TestCase):
     def test_process_message_success(self, mock_consumer_client, mock_commit_offset):
         class SomeConsumer(Consumer):
             topics = MagicMock()
-            config = {}
 
         msg = Mock(error=Mock(return_value=False))
 
@@ -91,7 +89,6 @@ class ConsumerTestCase(TestCase):
     ):
         class SomeConsumer(Consumer):
             topics = MagicMock()
-            config = {}
 
         msg = Mock(error=Mock(return_value=True))
 
@@ -130,7 +127,6 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics(topic_consumer)
-            config = {}
 
         consumer = SomeConsumer()
 

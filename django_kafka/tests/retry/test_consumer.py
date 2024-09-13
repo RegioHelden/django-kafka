@@ -116,7 +116,6 @@ class RetryConsumerTestCase(TestCase):
     def test_build__no_retry_topics(self):
         class TestConsumer(Consumer):
             topics = Topics()
-            config = {}
 
         self.assertIsNone(RetryConsumer.build(TestConsumer))
 
