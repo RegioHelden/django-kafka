@@ -59,6 +59,22 @@ class TestDbzModelTopicConsumer(TestCase):
             False,
         )
         self.assertEqual(
+            topic_consumer.is_deletion(Model, {}, {"__deleted": "true"}),
+            True,
+        )
+        self.assertEqual(
+            topic_consumer.is_deletion(Model, {}, {"__deleted": "True"}),
+            True,
+        )
+        self.assertEqual(
+            topic_consumer.is_deletion(Model, {}, {"__deleted": "false"}),
+            False,
+        )
+        self.assertEqual(
+            topic_consumer.is_deletion(Model, {}, {"__deleted": "anything"}),
+            False,
+        )
+        self.assertEqual(
             topic_consumer.is_deletion(Model, {}, {"__deleted": False}),
             False,
         )

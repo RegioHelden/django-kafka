@@ -1,7 +1,10 @@
 # Changelog
 
+## 0.4.1 (2024-09-17)
+* Support string-based delete keys in DbzModelTopicConsumer
+
 ## 0.4.0 (2024-09-17)
-* Add ModelTopicConsumer and DbModelTopicConsumer 
+* Add ModelTopicConsumer and DbzModelTopicConsumer 
 
 ## 0.3.0 (2024-09-05)
 * Add decorator for topic retry and dead letter topic, see `README.md`
