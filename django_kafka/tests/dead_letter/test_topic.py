@@ -3,7 +3,7 @@ from unittest import mock
 from django.test import TestCase, override_settings
 
 from django_kafka.conf import SETTINGS_KEY
-from django_kafka.dead_letter.headers import DeadLetterHeader
+from django_kafka.dead_letter.header import DeadLetterHeader
 from django_kafka.dead_letter.topic import DeadLetterTopicProducer
 
 

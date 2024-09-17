@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
 
-from django_kafka.retry.headers import RetryHeader
+from django_kafka.retry.header import RetryHeader
 
 
 class RetryHeaderTestCase(TestCase):

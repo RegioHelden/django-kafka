@@ -8,7 +8,7 @@ from django.utils import timezone
 from django_kafka.conf import settings
 from django_kafka.consumer import Consumer, Topics
 from django_kafka.dead_letter.topic import DeadLetterTopicProducer
-from django_kafka.retry.headers import RetryHeader
+from django_kafka.retry.header import RetryHeader
 from django_kafka.retry.topic import RetryTopicConsumer
 
 if TYPE_CHECKING:

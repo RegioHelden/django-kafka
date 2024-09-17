@@ -1,8 +1,8 @@
 import re
 from typing import TYPE_CHECKING
 
-from django_kafka import settings
-from django_kafka.dead_letter.headers import DeadLetterHeader
+from django_kafka.conf import settings
+from django_kafka.dead_letter.header import DeadLetterHeader
 from django_kafka.retry.topic import RetryTopicProducer
 from django_kafka.serialization import NoOpSerializer
 from django_kafka.topic import TopicProducer

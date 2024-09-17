@@ -117,6 +117,67 @@ DJANGO_KAFKA = {
 
 **Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom Topic with your schema.
 
+## Specialized Topics:
+
+### ModelTopicConsumer:
+
+`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model, the topic to consume from and define a few abstract methods.
+
+```py
+
+from django_kafka.topic.model import ModelTopicConsumer
+
+from my_app.models import MyModel
+
+class MyModelConsumer(ModelTopicConsumer):
+    name = "topic"
+    model = MyModel
+
+    def is_deletion(self, model, key, value) -> bool:
+        """returns if the message represents a deletion"""
+        return value.pop('__deleted', False)
+    
+    def get_lookup_kwargs(self, model, key, value) -> dict:
+        """returns the lookup kwargs used for filtering the model instance"""
+        return {"id": key}
+```
+
+Model instances will have their attributes synced from the message value. If you need to alter a message key or value before it is assigned, define a `transform_{attr}` method:
+
+```python
+
+    class MyModelConsumer(ModelTopicConsumer):
+        ...
+        def transform_name(model, key, value):
+            return 'first_name', value["name"].upper()
+```
+
+### DbzModelTopicConsumer:
+
+`DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer` and  defines default implementations for `is_deletion` and `get_lookup_kwargs` methods.
+
+In Debezium it is possible to [reroute records](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html) from multiple sources to the same topic. In doing so Debezium [inserts a table identifier](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html#_ensure_unique_key) to the key to ensure uniqueness. When this key is inserted, you **must instead** define a `reroute_model_map` to map the table identifier to the model class to be created.
+
+```py
+
+from django_kafka.topic.debezium import DbzModelTopicConsumer
+
+from my_app.models import MyModel, MyOtherModel
+
+class MyModelConsumer(DbzModelTopicConsumer):
+    name = "debezium_topic"
+    reroute_model_map = {
+        'public.my_model': MyModel,
+        'public.my_other_model': MyOtherModel,
+    }
+```
+
+A few notes:
+
+1. The connector must be using the [event flattening SMT](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html) to simplify the message structure.
+2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field.
+3. The message key is assumed to contain the model PK as a field, [which is the default behaviour](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-message-key-columns) for Debezium source connectors. If you need more complicated lookup behaviour, override `get_lookup_kwargs`.
+
 ## Non-Blocking Retries:
 
 Add non-blocking retry behaviour to a topic by using the `retry` decorator:

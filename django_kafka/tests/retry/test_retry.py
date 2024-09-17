@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from django_kafka.retry import RetrySettings
+from django_kafka.retry.settings import RetrySettings
 from django_kafka.topic import Topic
 
 

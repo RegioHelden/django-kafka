@@ -10,11 +10,11 @@ from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
 from django_kafka.registry import ConsumersRegistry
-from django_kafka.retry import RetrySettings
+from django_kafka.retry.settings import RetrySettings
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "autodiscover",
