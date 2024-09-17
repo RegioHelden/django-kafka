@@ -27,7 +27,15 @@ class DbzModelTopicConsumer(ModelTopicConsumer, ABC):
         return super().get_model(key, value)
 
     def is_deletion(self, model, key, value) -> bool:
-        return value is None or value.pop("__deleted", False)
+        if value is None:
+            return True
+
+        deleted = value.pop("__deleted", None)
+        if isinstance(deleted, bool):
+            return deleted
+        if isinstance(deleted, str):
+            return deleted.lower() == "true"
+        return False
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
         pk_field = model._meta.pk.name
