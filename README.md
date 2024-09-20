@@ -269,18 +269,18 @@ This way the chronology is strictly kept and the infinite events loop is avoided
 
 The disadvantage is that each system will still consume its own message.
 
-#### There are 2 mixins for django Model and for QuerySet:
+#### There are 2 classes for django Model and for QuerySet:
 
-#### KafkaSkipMixin
-It adds new `kafka_skip` boolean field, which defaults to `False`. And overrides `Model.save` method and sets `kafka_skip=False`.
+#### KafkaSkipModel
+Adds the `kafka_skip` boolean field, defaulting to `False`. This also automatically resets `kafka_skip` to `False` when updating model instances (if not explicitly set).
 
 Usage:
 ```python
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
-from django_kafka.models import KafkaSkipMixin
+from django_kafka.models import KafkaSkipModel
 
-class User(KafkaSkipMixin, PermissionsMixin, AbstractBaseUser):
+class User(KafkaSkipModel, PermissionsMixin, AbstractBaseUser):
     # ...
 ```
 
@@ -295,14 +295,14 @@ Usage:
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
-from django_kafka.models import KafkaSkipMixin, KafkaSkipQueryset
+from django_kafka.models import KafkaSkipModel, KafkaSkipQueryset
 
 
 class UserManager(BaseUserManager.from_queryset(KafkaSkipQueryset)):
     # ...
 
 
-class User(KafkaSkipMixin, PermissionsMixin, AbstractBaseUser):
+class User(KafkaSkipModel, PermissionsMixin, AbstractBaseUser):
     # ...
     objects = UserManager()
 ```
