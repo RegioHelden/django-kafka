@@ -17,6 +17,7 @@ class SettingsTestCase(TestCase):
         "DEAD_LETTER_TOPIC_SUFFIX",
         "POLLING_FREQUENCY",
         "SCHEMA_REGISTRY",
+        "CONNECT",
     )
 
     @patch("django_kafka.consumer.ConfluentConsumer")
@@ -46,6 +47,18 @@ class SettingsTestCase(TestCase):
             "POLLING_FREQUENCY": 0.5,
             "SCHEMA_REGISTRY": {
                 "url": "https://schema-registry",
+            },
+            "CONNECT": {
+                "HOST": "http://kafka-connect",
+                "AUTH": ("user", "pass"),
+                "RETRY": {
+                    "connect": 10,
+                    "read": 10,
+                    "status": 10,
+                    "backoff_factor": 0.1,
+                    "status_forcelist": [502, 503, 504],
+                },
+                "REQUESTS_TIMEOUT": 60,
             },
         }
         with override_settings(**{SETTINGS_KEY: user_settings}):

@@ -1,6 +1,6 @@
 import logging
 from multiprocessing.pool import Pool
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from django.utils.functional import cached_property
@@ -9,12 +9,16 @@ from django.utils.module_loading import autodiscover_modules
 from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
-from django_kafka.registry import ConsumersRegistry
+from django_kafka.registry import ConsumersRegistry, Registry
 from django_kafka.retry.settings import RetrySettings
+
+if TYPE_CHECKING:
+    from django_kafka.connect.connector import Connector
+    from django_kafka.consumer import Consumer
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 __all__ = [
     "autodiscover",
@@ -24,10 +28,11 @@ __all__ = [
 
 
 def autodiscover():
-    autodiscover_modules("consumers")
+    autodiscover_modules("consumers", "connectors")
 
 
 class DjangoKafka:
+    connectors = Registry["Connector"]()
     consumers = ConsumersRegistry()
     retry = RetrySettings
 

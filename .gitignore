@@ -10,3 +10,4 @@ build/
 .bash_history
 db.sqlite3
 .ruff_cache
+docker-compose.override.yaml

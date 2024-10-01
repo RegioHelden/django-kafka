@@ -203,6 +203,68 @@ When the consumption of a message in a retryable topic fails, the message is re-
 
 When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
 
+## Connectors
+
+Connectors are defined as python classes decorated with `@kafka.connectors()` which adds the class to the global registry. 
+
+`django_kafka.connect.connector.Connector` implements submission, validation and deletion of the connector configuration.
+
+### Define connector:
+```python
+# Connectors are discovered automatically when placed under the connectors module
+# e.g. ./connectors.py
+
+from django_kafka import kafka
+from django_kafka.connect.connector import Connector
+
+
+@kafka.connectors()
+class MyConnector(Connector):
+    config = {
+        # configuration for the connector
+    }
+```
+
+### Mark a connector for removal:
+
+```python
+from django_kafka import kafka
+from django_kafka.connect.connector import Connector
+
+
+@kafka.connectors()
+class MyConnector(Connector):
+    mark_for_removal = True
+    config = {
+        # configuration for the connector
+    }
+```
+
+### Manage connectors:
+
+django-kafka provides `./manage.py kafka_connect` management command to manage your connectors.
+
+
+#### Manage a single connector
+```bash
+./manage.py kafka_connect path.to.my.SpecialConnector --validate --publish --check-status --ignore-failures
+````
+
+#### Manage all connectors
+```bash
+./manage.py kafka_connect --validate --publish --check-status --ignore-failures
+````
+
+`--validate` - validates the config over the connect REST API
+
+`--publish` - create or update the connector or delete when `mark_for_removal = True`
+
+`--check-status` - check the status of the connector is `RUNNING`.
+
+`--ignore-failures` - command wont fail if any of the connectors fail to validate or publish.
+
+See `--help`.
+
 ## Settings:
 
 **Defaults:**
@@ -215,6 +277,22 @@ DJANGO_KAFKA = {
     "POLLING_FREQUENCY": 1,  # seconds
     "SCHEMA_REGISTRY": {},
     "ERROR_HANDLER": "django_kafka.error_handlers.ClientErrorHandler",
+    "CONNECT": {
+        # Rest API of the kafka-connect instance
+        "HOST": "http://kafka-connect",
+        # `requests.auth.AuthBase` instance or tuple of (username, password) for Basic Auth 
+        "AUTH": ("name", "password"),
+        # kwargs for `urllib3.util.retry.Retry` initialization
+        "RETRY": dict(
+            connect=5,
+            read=5,
+            status=5,
+            backoff_factor=0.5,
+            status_forcelist=[502, 503, 504],
+        ),
+        # `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call
+        "REQUESTS_TIMEOUT": 30,
+    },
 }
 ```
 
@@ -255,6 +333,24 @@ Default: `django_kafka.error_handlers.ClientErrorHandler`
 
 This is an `error_cb` hook (see [Kafka Client Configuration](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#kafka-client-configuration) for reference).
 It is triggered for client global errors and in case of fatal error it raises `DjangoKafkaError`.
+
+#### `CONNECT`
+Default: `{
+    "HOST": "",
+    "AUTH": None,
+    "RETRY": dict(
+        connect=5,
+        read=5,
+        status=5,
+        backoff_factor=0.5,
+        status_forcelist=[502, 503, 504],
+    ),
+    "REQUESTS_TIMEOUT": 30,
+}`
+
+Required for `./manage.py kafka_conncect` command.
+
+Used by `django_kafka.connect.connector.Connector` to initialize `django_kafka.connect.client.KafkaConnectClient`.
 
 
 ## Bidirectional data sync with no infinite event loop.
