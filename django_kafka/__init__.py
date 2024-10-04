@@ -9,7 +9,7 @@ from django.utils.module_loading import autodiscover_modules
 from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
-from django_kafka.registry import ConsumersRegistry, Registry
+from django_kafka.registry import ConnectorsRegistry, ConsumersRegistry
 from django_kafka.retry.settings import RetrySettings
 
 if TYPE_CHECKING:
@@ -28,11 +28,16 @@ __all__ = [
 
 
 def autodiscover():
-    autodiscover_modules("consumers", "connectors")
+    autodiscover_modules(
+        "consumers",
+        "connectors",
+        "kafka.consumers",
+        "kafka.connectors",
+    )
 
 
 class DjangoKafka:
-    connectors = Registry["Connector"]()
+    connectors = ConnectorsRegistry()
     consumers = ConsumersRegistry()
     retry = RetrySettings
 

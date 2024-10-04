@@ -1,2 +1,4 @@
 class DjangoKafkaError(Exception):
-    pass
+    def __init__(self, *args, context: any = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = context

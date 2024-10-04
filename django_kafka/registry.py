@@ -4,6 +4,7 @@ from django_kafka.exceptions import DjangoKafkaError
 
 if TYPE_CHECKING:
     from django_kafka.consumer import Consumer
+    from django_kafka.connect.connector import Connector
 
 
 T = TypeVar('T')
@@ -34,7 +35,14 @@ class Registry(Generic[T]):
 
     def register(self, cls: Type[T]):
         key = self.get_key(cls)
+        if key in self._classes:
+            raise DjangoKafkaError(f"`{key}` is already registered.")
         self._classes[key] = cls
+
+
+class ConnectorsRegistry(Registry["Connector"]):
+    def get_key(self, cls) -> str:
+        return cls.name
 
 
 class ConsumersRegistry(Registry["Consumer"]):
