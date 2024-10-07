@@ -1,6 +1,6 @@
 from typing import Type
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from django.test import SimpleTestCase
 
@@ -99,6 +99,7 @@ class ConsumersRegistryTestCase(SimpleTestCase):
         self.assertIs(registry[retry_key_a], retry_consumer_mock)
 
 
+@patch("django_kafka.connect.client.KafkaConnectSession", new=Mock())
 class ConnectorsRegistryTestCase(SimpleTestCase):
     def _gen_cls(self, name) -> Type[Connector]:
         return type[Connector](

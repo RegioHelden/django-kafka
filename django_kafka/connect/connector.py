@@ -24,16 +24,16 @@ class ConnectorStatus(StrEnum):
     PAUSED = "PAUSED"
 
 
-class Connector(ABC):
-    mark_for_removal = False
-
-    @classmethod
-    @property
-    def name(cls) -> str:
-        """Name of the connector."""
+class Name:
+    def __get__(self, instance, owner):
         if settings.CONNECTOR_NAME_PREFIX:
-            return f"{settings.CONNECTOR_NAME_PREFIX}.{cls.__name__}"
-        return cls.__name__
+            return f"{settings.CONNECTOR_NAME_PREFIX}.{owner.__name__}"
+        return owner.__name__
+
+
+class Connector(ABC):
+    name = Name()
+    mark_for_removal = False
 
     @property
     @abstractmethod

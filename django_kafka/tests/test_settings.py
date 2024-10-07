@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import override_settings, SimpleTestCase
 
 from django_kafka.conf import DEFAULTS, SETTINGS_KEY, settings
 
 
-class SettingsTestCase(TestCase):
+class SettingsTestCase(SimpleTestCase):
     settings_keys = (
         "CLIENT_ID",
         "ERROR_HANDLER",
