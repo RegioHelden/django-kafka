@@ -147,7 +147,7 @@ class Consumer:
         try:
             self.start()
             while True:
-                if msg := self.poll():
+                if (msg := self.poll()) is not None:
                     self.process_message(msg)
         except Exception as exc:
             self.log_error(exc)
