@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import override_settings, SimpleTestCase
 
 from django_kafka import DjangoKafka
 from django_kafka.conf import SETTINGS_KEY
@@ -9,7 +9,7 @@ from django_kafka.producer import Producer
 from django_kafka.registry import ConsumersRegistry
 
 
-class DjangoKafkaTestCase(TestCase):
+class DjangoKafkaTestCase(SimpleTestCase):
     def test_registry(self):
         kafka = DjangoKafka()
 

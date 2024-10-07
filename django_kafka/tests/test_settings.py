@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import override_settings, SimpleTestCase
 
 from django_kafka.conf import DEFAULTS, SETTINGS_KEY, settings
 
 
-class SettingsTestCase(TestCase):
+class SettingsTestCase(SimpleTestCase):
     settings_keys = (
         "CLIENT_ID",
         "ERROR_HANDLER",
@@ -17,7 +17,11 @@ class SettingsTestCase(TestCase):
         "DEAD_LETTER_TOPIC_SUFFIX",
         "POLLING_FREQUENCY",
         "SCHEMA_REGISTRY",
-        "CONNECT",
+        "CONNECT_HOST",
+        "CONNECT_AUTH",
+        "CONNECT_RETRY",
+        "CONNECT_REQUESTS_TIMEOUT",
+        "CONNECTOR_NAME_PREFIX",
     )
 
     @patch("django_kafka.consumer.ConfluentConsumer")
@@ -48,18 +52,17 @@ class SettingsTestCase(TestCase):
             "SCHEMA_REGISTRY": {
                 "url": "https://schema-registry",
             },
-            "CONNECT": {
-                "HOST": "http://kafka-connect",
-                "AUTH": ("user", "pass"),
-                "RETRY": {
-                    "connect": 10,
-                    "read": 10,
-                    "status": 10,
-                    "backoff_factor": 0.1,
-                    "status_forcelist": [502, 503, 504],
-                },
-                "REQUESTS_TIMEOUT": 60,
+            "CONNECT_HOST": "http://kafka-connect",
+            "CONNECT_AUTH": ("user", "pass"),
+            "CONNECT_RETRY": {
+                "connect": 10,
+                "read": 10,
+                "status": 10,
+                "backoff_factor": 0.1,
+                "status_forcelist": [502, 503, 504],
             },
+            "CONNECT_REQUESTS_TIMEOUT": 60,
+            "CONNECTOR_NAME_PREFIX": "project_name"
         }
         with override_settings(**{SETTINGS_KEY: user_settings}):
             for key in self.settings_keys:

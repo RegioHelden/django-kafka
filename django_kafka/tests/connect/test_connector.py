@@ -1,6 +1,6 @@
 from unittest.mock import patch, Mock
 
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase
 
 from django_kafka.connect.client import KafkaConnectClient
 from django_kafka.exceptions import DjangoKafkaError
@@ -12,22 +12,26 @@ class MyConnector(Connector):
     config = {}
 
 
-@override_settings(CONNECT={
-    "HOST": "http://localhost",
-    "AUTH": ("user", "pass"),
-    "RETRY": {},
-    "REQUESTS_TIMEOUT": 5,
-})
+@patch("django_kafka.connect.client.KafkaConnectSession", new=Mock())
+@patch.multiple("django_kafka.conf.settings", CONNECT_HOST="http://kafka-connect")
 class ConnectorTestCase(SimpleTestCase):
+    def test_name(self):
+        class MyConnector2(Connector):
+            name = 'custom-name'
+            config = {}
+
+        self.assertEqual(MyConnector.name, 'MyConnector')
+        self.assertEqual(MyConnector2.name, 'custom-name')
+
     @patch("django_kafka.connect.connector.KafkaConnectClient", spec=True)
     def test_init_request_session(self, mock_client):
         connector = MyConnector()
 
         mock_client.assert_called_with(
-            host=settings.CONNECT["HOST"],
-            auth=settings.CONNECT["AUTH"],
-            retry=settings.CONNECT["RETRY"],
-            timeout=settings.CONNECT["REQUESTS_TIMEOUT"],
+            host=settings.CONNECT_HOST,
+            auth=settings.CONNECT_AUTH,
+            retry=settings.CONNECT_RETRY,
+            timeout=settings.CONNECT_REQUESTS_TIMEOUT,
         )
         self.assertIsInstance(connector.client, KafkaConnectClient)
 

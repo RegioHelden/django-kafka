@@ -24,13 +24,16 @@ class ConnectorStatus(StrEnum):
     PAUSED = "PAUSED"
 
 
-class Connector(ABC):
-    mark_for_removal = False
+class Name:
+    def __get__(self, instance, owner):
+        if settings.CONNECTOR_NAME_PREFIX:
+            return f"{settings.CONNECTOR_NAME_PREFIX}.{owner.__name__}"
+        return owner.__name__
 
-    @property
-    def name(self) -> str:
-        """Name of the connector."""
-        return f"{settings.CLIENT_ID}.{self.__class__.__module__}.{self.__class__.__name__}"
+
+class Connector(ABC):
+    name = Name()
+    mark_for_removal = False
 
     @property
     @abstractmethod
@@ -38,11 +41,14 @@ class Connector(ABC):
         """Configurations for the connector."""
 
     def __init__(self):
+        if not settings.CONNECT_HOST:
+            raise DjangoKafkaError("Kafka `CONNECT_HOST` is not configured.")
+
         self.client = KafkaConnectClient(
-            host=settings.CONNECT["HOST"],
-            auth=settings.CONNECT["AUTH"],
-            retry=settings.CONNECT["RETRY"],
-            timeout=settings.CONNECT["REQUESTS_TIMEOUT"],
+            host=settings.CONNECT_HOST,
+            auth=settings.CONNECT_AUTH,
+            retry=settings.CONNECT_RETRY,
+            timeout=settings.CONNECT_REQUESTS_TIMEOUT,
         )
 
     def delete(self) -> bool:
@@ -52,7 +58,7 @@ class Connector(ABC):
             return False
 
         if not response.ok:
-            raise DjangoKafkaError(response.text)
+            raise DjangoKafkaError(response.text, context=response)
 
         return True
 
@@ -60,7 +66,7 @@ class Connector(ABC):
         response = self.client.update_or_create(self.name, self.config)
 
         if not response.ok:
-            raise DjangoKafkaError(response.text)
+            raise DjangoKafkaError(response.text, context=response)
 
         return response.json()
 
@@ -68,7 +74,7 @@ class Connector(ABC):
         response = self.client.validate(self.config)
 
         if raise_exception and not response.ok:
-            raise DjangoKafkaError(response.text)
+            raise DjangoKafkaError(response.text, context=response)
 
         return response.ok
 
@@ -76,6 +82,5 @@ class Connector(ABC):
         response = self.client.connector_status(self.name)
 
         if not response.ok:
-            raise DjangoKafkaError(response.text)
-
+            raise DjangoKafkaError(response.text, context=response)
         return response.json()["connector"]["state"]

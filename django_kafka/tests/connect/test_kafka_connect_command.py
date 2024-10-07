@@ -160,7 +160,9 @@ class KafkaConnectTestCase(SimpleTestCase):
         with patch_kafka_connectors(**{"status.return_value": ConnectorStatus.UNASSIGNED}) as connector:
             self.command.handle_status()
 
-        connector.status.assert_called_once_with()
+        # status UNASSIGNED is retried 3 times
+        self.assertEqual(connector.status.call_count, 3)
+
         self.assertTrue(self.command.has_failures)
 
     def test_handle_status__django_kafka_error(self):

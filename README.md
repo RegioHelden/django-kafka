@@ -49,7 +49,7 @@ class Topic1(Topic):
 
 Consumers define which topics they take care of. Usually you want one consumer per project. If 2 consumers are defined, then they will be started in parallel.
 
-Consumers are auto-discovered and are expected to be located under the `consumers.py`.
+Consumers are auto-discovered and are expected to be located under the `some_django_app/kafka/consumers.py` or `some_django_app/consumers.py`.
 
 ```python
 # ./consumers.py
@@ -205,6 +205,8 @@ When consumers are started using [start commands](#start-the-Consumers), an addi
 
 ## Connectors
 
+Connectors are auto-discovered and are expected to be located under the `some_django_app/kafka/connectors.py` or `some_django_app/connectors.py`.
+
 Connectors are defined as python classes decorated with `@kafka.connectors()` which adds the class to the global registry. 
 
 `django_kafka.connect.connector.Connector` implements submission, validation and deletion of the connector configuration.
@@ -271,28 +273,34 @@ See `--help`.
 ```python
 DJANGO_KAFKA = {
     "CLIENT_ID": f"{socket.gethostname()}-python",
+    "ERROR_HANDLER": "django_kafka.error_handlers.ClientErrorHandler",
     "GLOBAL_CONFIG": {},
     "PRODUCER_CONFIG": {},
     "CONSUMER_CONFIG": {},
+    "RETRY_CONSUMER_CONFIG": {
+        "auto.offset.reset": "earliest",
+        "enable.auto.offset.store": False,
+        "topic.metadata.refresh.interval.ms": 10000,
+    },
+    "RETRY_TOPIC_SUFFIX": "retry",
+    "DEAD_LETTER_TOPIC_SUFFIX": "dlt",
     "POLLING_FREQUENCY": 1,  # seconds
     "SCHEMA_REGISTRY": {},
-    "ERROR_HANDLER": "django_kafka.error_handlers.ClientErrorHandler",
-    "CONNECT": {
-        # Rest API of the kafka-connect instance
-        "HOST": "http://kafka-connect",
-        # `requests.auth.AuthBase` instance or tuple of (username, password) for Basic Auth 
-        "AUTH": ("name", "password"),
-        # kwargs for `urllib3.util.retry.Retry` initialization
-        "RETRY": dict(
-            connect=5,
-            read=5,
-            status=5,
-            backoff_factor=0.5,
-            status_forcelist=[502, 503, 504],
-        ),
-        # `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call
-        "REQUESTS_TIMEOUT": 30,
-    },
+    # Rest API of the kafka-connect instance
+    "CONNECT_HOST": None,
+    # `requests.auth.AuthBase` instance or tuple of (username, password) for Basic Auth
+    "CONNECT_AUTH": None,
+    # kwargs for `urllib3.util.retry.Retry` initialization
+    "CONNECT_RETRY": dict(
+        connect=5,
+        read=5,
+        status=5,
+        backoff_factor=0.5,
+        status_forcelist=[502, 503, 504],
+    ),
+    # `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call
+    "CONNECT_REQUESTS_TIMEOUT": 30,
+    "CONNECTOR_NAME_PREFIX": "",
 }
 ```
 
@@ -334,21 +342,38 @@ Default: `django_kafka.error_handlers.ClientErrorHandler`
 This is an `error_cb` hook (see [Kafka Client Configuration](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#kafka-client-configuration) for reference).
 It is triggered for client global errors and in case of fatal error it raises `DjangoKafkaError`.
 
-#### `CONNECT`
-Default: `{
-    "HOST": "",
-    "AUTH": None,
-    "RETRY": dict(
-        connect=5,
-        read=5,
-        status=5,
-        backoff_factor=0.5,
-        status_forcelist=[502, 503, 504],
-    ),
-    "REQUESTS_TIMEOUT": 30,
-}`
+#### `CONNECT_HOST`
+Default: `None`
 
-Required for `./manage.py kafka_conncect` command.
+Rest API of the kafka-connect instance.
+
+#### `CONNECT_AUTH`
+Default: `None`
+
+`requests.auth.AuthBase` instance or `("username", "password")` for Basic Auth.
+
+#### `CONNECT_AUTH`
+Default: `dict(
+    connect=5,
+    read=5,
+    status=5,
+    backoff_factor=0.5,
+    status_forcelist=[502, 503, 504],
+)`
+
+kwargs for `urllib3.util.retry.Retry` initialization.
+
+#### `CONNECT_REQUESTS_TIMEOUT`
+Default: `30`
+
+`django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call.
+
+#### `CONNECTOR_NAME_PREFIX`
+Default: `""`
+
+Prefix which will be added to the connector name when publishing the connector. 
+
+`CONNECT_` settings are required for `./manage.py kafka_connect` command which talks to the Rest API of the kafka-connect instance.
 
 Used by `django_kafka.connect.connector.Connector` to initialize `django_kafka.connect.client.KafkaConnectClient`.
 

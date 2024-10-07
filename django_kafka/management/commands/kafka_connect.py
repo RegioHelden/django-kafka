@@ -2,11 +2,13 @@ import logging
 
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
+from requests import Response
 from requests.exceptions import RetryError
 
 from django_kafka import kafka
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.connect.connector import Connector, ConnectorStatus
+from django_kafka.utils import retry
 
 logger = logging.getLogger(__name__)
 
@@ -134,22 +136,40 @@ class Command(BaseCommand):
             self.stdout.write(f"{connector_path}: ", ending="")
 
             connector = kafka.connectors[connector_path]()
-            if connector.mark_for_removal:
-                self.stdout.write(self.style.WARNING("skip (REASON: marked for removal)"))
-                continue
-
             try:
-                status = connector.status()
-            except (DjangoKafkaError, RetryError) as error:
+                self._connector_is_running(connector)
+            except DjangoKafkaError as error:
                 self.has_failures = True
-                self.stdout.write(self.style.ERROR("failed to retrieve"))
                 self.stdout.write(self.style.ERROR(str(error)))
+
+    @retry((DjangoKafkaError,), tries=3, delay=1, backoff=2)
+    def _connector_is_running(self, connector: Connector):
+        if connector.mark_for_removal:
+            self.stdout.write(self.style.WARNING("skip (REASON: marked for removal)"))
+            return
+        try:
+            status = connector.status()
+        except DjangoKafkaError as error:
+            if isinstance(error.context, Response) and error.context.status_code == 404:
+                # retry: on 404 as some delays are expected
+                raise
+
+            self.has_failures = True
+            self.stdout.write(self.style.ERROR("failed to retrieve"))
+            self.stdout.write(self.style.ERROR(str(error)))
+        except RetryError as error:
+            self.has_failures = True
+            self.stdout.write(self.style.ERROR("failed to retrieve"))
+            self.stdout.write(self.style.ERROR(str(error)))
+        else:
+            if status == ConnectorStatus.RUNNING:
+                self.stdout.write(self.style.SUCCESS(status))
+            elif status == ConnectorStatus.UNASSIGNED:
+                # retry: on UNASSIGNED as some delays are expected
+                raise DjangoKafkaError(f"Connector status is {status}.")
             else:
-                if status == ConnectorStatus.RUNNING:
-                    self.stdout.write(self.style.SUCCESS(status))
-                else:
-                    self.has_failures = True
-                    self.stdout.write(self.style.ERROR(status))
+                self.has_failures = True
+                self.stdout.write(self.style.ERROR(status))
 
     def handle_delete(self, connector: Connector):
         try:

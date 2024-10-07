@@ -8,8 +8,16 @@ from django_kafka.conf import SETTINGS_KEY, settings
 from django_kafka.consumer import Consumer, Topics
 
 
-class StopWhileTrueError(Exception):
-    pass
+class StopWhileTrue:
+    class Error(Exception):
+        pass
+
+    def __init__(self, stop_on):
+        self.stop_on = stop_on
+
+    def __call__(self, arg):
+        if arg == self.stop_on:
+            raise self.Error()
 
 
 class ConsumerTestCase(TestCase):
@@ -23,14 +31,15 @@ class ConsumerTestCase(TestCase):
 
     @patch(
         "django_kafka.consumer.Consumer.process_message",
-        side_effect=StopWhileTrueError(),
+        side_effect=StopWhileTrue(stop_on=False),
     )
     @patch(
         "django_kafka.consumer.ConfluentConsumer",
         **{
-            # first iteration - no message,
-            # second iteration - 1 message represented as boolean value for testing
-            "return_value.poll.side_effect": [None, True],
+            # first iteration - no message (None)
+            # second iteration - 1 non-empty message represented as True for testing
+            # third iteration - 1 empty message represented as False for testing
+            "return_value.poll.side_effect": [None, True, False],
         },
     )
     def test_run(self, mock_consumer_client, mock_process_message):
@@ -43,7 +52,7 @@ class ConsumerTestCase(TestCase):
         # hack to break infinite loop
         # `consumer.start` is using `while True:` loop which never ends
         # in order to test it we need to break it which is achievable with side_effect
-        with suppress(StopWhileTrueError):
+        with suppress(StopWhileTrue.Error):
             consumer.run()
 
         # subscribed to the topics defined by consumer class
@@ -53,11 +62,11 @@ class ConsumerTestCase(TestCase):
         # poll for message with the frequency defined by consumer class
         self.assertEqual(
             mock_consumer_client.return_value.poll.call_args_list,
-            # 2 calls expected as we setup 2 iterations in the test
-            [call(timeout=consumer.polling_freq)] * 2,
+            # 3 calls expected as we setup 3 iterations in the test
+            [call(timeout=consumer.polling_freq)] * 3,
         )
-        # process_message called once as there was no message on the first iteration
-        mock_process_message.assert_called_once_with(True)
+        # process_message called twice as None message is ignored
+        self.assertEqual(mock_process_message.call_args_list, [call(True), call(False)])
 
     @patch("django_kafka.consumer.Consumer.commit_offset")
     @patch("django_kafka.consumer.ConfluentConsumer")
