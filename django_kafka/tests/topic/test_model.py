@@ -58,7 +58,7 @@ class TestModelTopicConsumer(TestCase):
         topic_consumer.get_defaults = mock.Mock(return_value={"name": "name"})
         model = mock.Mock()
 
-        topic_consumer.sync(model, {"key": "key"}, {"value": "value"})
+        results = topic_consumer.sync(model, {"key": "key"}, {"value": "value"})
 
         topic_consumer.get_lookup_kwargs.assert_called_once_with(
             model,
@@ -73,6 +73,7 @@ class TestModelTopicConsumer(TestCase):
             id="id",
             defaults={"name": "name"},
         )
+        self.assertEqual(results, model.objects.update_or_create.return_value)
 
     def test_sync__deleted(self):
         topic_consumer = self._get_model_topic_consumer()
@@ -81,7 +82,7 @@ class TestModelTopicConsumer(TestCase):
         topic_consumer.is_deletion = mock.Mock(return_value=True)
         model = mock.Mock()
 
-        topic_consumer.sync(model, {"key": "key"}, {"value": "value"})
+        results = topic_consumer.sync(model, {"key": "key"}, {"value": "value"})
 
         topic_consumer.get_lookup_kwargs.assert_called_once_with(
             model,
@@ -92,6 +93,7 @@ class TestModelTopicConsumer(TestCase):
         model.objects.get.assert_called_once_with(id="id")
         model.objects.get.return_value.delete.assert_called_once()
         model.objects.update_or_create.assert_not_called()
+        self.assertIsNone(results)
 
     def test_get_model(self):
         topic_consumer = self._get_model_topic_consumer()
