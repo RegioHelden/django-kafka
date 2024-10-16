@@ -43,16 +43,16 @@ class ModelTopicConsumer(TopicConsumer, ABC):
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
 
-    def sync(self, model, key, value):
+    def sync(self, model, key, value) -> tuple[Model, bool] | None:
         lookup = self.get_lookup_kwargs(model, key, value)
 
         if self.is_deletion(model, key, value):
             with contextlib.suppress(ObjectDoesNotExist):
                 model.objects.get(**lookup).delete()
-            return
+            return None
 
         defaults = self.get_defaults(model, value)
-        model.objects.update_or_create(**lookup, defaults=defaults)
+        return model.objects.update_or_create(**lookup, defaults=defaults)
 
     def get_model(self, key, value) -> Type[Model]:
         if self.model:
