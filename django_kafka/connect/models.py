@@ -2,36 +2,36 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class KafkaSkipQueryset(models.QuerySet):
+class KafkaConnectSkipQueryset(models.QuerySet):
     def update(self, **kwargs) -> int:
         kwargs.setdefault("kafka_skip", False)
         return super().update(**kwargs)
 
 
-class KafkaSkipModel(models.Model):
+class KafkaConnectSkipModel(models.Model):
     """
-    For models (tables) which are synced with other database(s) in both directions.
+    For models (tables) which have Kafka Connect source connectors attached and require
+    a flag to suppress message production.
 
-    Every update which happens from within the system should set `kafka_skip=False`,
-     global producer (kafka connect, django post_save signal, etc.) will then create
-     a new event.
+    The Kafka Connect connector should filter out events based on the kafka_skip flag
+    provided in this model.
 
-    When db update comes from the consumed event, then the row should be manually
-     marked for skip `kafka_skip=True`, and kafka connector or global python producer
-     should not generate a new one by filtering it out based on `kafka_skip` field.
+    Any update to the model instance will reset the kafka_skip flag to False, if not
+    explicitly set.
+
+    This flag can help overcome infinite event loops during bidirectional data sync when
+    using Kafka. See README.md for more information.
     """
 
     kafka_skip = models.BooleanField(
         _("Kafka skip"),
         help_text=_(
-            "Wont generate an event if `True`."
-            "\nThis field is used to filter out the events to break the infinite loop"
-            " of message generation when synchronizing 2+ databases."
-            "\nGets reset to False on .save() method call.",
+            "Used by Kafka Connect to suppress event creation."
+            "\nGets reset to False on .save() method call, unless explicitly set.",
         ),
         default=False,
     )
-    objects = KafkaSkipQueryset.as_manager()
+    objects = KafkaConnectSkipQueryset.as_manager()
 
     class Meta:
         abstract = True

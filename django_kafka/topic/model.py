@@ -6,8 +6,8 @@ from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 
+from django_kafka.connect.models import KafkaConnectSkipModel
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.models import KafkaSkipModel
 from django_kafka.topic import TopicConsumer
 
 
@@ -30,7 +30,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
             else:
                 defaults[attr] = attr_value
 
-        if issubclass(model, KafkaSkipModel):
+        if issubclass(model, KafkaConnectSkipModel):
             defaults["kafka_skip"] = True
 
         return defaults

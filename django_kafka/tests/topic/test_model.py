@@ -3,8 +3,8 @@ from unittest import mock
 from django.db.models import Model
 from django.test import TestCase
 
+from django_kafka.connect.models import KafkaConnectSkipModel
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.models import KafkaSkipModel
 from django_kafka.topic.model import ModelTopicConsumer
 
 
@@ -32,10 +32,12 @@ class TestModelTopicConsumer(TestCase):
     def test_get_defaults__adds_kafka_skip(self):
         topic_consumer = self._get_model_topic_consumer()
 
-        class KafkaSkip(KafkaSkipModel):
+        class KafkaConnectSkip(KafkaConnectSkipModel):
             pass
 
-        defaults = topic_consumer.get_defaults(model=KafkaSkip, value={"name": 1})
+        defaults = topic_consumer.get_defaults(
+            model=KafkaConnectSkip, value={"name": 1}
+        )
 
         self.assertEqual(defaults, {"name": 1, "kafka_skip": True})
 
