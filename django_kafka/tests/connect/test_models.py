@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-from django_kafka.models import KafkaSkipModel
+from django_kafka.connect.models import KafkaConnectSkipModel
 from django_kafka.tests.models import AbstractModelTestCase
 
 
-class KafkaSkipModelTestCase(AbstractModelTestCase):
-    abstract_model = KafkaSkipModel
-    model: type[KafkaSkipModel]
+class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
+    abstract_model = KafkaConnectSkipModel
+    model: type[KafkaConnectSkipModel]
 
     def test_save__direct_instance_respects_set_kafka_skip(self):
         """test `save` on directly created instances will not ignore set kafka_skip"""

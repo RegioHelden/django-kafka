@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 (2024-10-17)
+* Added `producer.suppress` decorator.
+* Renamed `KafkaSkipModel` to `KafkaConnectSkipModel`.
+* Renamed `KafkaConnectSkipQueryset` to `KafkaConnectSkipQueryset`
+
 ## 0.5.1 (2024-10-16)
 * `ModelTopicConsumer.sync` returns now the results of the `update_or_create` method.
 * Add `days_from_epoch_to_date` function to convert `io.debezium.time.Date` to python `datetime.date`.

@@ -99,10 +99,11 @@ class RetryConsumerTestCase(TestCase):
 
     def test_build(self):
         consumer_cls = self._get_retryable_consumer_cls()
+
         retry_consumer_cls = RetryConsumer.build(consumer_cls)
 
         self.assertTrue(issubclass(retry_consumer_cls, RetryConsumer))
-
+        self.assertTrue(issubclass(retry_consumer_cls, consumer_cls))
         self.assertEqual(
             retry_consumer_cls.config["group.id"],
             f"{consumer_cls.build_config()['group.id']}.retry",

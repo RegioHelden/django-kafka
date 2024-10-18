@@ -21,7 +21,7 @@ class Topics:
 
     def __init__(self, *topic_consumers: "TopicConsumer"):
         self._topic_consumers = topic_consumers
-        self._match: dict[str, "TopicConsumer"] = {}
+        self._match: dict[str, TopicConsumer] = {}
 
     def get(self, topic_name: str) -> "TopicConsumer":
         if topic_name not in self._match:
@@ -123,13 +123,16 @@ class Consumer:
     def log_error(self, error):
         logger.error(error, exc_info=True)
 
+    def consume(self, msg):
+        self.get_topic_consumer(msg).consume(msg)
+
     def process_message(self, msg: cimpl.Message):
         if msg_error := msg.error():
             self.log_error(msg_error)
             return
 
         try:
-            self.get_topic_consumer(msg).consume(msg)
+            self.consume(msg)
         # ruff: noqa: BLE001 (we do not want consumer to stop if message consumption fails in any circumstances)
         except Exception as exc:
             self.handle_exception(msg, exc)
