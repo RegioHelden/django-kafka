@@ -44,7 +44,7 @@ class RetryConsumer(Consumer):
 
         return type[RetryConsumer](
             f"{consumer_cls.__name__}Retry",
-            (consumer_cls, cls),
+            (cls, consumer_cls),
             {
                 "topics": RetryTopics(group_id, *retryable_tcs),
                 "config": {
