@@ -4,9 +4,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, Type
 
 from confluent_kafka.serialization import (
+    Deserializer,
     MessageField,
     SerializationContext,
     Serializer,
+    StringDeserializer,
     StringSerializer,
 )
 
@@ -91,8 +93,8 @@ class TopicProducer(ABC):
 
 
 class TopicConsumer(ABC):
-    key_deserializer: Type[Serializer] = StringSerializer
-    value_deserializer: Type[Serializer] = StringSerializer
+    key_deserializer: Type[Deserializer] = StringDeserializer
+    value_deserializer: Type[Deserializer] = StringDeserializer
 
     retry_settings: Optional["RetrySettings"] = None
 
