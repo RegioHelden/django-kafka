@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 (2024-11-06)
+* `./manage.py kafka_connect` command now will exit with `CommandError` in case of any exception.
+* New `@substitute_error(errors: Iterable[Type[Exception]], substitution: Type[Exception])` decorator to substitute exceptions.
+
 ## 0.5.2 (2024-10-17)
 * Added `producer.suppress` decorator.
 * Renamed `KafkaSkipModel` to `KafkaConnectSkipModel`.
