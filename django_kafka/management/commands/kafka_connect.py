@@ -8,6 +8,7 @@ from requests.exceptions import RetryError
 from django_kafka import kafka
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.connect.connector import Connector, ConnectorStatus
+from django_kafka.management.commands.errors import substitute_error
 from django_kafka.utils import retry
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ class Command(BaseCommand):
         self.connectors: list[str] = []
         self.has_failures = False
 
+    @substitute_error([Exception], CommandError)
     def handle(self, connector, **options):
         if options["list"]:
             self.list_connectors()
