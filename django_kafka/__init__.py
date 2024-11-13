@@ -62,7 +62,10 @@ class DjangoKafka:
         consumer.run()
 
     def run_consumers(self, consumers: Optional[list[str]] = None):
-        consumers = consumers or list(self.consumers)
+        if not (consumers := consumers or list(self.consumers)):
+            logger.debug("No consumers in registry. Exit the process.")
+            return
+
         with Pool(processes=len(consumers)) as pool:
             try:
                 pool.map(self.run_consumer, consumers)
