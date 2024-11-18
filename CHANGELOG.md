@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.7 (2024-11-18)
+* `@substitute_error` now shows error message of the original error.
+
 ## 0.5.6 (2024-11-13)
 * Fix `DjangoKafka.run_consumers` failing when there are no consumers in the registry.
 

@@ -8,14 +8,18 @@ from django_kafka.management.commands.errors import substitute_error
 
 class SubstituteErrorTestCase(SimpleTestCase):
     def test_substitute(self):
-        class CustomException(Exception):
+        class CustomError(Exception):
             pass
 
-        errors = [ValueError, KeyError, CustomException]
-        decorator = substitute_error(errors, CommandError)
+        errors = {
+            ValueError: "value error",
+            KeyError: "key error",
+            CustomError: "custom error",
+        }
+        decorator = substitute_error(errors.keys(), CommandError)
 
-        for error in errors:
-            func = Mock(side_effect=error)
+        for error, msg in errors.items():
+            func = Mock(side_effect=error(msg))
 
-            with self.assertRaises(CommandError):
+            with self.assertRaisesMessage(CommandError, msg):
                 decorator(func)()
