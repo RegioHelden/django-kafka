@@ -1,5 +1,6 @@
 from django.db import connection
 from django.db.models import Model
+from django.db.models.base import ModelBase
 from django.test import TestCase
 
 
@@ -9,11 +10,14 @@ class AbstractModelTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        class TestModel(cls.abstract_model):
-            class Meta:
-                app_label = "django_kafka"
+        class Meta:
+            app_label = cls.__module__
 
-        cls.model = TestModel
+        cls.model = ModelBase(
+            f'__Test{cls.abstract_model.__name__}__',
+            (cls.abstract_model,),
+            {'__module__': cls.abstract_model.__module__, "Meta": Meta},
+        )
 
         with connection.schema_editor() as editor:
             editor.create_model(cls.model)

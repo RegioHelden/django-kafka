@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.8 (2024-11-19)
+* `ModelTopicConsumer.get_defaults` will skip fields not defined on the model.
+
 ## 0.5.7 (2024-11-18)
 * `@substitute_error` now shows error message of the original error.
 
@@ -18,7 +21,6 @@
 ## 0.5.1 (2024-10-16)
 * `ModelTopicConsumer.sync` returns now the results of the `update_or_create` method.
 * Add `days_from_epoch_to_date` function to convert `io.debezium.time.Date` to python `datetime.date`.
-
 
 ## 0.4.1 (2024-09-17)
 * Support string-based delete keys in DbzModelTopicConsumer

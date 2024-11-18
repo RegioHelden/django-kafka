@@ -16,19 +16,30 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
     model: Optional[Type[Model]] = None  # override get_model for dynamic model lookups
 
+    def transform(self, model, value) -> dict:
+        """
+        Runs defined `transform_{key}` methods.
+
+        Value fields can be transformed by defining a `transform_{key}` method.
+        """
+        transformed_value = {}
+        for field_name, field_value in value.items():
+            if transform_method := getattr(self, f"transform_{field_name}", None):
+                new_key, new_value = transform_method(model, field_name, field_value)
+                transformed_value[new_key] = new_value
+            else:
+                transformed_value[field_name] = field_value
+        return transformed_value
+
     def get_defaults(self, model, value) -> dict:
         """
         Returns instance update_or_create defaults from the message value.
-
-        value fields can be transformed by defining a transform_{attr} method.
         """
-        defaults = {}
-        for attr, attr_value in value.items():
-            if transform_method := getattr(self, "transform_" + attr, None):
-                new_attr, new_value = transform_method(model, attr, attr_value)
-                defaults[new_attr] = new_value
-            else:
-                defaults[attr] = attr_value
+        defaults = {
+            field_name: field_value
+            for field_name, field_value in value.items()
+            if self.model_has_field(model, field_name)
+        }
 
         if issubclass(model, KafkaConnectSkipModel):
             defaults["kafka_skip"] = True
@@ -51,7 +62,8 @@ class ModelTopicConsumer(TopicConsumer, ABC):
                 model.objects.get(**lookup).delete()
             return None
 
-        defaults = self.get_defaults(model, value)
+        transformed_value = self.transform(model, value)
+        defaults = self.get_defaults(model, transformed_value)
         return model.objects.update_or_create(**lookup, defaults=defaults)
 
     def get_model(self, key, value) -> Type[Model]:
@@ -60,6 +72,9 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         raise DjangoKafkaError(
             "Cannot obtain model: either define a default model or override get_model",
         )
+
+    def model_has_field(self, model: Type[Model], field_name: str) -> bool:
+        return field_name in model._meta._forward_fields_map or field_name in model._meta.fields_map
 
     def consume(self, msg):
         key = self.deserialize(msg.key(), MessageField.KEY, msg.headers())
