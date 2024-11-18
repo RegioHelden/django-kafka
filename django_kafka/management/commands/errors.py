@@ -10,6 +10,6 @@ def substitute_error(errors: Iterable[Type[Exception]], substitution: Type[Excep
             try:
                 return func(*args, **kwargs)
             except tuple(errors) as original_error:
-                raise substitution from original_error
+                raise substitution(original_error) from original_error
         return wrapper
     return decorator
