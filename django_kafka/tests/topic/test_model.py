@@ -1,18 +1,21 @@
 from unittest import mock
 
-from django.db.models import Model
-from django.test import TestCase
+from django.db import models
 
 from django_kafka.connect.models import KafkaConnectSkipModel
 from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.tests.models import AbstractModelTestCase
 from django_kafka.topic.model import ModelTopicConsumer
 
 
-class TestModelTopicConsumer(TestCase):
+class ModelTopicConsumerTestCase(AbstractModelTestCase):
+    abstract_model = models.Model
+    model: type[KafkaConnectSkipModel]
+
     def _get_model_topic_consumer(self):
         class SomeModelTopicConsumer(ModelTopicConsumer):
             name = "name"
-            model = Model
+            model = self.model
 
             def get_lookup_kwargs(self, model, key, value) -> dict:
                 return {}
@@ -25,7 +28,16 @@ class TestModelTopicConsumer(TestCase):
     def test_get_defaults(self):
         topic_consumer = self._get_model_topic_consumer()
 
-        defaults = topic_consumer.get_defaults(model=Model, value={"name": 1})
+        class SomeModel(models.Model):
+            name = models.CharField()
+
+            class Meta:
+                abstract = True
+
+        defaults = topic_consumer.get_defaults(
+            model=SomeModel,
+            value={"name": 1, "not_model_field": "value"},
+        )
 
         self.assertEqual(defaults, {"name": 1})
 
@@ -33,7 +45,7 @@ class TestModelTopicConsumer(TestCase):
         topic_consumer = self._get_model_topic_consumer()
 
         class KafkaConnectSkip(KafkaConnectSkipModel):
-            pass
+            name = models.CharField()
 
         defaults = topic_consumer.get_defaults(
             model=KafkaConnectSkip, value={"name": 1}
@@ -41,22 +53,23 @@ class TestModelTopicConsumer(TestCase):
 
         self.assertEqual(defaults, {"name": 1, "kafka_skip": True})
 
-    def test_get_defaults__calls_transform_attr(self):
+    def test_transform(self):
         topic_consumer = self._get_model_topic_consumer()
-        topic_consumer.transform_name = mock.Mock(return_value=("name_new", 2))
+        topic_consumer.transform_name = mock.Mock(return_value=("transformed_name", "transformed_value"))
 
-        defaults = topic_consumer.get_defaults(model=Model, value={"name": 1})
+        transformed_value = topic_consumer.transform(self.model, {"name": "value"})
 
+        self.assertEqual(transformed_value, {"transformed_name": "transformed_value"})
         topic_consumer.transform_name.assert_called_once_with(
-            topic_consumer.model,
+            self.model,
             "name",
-            1,
+            "value",
         )
-        self.assertEqual(defaults, {"name_new": 2})
 
     def test_sync(self):
         topic_consumer = self._get_model_topic_consumer()
         topic_consumer.get_lookup_kwargs = mock.Mock(return_value={"id": "id"})
+        topic_consumer.transform = mock.Mock()
         topic_consumer.get_defaults = mock.Mock(return_value={"name": "name"})
         model = mock.Mock()
 
@@ -67,9 +80,13 @@ class TestModelTopicConsumer(TestCase):
             {"key": "key"},
             {"value": "value"},
         )
+        topic_consumer.transform.assert_called_once_with(
+            model,
+            {"value": "value"}
+        )
         topic_consumer.get_defaults.assert_called_once_with(
             model,
-            {"value": "value"},
+            topic_consumer.transform.return_value,
         )
         model.objects.update_or_create.assert_called_once_with(
             id="id",
@@ -129,3 +146,17 @@ class TestModelTopicConsumer(TestCase):
             msg_key,
             msg_value,
         )
+
+    def test_model_has_field(self):
+        class BookModel(models.Model):
+            name = models.CharField(max_length=100)
+            author = models.ForeignKey(self.model, models.CASCADE)
+
+        topic_consumer = self._get_model_topic_consumer()
+        topic_consumer.model = BookModel
+
+        fields = ("id", "name", "author", "author_id")
+        for field in fields:
+            self.assertTrue(topic_consumer.model_has_field(BookModel, field))
+
+        self.assertFalse(topic_consumer.model_has_field(BookModel, "not_defined_field"))
