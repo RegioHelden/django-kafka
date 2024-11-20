@@ -5,12 +5,6 @@ from django_kafka.retry.header import RetryHeader
 
 
 class RetryHeaderTestCase(TestCase):
-    def test_get_header(self):
-        headers = [(RetryHeader.TIMESTAMP, "abc")]
-
-        self.assertEqual(RetryHeader.get_header(headers, RetryHeader.TIMESTAMP), "abc")
-        self.assertEqual(RetryHeader.get_header([], RetryHeader.TIMESTAMP), None)
-
     def test_get_retry_time(self):
         now = timezone.now()
         headers = [(RetryHeader.TIMESTAMP, str(now.timestamp()))]

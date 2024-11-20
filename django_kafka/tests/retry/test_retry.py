@@ -1,3 +1,4 @@
+import datetime
 from unittest import mock
 
 from django.test import TestCase
@@ -10,19 +11,19 @@ class RetrySettingTestCase(TestCase):
     def test_should_retry__include(self):
         settings = RetrySettings(max_retries=5, delay=60, include=[ValueError])
 
-        self.assertEqual(settings.should_retry(ValueError()), True)
-        self.assertEqual(settings.should_retry(IndexError()), False)
+        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), True)
+        self.assertEqual(settings.can_retry(attempt=0, exc=IndexError()), False)
 
     def test_should_retry__exclude(self):
         settings = RetrySettings(max_retries=5, delay=60, exclude=[ValueError])
 
-        self.assertEqual(settings.should_retry(ValueError()), False)
-        self.assertEqual(settings.should_retry(IndexError()), True)
+        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), False)
+        self.assertEqual(settings.can_retry(attempt=0, exc=IndexError()), True)
 
     def test_should_retry__no_include_exclude(self):
         settings = RetrySettings(max_retries=5, delay=60)
 
-        self.assertEqual(settings.should_retry(ValueError()), True)
+        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), True)
 
     def test_attempts_exceeded(self):
         settings = RetrySettings(max_retries=5, delay=60)
@@ -34,24 +35,48 @@ class RetrySettingTestCase(TestCase):
     @mock.patch("django.utils.timezone.now")
     def test_get_retry_time__fixed_delay(self, mock_now):
         settings = RetrySettings(max_retries=5, delay=60, backoff=False)
+        now = datetime.datetime.fromtimestamp(1000, datetime.UTC)
+        mock_now.return_value = now
 
-        timestamp = 1000
-        mock_now.return_value.timestamp.return_value = timestamp
-        self.assertEqual(settings.get_retry_timestamp(1), str(timestamp + 60))
-        self.assertEqual(settings.get_retry_timestamp(2), str(timestamp + 60))
-        self.assertEqual(settings.get_retry_timestamp(3), str(timestamp + 60))
-        self.assertEqual(settings.get_retry_timestamp(4), str(timestamp + 60))
+        self.assertEqual(
+            settings.get_retry_time(1),
+            now + datetime.timedelta(seconds=60),
+        )
+        self.assertEqual(
+            settings.get_retry_time(2),
+            now + datetime.timedelta(seconds=60),
+        )
+        self.assertEqual(
+            settings.get_retry_time(3),
+            now + datetime.timedelta(seconds=60),
+        )
+        self.assertEqual(
+            settings.get_retry_time(4),
+            now + datetime.timedelta(seconds=60),
+        )
 
     @mock.patch("django.utils.timezone.now")
     def test_get_retry_time__backoff_delay(self, mock_now):
         settings = RetrySettings(max_retries=5, delay=60, backoff=True)
+        now = datetime.datetime.fromtimestamp(1000, datetime.UTC)
+        mock_now.return_value = now
 
-        timestamp = 1000
-        mock_now.return_value.timestamp.return_value = timestamp
-        self.assertEqual(settings.get_retry_timestamp(1), str(timestamp + 60))
-        self.assertEqual(settings.get_retry_timestamp(2), str(timestamp + 120))
-        self.assertEqual(settings.get_retry_timestamp(3), str(timestamp + 240))
-        self.assertEqual(settings.get_retry_timestamp(4), str(timestamp + 480))
+        self.assertEqual(
+            settings.get_retry_time(1),
+            now + datetime.timedelta(seconds=60),
+        )
+        self.assertEqual(
+            settings.get_retry_time(2),
+            now + datetime.timedelta(seconds=120),
+        )
+        self.assertEqual(
+            settings.get_retry_time(3),
+            now + datetime.timedelta(seconds=240),
+        )
+        self.assertEqual(
+            settings.get_retry_time(4),
+            now + datetime.timedelta(seconds=480),
+        )
 
 
 class RetryDecoratorTestCase(TestCase):
