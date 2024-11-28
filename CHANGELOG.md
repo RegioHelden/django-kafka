@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.9 (2024-11-28)
+* Add `RETRY_SETTINGS` configuration setting.
+* Add blocking retry behaviour and make it the default.
+
 ## 0.5.8 (2024-11-19)
 * `ModelTopicConsumer.get_defaults` will skip fields not defined on the model.
 
