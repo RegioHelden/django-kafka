@@ -33,12 +33,11 @@ class DeadLetterTopicProducer(TopicProducer):
         return f"{self.group_id}.{topic}.{self.suffix()}"
 
     def produce_for(self, header_message, header_detail):
-        headers = [
-            (DeadLetterHeader.MESSAGE, header_message),
-            (DeadLetterHeader.DETAIL, header_detail),
-        ]
         self.produce(
             key=self.msg.key(),
             value=self.msg.value(),
-            headers=headers,
+            headers=[
+                (DeadLetterHeader.MESSAGE, header_message),
+                (DeadLetterHeader.DETAIL, header_detail),
+            ],
         )

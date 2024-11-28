@@ -1,6 +1,6 @@
-from enum import StrEnum
+from django_kafka.utils.message import Header
 
 
-class DeadLetterHeader(StrEnum):
+class DeadLetterHeader(Header):
     MESSAGE = "DEAD_LETTER_MESSAGE"
     DETAIL = "DEAD_LETTER_DETAIL"

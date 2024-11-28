@@ -6,8 +6,8 @@ from requests import Response
 from requests.exceptions import RetryError
 
 from django_kafka import kafka
-from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.connect.connector import Connector, ConnectorStatus
+from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.management.commands.errors import substitute_error
 from django_kafka.utils import retry
 
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             action="store_true",
             default=False,
             help="The command wont fail if failures were detected. "
-                 "By default if any failures were detected the command exist with error status.",
+            "By default if any failures were detected the command exist with error status.",
         )
 
     def __init__(self, *args, **kwargs):
@@ -68,7 +68,14 @@ class Command(BaseCommand):
             self.list_connectors()
             return
 
-        if not any((connector, options["validate"], options["publish"], options["check_status"])):
+        if not any(
+            (
+                connector,
+                options["validate"],
+                options["publish"],
+                options["check_status"],
+            ),
+        ):
             self.print_help("manage.py", "kafka_connect")
             return
 
@@ -99,14 +106,16 @@ class Command(BaseCommand):
 
     def handle_validate(self):
         self.stdout.write(self.style.SUCCESS("Validating connectors..."))
-        
+
         for connector_path in self.connectors:
             self.stdout.write(f"{connector_path}: ", ending="")
 
             connector = kafka.connectors[connector_path]()
 
             if connector.mark_for_removal:
-                self.stdout.write(self.style.WARNING("skip (REASON: marked for removal)"))
+                self.stdout.write(
+                    self.style.WARNING("skip (REASON: marked for removal)"),
+                )
                 continue
 
             try:
@@ -184,7 +193,9 @@ class Command(BaseCommand):
             if deleted:
                 self.stdout.write(self.style.SUCCESS("deleted"))
             else:
-                self.stdout.write(self.style.WARNING("does not exist (already deleted)"))
+                self.stdout.write(
+                    self.style.WARNING("does not exist (already deleted)"),
+                )
 
     def handle_submit(self, connector: Connector):
         try:

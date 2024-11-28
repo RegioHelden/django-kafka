@@ -178,9 +178,13 @@ A few notes:
 2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field.
 3. The message key is assumed to contain the model PK as a field, [which is the default behaviour](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-message-key-columns) for Debezium source connectors. If you need more complicated lookup behaviour, override `get_lookup_kwargs`.
 
-## Non-Blocking Retries:
+## Dead Letter Topic:
 
-Add non-blocking retry behaviour to a topic by using the `retry` decorator:
+Any message which fails to consume will be sent to the dead letter topic. The dead letter topic name is combined of the consumer group id, the original topic name, and a `.dlt` suffix (controllable with the `DEAD_LETTER_TOPIC_SUFFIX` setting).  So for a failed message in `topic` received by consumer `group`, the dead letter topic name would be `group.topic.dlt`.
+
+## Retries:
+
+Add retry behaviour to a topic by using the `retry` decorator:
 
 ```python
 from django_kafka import kafka
@@ -193,7 +197,17 @@ class RetryableTopic(Topic):
     ...
 ```
 
-When the consumption of a message in a retryable topic fails, the message is re-sent to a topic with a name combined of the consumer group id, the original topic name, a `.retry` suffix, and the retry number. Subsequent failed retries will then be sent to retry topics of incrementing retry number until the maximum attempts are reached, after which it will be sent to a dead letter topic suffixed by `.dlt`. So for a failed message in topic `topic` received by consumer group `group`, the expected topic sequence would be: 
+You can also configure retry behaviour globally for all topics with the `RETRY_SETTINGS` configuration (see [settings](#settings)).
+
+Retries can be either blocking or non-blocking, controlled by the `blocking` boolean parameter. By default, all retries are blocking. 
+
+### Blocking Retries:
+
+When the consumption of a message fails in a blocking retryable topic, the consumer process will pause the partition and retry the message at a later time. Therefore, messages in that partition will be blocked until the failing message succeeds or the maximum retry attempts are reached, after which the message is sent to the dead letter topic.
+
+### Non-blocking Retries:
+
+When the consumption of a message fails in a non-blocking retryable topic, the message is re-sent to a topic with a name combined of the consumer group id, the original topic name, a `.retry` suffix (controllable with the `RETRY_TOPIC_SUFFIX` setting), and the retry number. Subsequent failed retries will then be sent to retry topics of incrementing retry number until the maximum attempts are reached, after which it will be sent to a dead letter topic. So for a failed message in topic `topic`, with a maximum retry attempts of 3 and received by consumer group `group`, the expected topic sequence would be: 
 
 1. `topic`
 2. `group.topic.retry.1`
@@ -201,7 +215,7 @@ When the consumption of a message in a retryable topic fails, the message is re-
 4. `group.topic.retry.3`
 5. `group.topic.dlt`
 
-When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
+When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a non-blocking retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
 
 ## Connectors:
 
@@ -282,6 +296,7 @@ DJANGO_KAFKA = {
         "enable.auto.offset.store": False,
         "topic.metadata.refresh.interval.ms": 10000,
     },
+    "RETRY_SETTINGS": None,
     "RETRY_TOPIC_SUFFIX": "retry",
     "DEAD_LETTER_TOPIC_SUFFIX": "dlt",
     "POLLING_FREQUENCY": 1,  # seconds
@@ -325,6 +340,34 @@ Defines configurations of the producer. See [configs marked with `P`](https://gi
 Default: `{}`
 
 Defines configurations of the consumer. See [configs marked with `C`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
+
+#### `RETRY_CONSUMER_CONFIG`
+Default:
+
+```py
+{
+    "auto.offset.reset": "earliest",
+    "enable.auto.offset.store": False,
+    "topic.metadata.refresh.interval.ms": 10000,
+}
+```
+
+Defines configuration for the retry consumer. See [Non-blocking retries](#non-blocking-retries).
+
+#### `RETRY_TOPIC_SUFFIX`
+Default: `retry`
+
+Defines the retry topic suffix. See [Non-blocking retries](#non-blocking-retries).
+
+#### `RETRY_SETTINGS`
+Default: `None`
+
+Defines the default retry settings. See [retries](#retries).
+
+#### `DEAD_LETTER_TOPIC_SUFFIX`
+Default: `dlt`
+
+Defines the dead letter topic suffix. See [Dead Letter Topic](#dead-letter-topic).
 
 #### `POLLING_FREQUENCY`
 Default: 1  # second

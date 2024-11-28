@@ -5,6 +5,7 @@ from django.test import TestCase, override_settings
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.dead_letter.header import DeadLetterHeader
 from django_kafka.dead_letter.topic import DeadLetterTopicProducer
+from django_kafka.tests.utils import message_mock
 
 
 @override_settings(
@@ -36,7 +37,7 @@ class DeadLetterTopicProducerTestCase(TestCase):
         self.assertEqual(dlt_producer_2.name, "group.id.topic.name.test-dlt")
 
     def test_produce_for(self):
-        msg_mock = mock.Mock(**{"topic.return_value": "msg_topic"})
+        msg_mock = message_mock()
         dlt_producer = DeadLetterTopicProducer(group_id="group.id", msg=msg_mock)
         dlt_producer.produce = mock.Mock()
         header_message = "header message"

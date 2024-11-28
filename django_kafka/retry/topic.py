@@ -19,10 +19,15 @@ class RetryTopicProducer(TopicProducer):
 
     def __init__(
         self,
-        group_id: str,
         retry_settings: "RetrySettings",
+        group_id: str,
         msg: "cimpl.Message",
     ):
+        if retry_settings.blocking:
+            raise DjangoKafkaError(
+                "RetryTopicProducer requires non-blocking RetrySettings",
+            )
+
         self.settings = retry_settings
         self.group_id = group_id
         self.msg = msg
@@ -54,21 +59,17 @@ class RetryTopicProducer(TopicProducer):
         return f"{self.group_id}.{self.msg.topic()}.{suffix}"
 
     def retry(self, exc: Exception) -> bool:
-        if not self.settings.should_retry(exc=exc):
+        if not self.settings.can_retry(attempt=self.attempt, exc=exc):
             return False
 
-        if self.settings.attempts_exceeded(attempt=self.attempt):
-            return False
+        retry_timestamp = self.settings.get_retry_time(self.attempt).timestamp()
 
         self.produce(
             key=self.msg.key(),
             value=self.msg.value(),
             headers=[
                 (RetryHeader.MESSAGE, str(exc)),
-                (
-                    RetryHeader.TIMESTAMP,
-                    self.settings.get_retry_timestamp(self.attempt),
-                ),
+                (RetryHeader.TIMESTAMP, str(retry_timestamp)),
             ],
         )
         return True
@@ -79,12 +80,13 @@ class RetryTopicConsumer(TopicConsumer):
     value_deserializer = NoOpSerializer
 
     def __init__(self, group_id: str, topic_consumer: TopicConsumer):
-        if not topic_consumer.retry_settings:
+        retry_settings = topic_consumer.retry_settings
+        if not retry_settings or retry_settings.blocking:
             raise DjangoKafkaError(
-                f"TopicConsumer {topic_consumer} is not marked for retry",
+                f"TopicConsumer {topic_consumer} is not marked for non-blocking retry",
             )
-        self.topic_consumer = topic_consumer
         self.group_id = group_id
+        self.topic_consumer = topic_consumer
         super().__init__()
 
     @property
@@ -103,7 +105,7 @@ class RetryTopicConsumer(TopicConsumer):
 
     def producer_for(self, msg: "cimpl.Message") -> RetryTopicProducer:
         return RetryTopicProducer(
-            group_id=self.group_id,
             retry_settings=self.topic_consumer.retry_settings,
+            group_id=self.group_id,
             msg=msg,
         )

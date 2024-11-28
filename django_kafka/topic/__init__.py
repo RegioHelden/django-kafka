@@ -13,8 +13,8 @@ from confluent_kafka.serialization import (
 )
 
 from django_kafka import kafka
+from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.retry.settings import RetrySettings
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
@@ -95,8 +95,7 @@ class TopicProducer(ABC):
 class TopicConsumer(ABC):
     key_deserializer: Type[Deserializer] = StringDeserializer
     value_deserializer: Type[Deserializer] = StringDeserializer
-
-    retry_settings: Optional["RetrySettings"] = None
+    retry_settings = settings.RETRY_SETTINGS
 
     @property
     @abstractmethod

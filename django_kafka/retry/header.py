@@ -1,25 +1,19 @@
 from datetime import datetime
-from enum import StrEnum
 from typing import Optional
 
 from django.utils import timezone
 
+from django_kafka.utils.message import Header
 
-class RetryHeader(StrEnum):
+
+class RetryHeader(Header):
     MESSAGE = "RETRY_MESSAGE"
     TIMESTAMP = "RETRY_TIMESTAMP"
 
-    @staticmethod
-    def get_header(headers: list[tuple], header: "RetryHeader") -> Optional[str]:
-        return next((v for k, v in headers if k == header), None)
-
-    @staticmethod
-    def get_retry_time(headers: Optional[list[tuple]]) -> Optional["datetime"]:
+    @classmethod
+    def get_retry_time(cls, headers: Optional[list[tuple]]) -> Optional["datetime"]:
         """returns the retry time from the message headers"""
-        if not headers:
-            return None
-
-        header = RetryHeader.get_header(headers, RetryHeader.TIMESTAMP)
+        header = RetryHeader.get(headers, RetryHeader.TIMESTAMP)
         try:
             epoch = float(header)
         except (TypeError, ValueError):
