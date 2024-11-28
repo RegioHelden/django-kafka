@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from django_kafka.conf import SETTINGS_KEY, settings
-from django_kafka.consumer import Consumer, PauseManager, RetryManager, Topics
+from django_kafka.consumer import Consumer, Topics
 from django_kafka.retry.settings import RetrySettings
 from django_kafka.tests.utils import message_mock
 
@@ -25,86 +25,6 @@ class StopWhileTrue:
             raise self.Error
 
 
-class TopicsTestCase(TestCase):
-    def test_get_retryable(self):
-        blocking_tc = Mock(
-            retry_settings=RetrySettings(delay=1, max_retries=1, blocking=True),
-        )
-        non_blocking_tc = Mock(
-            retry_settings=RetrySettings(delay=1, max_retries=1, blocking=False),
-        )
-
-        topics = Topics(blocking_tc, non_blocking_tc)
-
-        self.assertEqual(topics.get_retryable(blocking=True), [blocking_tc])
-        self.assertEqual(topics.get_retryable(blocking=False), [non_blocking_tc])
-
-
-class RetryManagerTestCase(TestCase):
-    def test_get_msg_partition(self):
-        mock_msg = message_mock()
-        manager = RetryManager()
-
-        tp = manager.get_msg_partition(mock_msg)
-
-        self.assertEqual(tp.topic, mock_msg.topic())
-        self.assertEqual(tp.partition, mock_msg.partition())
-        self.assertEqual(tp.offset, mock_msg.offset())
-
-    def test_next(self):
-        mock_msg = message_mock()
-        manager = RetryManager()
-
-        self.assertEqual(manager.next(mock_msg), 1)
-        self.assertEqual(manager.next(mock_msg), 2)
-        self.assertEqual(manager.next(mock_msg), 3)
-
-    def test_next__resets_for_new_offset(self):
-        """tests retry attempt resets if requested for a new offset"""
-        mock_msg = message_mock(offset=0)
-        manager = RetryManager()
-
-        self.assertEqual(manager.next(mock_msg), 1)
-
-        mock_msg.offset.return_value = 1
-
-        self.assertEqual(manager.next(mock_msg), 1)
-        self.assertEqual(manager.next(mock_msg), 2)
-
-
-class PauseManagerTestCase(TestCase):
-    def test_get_msg_partition(self):
-        mock_msg = message_mock()
-        manager = PauseManager()
-
-        tp = manager.get_msg_partition(mock_msg)
-
-        self.assertEqual(tp.topic, mock_msg.topic())
-        self.assertEqual(tp.partition, mock_msg.partition())
-
-    def test_set(self):
-        mock_msg = message_mock()
-        manager = PauseManager()
-
-        tp = manager.set(mock_msg, timezone.now())
-
-        self.assertEqual(manager.get_msg_partition(mock_msg), tp)
-
-    def test_pop_ready(self):
-        manager = PauseManager()
-        mock_msg_1 = message_mock(partition=1)
-        mock_msg_2 = message_mock(partition=2)
-
-        manager.set(mock_msg_1, timezone.now() - datetime.timedelta(minutes=1))
-        manager.set(mock_msg_2, timezone.now() + datetime.timedelta(minutes=1))
-
-        self.assertEqual(
-            list(manager.pop_ready()),
-            [manager.get_msg_partition(mock_msg_1)],
-        )
-        self.assertEqual(list(manager.pop_ready()), [])  # empty the second time
-
-
 class ConsumerTestCase(TestCase):
     def test_group_id(self):
         class SomeConsumer(Consumer):
@@ -119,7 +39,7 @@ class ConsumerTestCase(TestCase):
         side_effect=StopWhileTrue(stop_on=False),
     )
     @patch(
-        "django_kafka.consumer.ConfluentConsumer",
+        "django_kafka.consumer.consumer.ConfluentConsumer",
         **{
             # first iteration - no message (None)
             # second iteration - 1 non-empty message represented as True for testing
@@ -157,7 +77,7 @@ class ConsumerTestCase(TestCase):
         # process_message called twice as None message is ignored
         self.assertEqual(mock_process_message.call_args_list, [call(True), call(False)])
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_pause_partition(self, mock_confluent_consumer):
         class SomeConsumer(Consumer):
             topics = MagicMock()
@@ -178,7 +98,7 @@ class ConsumerTestCase(TestCase):
         mock_confluent_consumer.return_value.seek.assert_called_once_with(partition)
         mock_confluent_consumer.return_value.pause.assert_called_once_with([partition])
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_resume_partitions__before_time(self, mock_confluent_consumer):
         class SomeConsumer(Consumer):
             topics = MagicMock()
@@ -192,7 +112,7 @@ class ConsumerTestCase(TestCase):
 
         mock_confluent_consumer.return_value.resume.assert_not_called()
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_resume_partitions__after_time(self, mock_confluent_consumer):
         class SomeConsumer(Consumer):
             topics = MagicMock()
@@ -212,7 +132,7 @@ class ConsumerTestCase(TestCase):
         mock_confluent_consumer.return_value.resume.assert_called_once_with([partition])
 
     @patch("django_kafka.consumer.Consumer.commit_offset")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message_success(self, mock_consumer_client, mock_commit_offset):
         class SomeConsumer(Consumer):
             topics = MagicMock()
@@ -231,7 +151,7 @@ class ConsumerTestCase(TestCase):
 
     @patch("django_kafka.consumer.Consumer.log_error")
     @patch("django_kafka.consumer.Consumer.commit_offset")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message_msg_error_logged(
         self,
         mock_consumer_client,
@@ -257,7 +177,7 @@ class ConsumerTestCase(TestCase):
 
     @patch("django_kafka.consumer.Consumer.handle_exception", return_value=True)
     @patch("django_kafka.consumer.Consumer.commit_offset")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message__processed_exception(
         self,
         mock_consumer_client,
@@ -286,7 +206,7 @@ class ConsumerTestCase(TestCase):
 
     @patch("django_kafka.consumer.Consumer.handle_exception", return_value=False)
     @patch("django_kafka.consumer.Consumer.commit_offset")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message__unprocessed_exception(
         self,
         mock_consumer_client,
@@ -517,7 +437,7 @@ class ConsumerTestCase(TestCase):
             header_detail=traceback.format_exc(),
         )
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_auto_offset_false(self, mock_consumer_client):
         class SomeConsumer(Consumer):
             config = {"enable.auto.offset.store": False}
@@ -529,7 +449,7 @@ class ConsumerTestCase(TestCase):
 
         mock_consumer_client.return_value.store_offsets.assert_called_once_with(msg)
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_auto_offset_true(self, mock_consumer_client):
         class SomeConsumer(Consumer):
             config = {"enable.auto.offset.store": True}
@@ -560,7 +480,7 @@ class ConsumerTestCase(TestCase):
             },
         },
     )
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     @patch("django_kafka.error_handlers.ClientErrorHandler")
     def test_config_merge_override(self, mock_error_handler, mock_consumer_client):
         """

@@ -3,7 +3,7 @@ from typing import Optional
 
 from django.utils import timezone
 
-from django_kafka.header import Header
+from django_kafka.utils.message import Header
 
 
 class RetryHeader(Header):

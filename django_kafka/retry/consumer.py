@@ -1,7 +1,6 @@
 import traceback
 from typing import TYPE_CHECKING, Optional, Type
 
-from confluent_kafka import cimpl
 from django.utils import timezone
 
 from django_kafka.conf import settings
@@ -11,6 +10,8 @@ from django_kafka.retry.header import RetryHeader
 from django_kafka.retry.topic import RetryTopicConsumer
 
 if TYPE_CHECKING:
+    from confluent_kafka import cimpl
+
     from django_kafka.topic import TopicConsumer
 
 
@@ -56,18 +57,18 @@ class RetryConsumer(Consumer):
             **getattr(cls, "config", {}),
         }
 
-    def retry_msg(self, msg: cimpl.Message, exc: Exception) -> (bool, bool):
+    def retry_msg(self, msg: "cimpl.Message", exc: Exception) -> (bool, bool):
         retry_topic: RetryTopicConsumer = self.get_topic(msg)
         return retry_topic.producer_for(msg).retry(exc), False
 
-    def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
+    def dead_letter_msg(self, msg: "cimpl.Message", exc: Exception):
         retry_topic: RetryTopicConsumer = self.get_topic(msg)
         DeadLetterTopicProducer(group_id=retry_topic.group_id, msg=msg).produce_for(
             header_message=str(exc),
             header_detail=traceback.format_exc(),
         )
 
-    def process_message(self, msg: cimpl.Message):
+    def process_message(self, msg: "cimpl.Message"):
         retry_time = RetryHeader.get_retry_time(msg.headers())
         if retry_time and retry_time > timezone.now():
             self.pause_partition(msg, retry_time)

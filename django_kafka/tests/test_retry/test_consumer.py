@@ -57,7 +57,7 @@ class RetryConsumerTestCase(TestCase):
             },
         },
     )
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     @patch("django_kafka.retry.consumer.Consumer.build_config")
     def test_config_merge_override(
         self,
@@ -159,7 +159,7 @@ class RetryConsumerTestCase(TestCase):
         )
 
     @patch("django_kafka.consumer.Consumer.process_message")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message__before_retry_time(
         self,
         mock_confluent_consumer,
@@ -179,7 +179,7 @@ class RetryConsumerTestCase(TestCase):
         mock_consumer_process_message.process_message.assert_not_called()
 
     @patch("django_kafka.consumer.Consumer.process_message")
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message__after_retry_time(
         self,
         mock_confluent_consumer,

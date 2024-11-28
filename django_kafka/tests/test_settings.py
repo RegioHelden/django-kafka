@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import override_settings, SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from django_kafka.conf import DEFAULTS, SETTINGS_KEY, settings
 
@@ -24,13 +24,13 @@ class SettingsTestCase(SimpleTestCase):
         "CONNECTOR_NAME_PREFIX",
     )
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_defaults(self, mock_consumer_client):
         # make sure defaults are assigned
         for key in self.settings_keys:
             self.assertEqual(getattr(settings, key), DEFAULTS[key])
 
-    @patch("django_kafka.consumer.ConfluentConsumer")
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_user_settings(self, mock_consumer_client):
         # make sure settings defined by user pulled up
         user_settings = {
@@ -62,7 +62,7 @@ class SettingsTestCase(SimpleTestCase):
                 "status_forcelist": [502, 503, 504],
             },
             "CONNECT_REQUESTS_TIMEOUT": 60,
-            "CONNECTOR_NAME_PREFIX": "project_name"
+            "CONNECTOR_NAME_PREFIX": "project_name",
         }
         with override_settings(**{SETTINGS_KEY: user_settings}):
             for key in self.settings_keys:
