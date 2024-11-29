@@ -15,15 +15,20 @@ class ModelTopicConsumer(TopicConsumer, ABC):
     """Syncs abstract kafka messages directly in to Django model instances"""
 
     model: Optional[Type[Model]] = None  # override get_model for dynamic model lookups
+    exclude_fields: list[str] = None  # fields to ignore from message value
 
     def transform(self, model, value) -> dict:
         """
-        Runs defined `transform_{key}` methods.
+        Filters key fields and runs defined `transform_{key}` methods.
 
         Value fields can be transformed by defining a `transform_{key}` method.
         """
+        exclude_fields = self.exclude_fields or []
+
         transformed_value = {}
         for field_name, field_value in value.items():
+            if field_name in exclude_fields:
+                continue
             if transform_method := getattr(self, f"transform_{field_name}", None):
                 new_key, new_value = transform_method(model, field_name, field_value)
                 transformed_value[new_key] = new_value
@@ -74,7 +79,10 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         )
 
     def model_has_field(self, model: Type[Model], field_name: str) -> bool:
-        return field_name in model._meta._forward_fields_map or field_name in model._meta.fields_map
+        return (
+            field_name in model._meta._forward_fields_map
+            or field_name in model._meta.fields_map
+        )
 
     def consume(self, msg):
         key = self.deserialize(msg.key(), MessageField.KEY, msg.headers())

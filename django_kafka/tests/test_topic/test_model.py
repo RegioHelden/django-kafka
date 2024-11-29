@@ -48,14 +48,18 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
             name = models.CharField()
 
         defaults = topic_consumer.get_defaults(
-            model=KafkaConnectSkip, value={"name": 1}
+            model=KafkaConnectSkip,
+            value={"name": 1},
         )
 
         self.assertEqual(defaults, {"name": 1, "kafka_skip": True})
 
     def test_transform(self):
+        """test custom transform methods are used during transformation"""
         topic_consumer = self._get_model_topic_consumer()
-        topic_consumer.transform_name = mock.Mock(return_value=("transformed_name", "transformed_value"))
+        topic_consumer.transform_name = mock.Mock(
+            return_value=("transformed_name", "transformed_value"),
+        )
 
         transformed_value = topic_consumer.transform(self.model, {"name": "value"})
 
@@ -65,6 +69,15 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
             "name",
             "value",
         )
+
+    def test_exclude_fields(self):
+        """test excluded fields are not included in the transformed result"""
+        topic_consumer = self._get_model_topic_consumer()
+        topic_consumer.exclude_fields = ["name"]
+
+        transformed_value = topic_consumer.transform(self.model, {"name": "value"})
+
+        self.assertEqual(transformed_value, {})
 
     def test_sync(self):
         topic_consumer = self._get_model_topic_consumer()
@@ -82,7 +95,7 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
         )
         topic_consumer.transform.assert_called_once_with(
             model,
-            {"value": "value"}
+            {"value": "value"},
         )
         topic_consumer.get_defaults.assert_called_once_with(
             model,
