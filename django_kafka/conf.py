@@ -1,6 +1,9 @@
 import socket
+from typing import Optional
 
 from django.conf import settings as django_settings
+
+from django_kafka.retry.settings import RetrySettings
 
 SETTINGS_KEY = "DJANGO_KAFKA"
 DEFAULTS = {
@@ -50,6 +53,9 @@ class Settings:
             return DEFAULTS[attr]
 
         raise AttributeError(f"Invalid setting: '{attr}'")
+
+    def get_retry_settings(self) -> Optional[RetrySettings]:
+        return RetrySettings(**self.RETRY_SETTINGS) if self.RETRY_SETTINGS else None
 
 
 settings = Settings()

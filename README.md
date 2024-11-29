@@ -362,7 +362,9 @@ Defines the retry topic suffix. See [Non-blocking retries](#non-blocking-retries
 #### `RETRY_SETTINGS`
 Default: `None`
 
-Defines the default retry settings. See [retries](#retries).
+Defines the configuration of the default retry settings. See [retries](#retries).
+
+For example, `{ ..., "RETRY_SETTINGS": dict(max_retries=-1, delay=10) }`
 
 #### `DEAD_LETTER_TOPIC_SUFFIX`
 Default: `dlt`
