@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.10 (2024-11-29)
+* `settings.RETRY_SETTINGS` takes a `dict` of kwargs to pass to `RetrySettings` class.
+* Add `exclude_fields` option to `ModelTopicConsumer` to ignore message value fields.
+
 ## 0.5.9 (2024-11-28)
 * Add `RETRY_SETTINGS` configuration setting.
 * Add blocking retry behaviour and make it the default.

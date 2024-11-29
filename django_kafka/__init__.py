@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.5.9"
+__version__ = "0.5.10"
 
 __all__ = [
     "autodiscover",
