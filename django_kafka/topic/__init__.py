@@ -95,7 +95,7 @@ class TopicProducer(ABC):
 class TopicConsumer(ABC):
     key_deserializer: Type[Deserializer] = StringDeserializer
     value_deserializer: Type[Deserializer] = StringDeserializer
-    retry_settings = settings.RETRY_SETTINGS
+    retry_settings = settings.get_retry_settings()
 
     @property
     @abstractmethod

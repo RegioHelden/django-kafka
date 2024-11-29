@@ -124,7 +124,6 @@ DJANGO_KAFKA = {
 `ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model, the topic to consume from and define a few abstract methods.
 
 ```py
-
 from django_kafka.topic.model import ModelTopicConsumer
 
 from my_app.models import MyModel
@@ -142,14 +141,19 @@ class MyModelConsumer(ModelTopicConsumer):
         return {"id": key}
 ```
 
-Model instances will have their attributes synced from the message value. If you need to alter a message key or value before it is assigned, define a `transform_{attr}` method:
+Model instances will have their attributes synced from the message value. 
+
+1. If you need to alter a message key or value before it is assigned, define a `transform_{attr}` method.
+2. If you need to ignore a field in the message value, define an `exclude_fields` list.
 
 ```python
+class MyModelConsumer(ModelTopicConsumer):
+    ...
+        
+    exclude_fields = ['id']
 
-    class MyModelConsumer(ModelTopicConsumer):
-        ...
-        def transform_name(model, key, value):
-            return 'first_name', value["name"].upper()
+    def transform_name(model, key, value):
+        return 'first_name', value["name"].upper()
 ```
 
 ### DbzModelTopicConsumer:
@@ -159,7 +163,6 @@ Model instances will have their attributes synced from the message value. If you
 In Debezium it is possible to [reroute records](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html) from multiple sources to the same topic. In doing so Debezium [inserts a table identifier](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html#_ensure_unique_key) to the key to ensure uniqueness. When this key is inserted, you **must instead** define a `reroute_model_map` to map the table identifier to the model class to be created.
 
 ```py
-
 from django_kafka.topic.debezium import DbzModelTopicConsumer
 
 from my_app.models import MyModel, MyOtherModel
@@ -362,7 +365,9 @@ Defines the retry topic suffix. See [Non-blocking retries](#non-blocking-retries
 #### `RETRY_SETTINGS`
 Default: `None`
 
-Defines the default retry settings. See [retries](#retries).
+Defines the configuration of the default retry settings. See [retries](#retries).
+
+For example, `{ ..., "RETRY_SETTINGS": dict(max_retries=-1, delay=10) }`
 
 #### `DEAD_LETTER_TOPIC_SUFFIX`
 Default: `dlt`

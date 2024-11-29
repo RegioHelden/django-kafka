@@ -13,6 +13,7 @@ class SettingsTestCase(SimpleTestCase):
         "PRODUCER_CONFIG",
         "CONSUMER_CONFIG",
         "RETRY_CONSUMER_CONFIG",
+        "RETRY_SETTINGS",
         "RETRY_TOPIC_SUFFIX",
         "DEAD_LETTER_TOPIC_SUFFIX",
         "POLLING_FREQUENCY",
@@ -46,6 +47,7 @@ class SettingsTestCase(SimpleTestCase):
             "RETRY_CONSUMER_CONFIG": {
                 "topic.metadata.refresh.interval.ms": 5000,
             },
+            "RETRY_SETTINGS": {"max_retries": -1, "delay": 10},
             "RETRY_TOPIC_SUFFIX": "retry-extra",
             "DEAD_LETTER_TOPIC_SUFFIX": "dlt-extra",
             "POLLING_FREQUENCY": 0.5,
@@ -67,3 +69,10 @@ class SettingsTestCase(SimpleTestCase):
         with override_settings(**{SETTINGS_KEY: user_settings}):
             for key in self.settings_keys:
                 self.assertEqual(getattr(settings, key), user_settings[key])
+
+    def test_get_retry_settings(self):
+        retry_settings = {"RETRY_SETTINGS": {"max_retries": -1, "delay": 10}}
+        with override_settings(**{SETTINGS_KEY: retry_settings}):
+            retry_instance = settings.get_retry_settings()
+            for key, value in retry_settings["RETRY_SETTINGS"].items():
+                self.assertEqual(getattr(retry_instance, key), value)

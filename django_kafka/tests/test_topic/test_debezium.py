@@ -7,7 +7,7 @@ from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.topic.debezium import DbzModelTopicConsumer
 
 
-class TestDbzModelTopicConsumer(TestCase):
+class DbzModelTopicConsumerTestCase(TestCase):
     def _get_model_topic_consumer(self) -> DbzModelTopicConsumer:
         class SomeModelTopicConsumer(DbzModelTopicConsumer):
             name = "name"
