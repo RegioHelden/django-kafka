@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.11 (2024-12-20)
+* Upgrade `confluent-kafka` which adds support of the list of urls to the `SchemaRegistryClient`.
+
 ## 0.5.10 (2024-11-29)
 * `settings.RETRY_SETTINGS` takes a `dict` of kwargs to pass to `RetrySettings` class.
 * Add `exclude_fields` option to `ModelTopicConsumer` to ignore message value fields.
