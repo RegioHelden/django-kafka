@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.12 (2024-12-20)
+* Fix dependency name rename `schema-registry` to `schemaregistry`.
+
 ## 0.5.11 (2024-12-20)
 * Upgrade `confluent-kafka` which adds support of the list of urls to the `SchemaRegistryClient`.
 

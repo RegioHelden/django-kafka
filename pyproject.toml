@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-kafka"
-version = "0.5.11"
+version = "0.5.12"
 dependencies = [
     "django>=4.2,<6.0",
-    "confluent-kafka[avro, schema-registry]==2.6.2"
+    "confluent-kafka[avro, schemaregistry]==2.6.2"
 ]
 requires-python = ">=3.11"
 authors = [
