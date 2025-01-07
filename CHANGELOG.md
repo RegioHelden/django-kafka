@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.13 (2025-01-07)
+* Upgrade `confluent-kafka` from `v2.6.2` to `v2.7.0` as recommended by authors.
+
 ## 0.5.12 (2024-12-20)
 * Fix dependency name rename `schema-registry` to `schemaregistry`.
 
