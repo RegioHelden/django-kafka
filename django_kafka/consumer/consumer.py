@@ -102,7 +102,7 @@ class Consumer:
         if retry_settings.can_retry(attempt, exc):
             until = retry_settings.get_retry_time(attempt)
             self.pause_partition(msg, until)
-            self.log_error(exc)
+            self.log_error(msg, exc_info=exc)
             return True
         return False
 
@@ -153,22 +153,34 @@ class Consumer:
         retried, blocking = self.retry_msg(msg, exc)
         if not retried:
             self.dead_letter_msg(msg, exc)
-            self.log_error(exc)
+            self.log_error(msg, exc_info=exc)
             return True
         return not blocking
 
     def get_topic(self, msg: "cimpl.Message") -> "TopicConsumer":
         return self.topics.get(topic_name=msg.topic())
 
-    def log_error(self, error):
-        logger.error(error, exc_info=True)
+    def log_error(
+            self,
+            msg: Optional["cimpl.Message"] = None,
+            exc_info: bool | Exception = False,
+    ):
+        error = f"'{self.__class__.__module__}.{self.__class__.__name__} failed'"
+        if msg:
+            topic = self.get_topic(msg)
+            error = f"{error} on '{topic.__class__.__module__}.{topic.__class__.__name__}'"
+
+            if msg_error := msg.error():
+                error = f"{error}\nMessage error: '{msg_error}'"
+
+        logger.error(error, exc_info=exc_info)
 
     def consume(self, msg):
         self.get_topic(msg).consume(msg)
 
     def process_message(self, msg: "cimpl.Message"):
-        if msg_error := msg.error():
-            self.log_error(msg_error)
+        if msg.error():
+            self.log_error(msg)
             return
 
         try:
@@ -197,7 +209,7 @@ class Consumer:
                 if (msg := self.poll()) is not None:
                     self.process_message(msg)
         except Exception as exc:
-            self.log_error(exc)
+            self.log_error(exc_info=exc)
             raise
         finally:
             self.stop()
