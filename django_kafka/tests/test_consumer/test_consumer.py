@@ -169,7 +169,7 @@ class ConsumerTestCase(TestCase):
         # checks msg had error before processing
         msg.error.assert_called_once_with()
         # error handler was triggered
-        log_error.assert_called_once_with(msg.error.return_value)
+        log_error.assert_called_once_with(msg)
         # Topic.consume is not called
         consumer.topics[msg.topic()].consume.assert_not_called()
         # Consumer.commit_offset is not called
@@ -269,7 +269,7 @@ class ConsumerTestCase(TestCase):
 
         consumer.retry_msg.assert_called_once_with(msg, exc)
         consumer.dead_letter_msg.assert_called_once_with(msg, exc)
-        consumer.log_error.assert_called_once_with(exc)
+        consumer.log_error.assert_called_once_with(msg, exc_info=exc)
 
     def test_blocking_retry(self):
         retry_time = timezone.now()
@@ -289,7 +289,7 @@ class ConsumerTestCase(TestCase):
         retried = consumer.blocking_retry(retry_settings, msg_mock, exc)
 
         consumer.pause_partition.assert_called_once_with(msg_mock, retry_time)
-        consumer.log_error.assert_called_once_with(exc)
+        consumer.log_error.assert_called_once_with(msg_mock, exc_info=exc)
         self.assertEqual(retried, True)
 
     @patch("django_kafka.consumer.Consumer.log_error")

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.14 (2025-01-27)
+* Improve logging. Add consumer and topic names to the error message.
+
 ## 0.5.13 (2025-01-07)
 * Upgrade `confluent-kafka` from `v2.6.2` to `v2.7.0` as recommended by authors.
 
