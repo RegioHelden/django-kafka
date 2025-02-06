@@ -3,6 +3,7 @@ from unittest.mock import call, patch
 from confluent_kafka.serialization import MessageField
 from django.test import TestCase
 
+from django_kafka import producer
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.topic import TopicConsumer, TopicProducer
 
@@ -156,6 +157,18 @@ class TopicProducerTestCase(TestCase):
         mock_topic_context.assert_not_called()
         mock_value_serializer.assert_not_called()
         mock_key_serializer.assert_not_called()
+
+    @patch("django_kafka.topic.TopicProducer.serialize")
+    @patch("django_kafka.kafka.producer")
+    def test_produce_suppression(self, mock_kafka_producer, mock_topic_serialize):
+        key = "key"
+        value = "message value"
+
+        with producer.suppress():
+            self.topic_producer.produce(value, key=key)
+
+        mock_topic_serialize.assert_not_called()
+        mock_kafka_producer.produce.assert_not_called()
 
     def test_context(self):
         fields = [MessageField.VALUE, MessageField.KEY]

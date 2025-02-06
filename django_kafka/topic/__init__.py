@@ -15,6 +15,7 @@ from confluent_kafka.serialization import (
 from django_kafka import kafka
 from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.producer import Suppression
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
@@ -67,6 +68,9 @@ class TopicProducer(ABC):
         raise DjangoKafkaError(f"Unsupported serialization field {field}.")
 
     def produce(self, value: any, **kwargs):
+        if Suppression.active(self.name):
+            return  # do not serialize if producing is suppressed
+
         key_serializer_kwargs = kwargs.pop("key_serializer_kwargs", {}) or {}
         value_serializer_kwargs = kwargs.pop("value_serializer_kwargs", {}) or {}
         headers = kwargs.get("headers")
