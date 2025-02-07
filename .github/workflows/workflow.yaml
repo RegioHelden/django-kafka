@@ -20,11 +20,13 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           args: "check"
+          version-file: "example/requirements.txt"
 
       - name: Check format
         uses: astral-sh/ruff-action@v3
         with:
           args: "format --check"
+          version-file: "example/requirements.txt"
 
   test:
     runs-on: ubuntu-latest
