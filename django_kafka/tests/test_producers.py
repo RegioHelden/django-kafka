@@ -29,11 +29,10 @@ class ProducerSuppressTestCase(TestCase):
         """tests that message suppression lists are combined with later contexts"""
         producer = Producer()
 
-        with suppress(["topicA"]):
-            with suppress(["topicB"]):
-                producer.produce("topicA")
-                producer.produce("topicB")
-                producer.produce("topicC")
+        with suppress(["topicA"]), suppress(["topicB"]):
+            producer.produce("topicA")
+            producer.produce("topicB")
+            producer.produce("topicC")
 
         mock_confluent_producer.return_value.produce.assert_called_once_with("topicC")
 
@@ -41,18 +40,16 @@ class ProducerSuppressTestCase(TestCase):
         """test that global message suppression is maintained by later contexts"""
         producer = Producer()
 
-        with suppress():
-            with suppress(["topicA"]):
-                producer.produce("topicB")
+        with suppress(), suppress(["topicA"]):
+            producer.produce("topicB")
 
         mock_confluent_producer.return_value.produce.assert_not_called()
 
     def test_unsuppress(self, mock_confluent_producer):
         producer = Producer()
 
-        with suppress(["topicA"]):
-            with unsuppress():
-                producer.produce("topicA")
+        with suppress(["topicA"]), unsuppress():
+            producer.produce("topicA")
 
         mock_confluent_producer.return_value.produce.assert_called_once_with("topicA")
 

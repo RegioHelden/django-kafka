@@ -1,18 +1,17 @@
-from typing import Type
 from unittest import mock
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 
 from django_kafka.connect.connector import Connector
 from django_kafka.consumer import Consumer, Topics
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.registry import ConsumersRegistry, Registry, ConnectorsRegistry
+from django_kafka.registry import ConnectorsRegistry, ConsumersRegistry, Registry
 
 
 class RegistryTestCase(SimpleTestCase):
     def _gen_cls(self, name):
-        return type(name, (object, ), {})
+        return type(name, (object,), {})
 
     def test_registering_same_key_not_allowed(self):
         registry = Registry()
@@ -73,7 +72,7 @@ class RegistryTestCase(SimpleTestCase):
 
 
 class ConsumersRegistryTestCase(SimpleTestCase):
-    def _get_consumer_cls(self, name, group_id) -> Type[Consumer]:
+    def _get_consumer_cls(self, name, group_id) -> type[Consumer]:
         return type[Consumer](
             name,
             (Consumer,),
@@ -101,7 +100,7 @@ class ConsumersRegistryTestCase(SimpleTestCase):
 
 @patch("django_kafka.connect.client.KafkaConnectSession", new=Mock())
 class ConnectorsRegistryTestCase(SimpleTestCase):
-    def _gen_cls(self, name) -> Type[Connector]:
+    def _gen_cls(self, name) -> type[Connector]:
         return type[Connector](
             name,
             (Connector,),

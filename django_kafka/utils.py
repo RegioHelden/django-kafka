@@ -1,10 +1,9 @@
 import time
 from functools import wraps
-from typing import Type
 
 
 def retry(
-    exceptions: tuple[Type[Exception]] = (Exception,),
+    exceptions: tuple[type[Exception]] = (Exception,),
     tries: int = -1,
     delay: int = 0,
     backoff: int = 1,
@@ -24,5 +23,8 @@ def retry(
                         raise
                     time.sleep(_delay)
                     _delay *= backoff
+            return None
+
         return wrapper
+
     return decorator

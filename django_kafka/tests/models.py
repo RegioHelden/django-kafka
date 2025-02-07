@@ -14,9 +14,9 @@ class AbstractModelTestCase(TestCase):
             app_label = cls.__module__
 
         cls.model = ModelBase(
-            f'__Test{cls.abstract_model.__name__}__',
+            f"__Test{cls.abstract_model.__name__}__",
             (cls.abstract_model,),
-            {'__module__': cls.abstract_model.__module__, "Meta": Meta},
+            {"__module__": cls.abstract_model.__module__, "Meta": Meta},
         )
 
         with connection.schema_editor() as editor:

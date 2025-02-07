@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import override_settings, SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from django_kafka import DjangoKafka
 from django_kafka.conf import SETTINGS_KEY

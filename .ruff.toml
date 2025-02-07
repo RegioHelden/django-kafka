@@ -70,3 +70,6 @@ max-public-methods = 50
 
 [format]
 skip-magic-trailing-comma = false
+
+[lint.pyflakes]
+extend-generics = ["django_kafka.registry.Registry"]

@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from http import HTTPStatus
 
 from django_kafka.conf import settings
-from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.connect.client import KafkaConnectClient
+from django_kafka.exceptions import DjangoKafkaError
 
 __all__ = [
     "Connector",
@@ -17,8 +18,10 @@ class ConnectorStatus(StrEnum):
     UNASSIGNED: The connector/task has not yet been assigned to a worker.
     RUNNING: The connector/task is running.
     PAUSED: The connector/task has been administratively paused.
-    FAILED: The connector/task has failed (usually by raising an exception, which is reported in the status output).
+    FAILED: The connector/task has failed (usually by raising an exception, which
+            is reported in the status output).
     """
+
     UNASSIGNED = "UNASSIGNED"
     RUNNING = "RUNNING"
     PAUSED = "PAUSED"
@@ -54,7 +57,7 @@ class Connector(ABC):
     def delete(self) -> bool:
         response = self.client.delete(self.name)
 
-        if response.status_code == 404:
+        if response.status_code == HTTPStatus.NOT_FOUND:
             return False
 
         if not response.ok:

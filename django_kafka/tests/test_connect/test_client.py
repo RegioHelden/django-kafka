@@ -1,9 +1,9 @@
-from unittest.mock import patch, call
+from unittest.mock import call, patch
 
 from django.test import SimpleTestCase
 
+from django_kafka.connect.client import KafkaConnectClient, KafkaConnectSession
 from django_kafka.exceptions import DjangoKafkaError
-from django_kafka.connect.client import KafkaConnectSession, KafkaConnectClient
 
 
 class KafkaConnectSessionTestCase(SimpleTestCase):
@@ -30,7 +30,7 @@ class KafkaConnectSessionTestCase(SimpleTestCase):
     def test_session_request(self, mock_super):
         host = "http://localhost"
         request_path = "/path"
-        
+
         session = KafkaConnectSession(host, timeout=10)
 
         # should use timeout value from the init
@@ -39,10 +39,13 @@ class KafkaConnectSessionTestCase(SimpleTestCase):
         session.request("GET", request_path, timeout=20)
 
         # url was correctly constructed and right timeout was used
-        mock_super().request.assert_has_calls([
-            call("GET", f"{host}{request_path}", timeout=10),
-            call("GET", f"{host}{request_path}", timeout=20),
-        ], any_order=False)
+        mock_super().request.assert_has_calls(
+            [
+                call("GET", f"{host}{request_path}", timeout=10),
+                call("GET", f"{host}{request_path}", timeout=20),
+            ],
+            any_order=False,
+        )
 
 
 class KafkaConnectClientTestCase(SimpleTestCase):
@@ -65,7 +68,9 @@ class KafkaConnectClientTestCase(SimpleTestCase):
     @patch("django_kafka.connect.client.KafkaConnectSession")
     def test_validate_parse_connector_class(self, mock_session):
         client = KafkaConnectClient("http://localhost")
-        config = {"connector.class": "io.debezium.connector.postgresql.PostgresConnector"}
+        config = {
+            "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        }
         connector_class_name = "PostgresConnector"
 
         result = client.validate(config)
@@ -97,7 +102,9 @@ class KafkaConnectClientTestCase(SimpleTestCase):
 
         result = client.delete(connector_name)
 
-        mock_session.return_value.delete.assert_called_once_with(f"/connectors/{connector_name}")
+        mock_session.return_value.delete.assert_called_once_with(
+            f"/connectors/{connector_name}",
+        )
         self.assertEqual(result, mock_session.return_value.delete.return_value)
 
     @patch("django_kafka.connect.client.KafkaConnectSession")
@@ -107,5 +114,7 @@ class KafkaConnectClientTestCase(SimpleTestCase):
 
         result = client.connector_status(connector_name)
 
-        mock_session.return_value.get.assert_called_once_with(f"/connectors/{connector_name}/status")
+        mock_session.return_value.get.assert_called_once_with(
+            f"/connectors/{connector_name}/status",
+        )
         self.assertEqual(result, mock_session.return_value.get.return_value)

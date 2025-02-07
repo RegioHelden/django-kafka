@@ -1,9 +1,9 @@
 from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
 from requests.auth import AuthBase
 from urllib3.util import Retry
-from requests.adapters import HTTPAdapter
 
 from django_kafka.exceptions import DjangoKafkaError
 
@@ -13,8 +13,8 @@ class KafkaConnectSession(requests.Session):
         self,
         host: str,
         auth: Optional[tuple | AuthBase] = None,
-        retry: dict = None,
-        timeout: int = None,
+        retry: Optional[dict] = None,
+        timeout: Optional[int] = None,
     ):
         super().__init__()
         self.auth = auth
@@ -41,8 +41,8 @@ class KafkaConnectClient:
         self,
         host: str,
         auth: Optional[tuple | AuthBase] = None,
-        retry: dict = None,
-        timeout: int = None,
+        retry: Optional[dict] = None,
+        timeout: Optional[int] = None,
     ):
         self._requests = KafkaConnectSession(host, auth, retry, timeout)
 
@@ -53,12 +53,16 @@ class KafkaConnectClient:
         return self._requests.delete(f"/connectors/{connector_name}")
 
     def validate(self, config: dict):
-        if not config.get('connector.class'):
-            raise DjangoKafkaError("'connector.class' config is required for validation.")
+        if not config.get("connector.class"):
+            raise DjangoKafkaError(
+                "'connector.class' config is required for validation.",
+            )
 
         connector_class_name = config.get("connector.class").rsplit(".", 1)[-1]
-        response = self._requests.put(f"/connector-plugins/{connector_class_name}/config/validate", json=config)
-        return response
+        return self._requests.put(
+            f"/connector-plugins/{connector_class_name}/config/validate",
+            json=config,
+        )
 
     def connector_status(self, connector_name: str):
         """
