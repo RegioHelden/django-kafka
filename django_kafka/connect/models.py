@@ -37,6 +37,15 @@ class KafkaConnectSkipModel(models.Model):
         abstract = True
         base_manager_name = "objects"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._reset_kafka_skip = False  # set True for DB fetched instances in from_db
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        if key == "kafka_skip":
+            self._reset_kafka_skip = False
+
     def save(
         self,
         force_insert=False,
@@ -69,15 +78,6 @@ class KafkaConnectSkipModel(models.Model):
         instance = super().from_db(*args, **kwargs)
         instance._reset_kafka_skip = True
         return instance
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._reset_kafka_skip = False  # set True for DB fetched instances in from_db
-
-    def __setattr__(self, key, value):
-        super().__setattr__(key, value)
-        if key == "kafka_skip":
-            self._reset_kafka_skip = False
 
     def refresh_from_db(self, *args, **kwargs):
         super().refresh_from_db(*args, **kwargs)

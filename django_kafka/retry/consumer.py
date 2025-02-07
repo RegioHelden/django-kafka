@@ -1,5 +1,5 @@
 import traceback
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from django.utils import timezone
 
@@ -29,7 +29,7 @@ class RetryConsumer(Consumer):
     topics: RetryTopics
 
     @classmethod
-    def build(cls, consumer_cls: Type["Consumer"]) -> Optional[Type["RetryConsumer"]]:
+    def build(cls, consumer_cls: type["Consumer"]) -> Optional[type["RetryConsumer"]]:
         """Generates RetryConsumer subclass linked to consumer class retryable topics"""
         retryable_topics = consumer_cls.topics.get_retryable(blocking=False)
         if not retryable_topics:

@@ -62,7 +62,7 @@ class Producer:
 class Suppression(ContextDecorator):
     """context manager to help suppress producing messages to desired Kafka topics"""
 
-    _var = ContextVar(f"{__name__}.suppression", default=[])
+    _var = ContextVar(f"{__name__}.suppression", default=None)
 
     @classmethod
     def active(cls, topic: str):
@@ -74,6 +74,9 @@ class Suppression(ContextDecorator):
 
     def __init__(self, topics: Optional[list[str]], deactivate=False):
         current = self._var.get()
+        if current is None:
+            self._var.set([])
+
         if deactivate:
             self.topics = []
         elif topics is None or current is None:

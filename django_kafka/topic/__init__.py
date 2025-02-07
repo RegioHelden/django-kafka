@@ -1,7 +1,7 @@
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from confluent_kafka.serialization import (
     Deserializer,
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class TopicProducer(ABC):
-    key_serializer: Type[Serializer] = StringSerializer
-    value_serializer: Type[Serializer] = StringSerializer
+    key_serializer: type[Serializer] = StringSerializer
+    value_serializer: type[Serializer] = StringSerializer
 
     @property
     @abstractmethod
@@ -97,8 +97,8 @@ class TopicProducer(ABC):
 
 
 class TopicConsumer(ABC):
-    key_deserializer: Type[Deserializer] = StringDeserializer
-    value_deserializer: Type[Deserializer] = StringDeserializer
+    key_deserializer: type[Deserializer] = StringDeserializer
+    value_deserializer: type[Deserializer] = StringDeserializer
     retry_settings = settings.get_retry_settings()
 
     @property

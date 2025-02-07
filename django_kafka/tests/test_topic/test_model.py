@@ -165,6 +165,9 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
             name = models.CharField(max_length=100)
             author = models.ForeignKey(self.model, models.CASCADE)
 
+            def __str__(self):
+                return self.name
+
         topic_consumer = self._get_model_topic_consumer()
         topic_consumer.model = BookModel
 

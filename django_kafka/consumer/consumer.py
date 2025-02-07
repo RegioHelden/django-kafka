@@ -161,14 +161,16 @@ class Consumer:
         return self.topics.get(topic_name=msg.topic())
 
     def log_error(
-            self,
-            msg: Optional["cimpl.Message"] = None,
-            exc_info: bool | Exception = False,
+        self,
+        msg: Optional["cimpl.Message"] = None,
+        exc_info: bool | Exception = False,
     ):
         error = f"'{self.__class__.__module__}.{self.__class__.__name__} failed'"
         if msg:
             topic = self.get_topic(msg)
-            error = f"{error} on '{topic.__class__.__module__}.{topic.__class__.__name__}'"
+            error = (
+                f"{error} on '{topic.__class__.__module__}.{topic.__class__.__name__}'"
+            )
 
             if msg_error := msg.error():
                 error = f"{error}\nMessage error: '{msg_error}'"

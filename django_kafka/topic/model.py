@@ -1,6 +1,6 @@
 import contextlib
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Optional
 
 from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,7 +14,7 @@ from django_kafka.topic import TopicConsumer
 class ModelTopicConsumer(TopicConsumer, ABC):
     """Syncs abstract kafka messages directly in to Django model instances"""
 
-    model: Optional[Type[Model]] = None  # override get_model for dynamic model lookups
+    model: Optional[type[Model]] = None  # override get_model for dynamic model lookups
     exclude_fields: list[str] = None  # fields to ignore from message value
 
     def transform(self, model, value) -> dict:
@@ -71,14 +71,14 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         defaults = self.get_defaults(model, transformed_value)
         return model.objects.update_or_create(**lookup, defaults=defaults)
 
-    def get_model(self, key, value) -> Type[Model]:
+    def get_model(self, key, value) -> type[Model]:
         if self.model:
             return self.model
         raise DjangoKafkaError(
             "Cannot obtain model: either define a default model or override get_model",
         )
 
-    def model_has_field(self, model: Type[Model], field_name: str) -> bool:
+    def model_has_field(self, model: type[Model], field_name: str) -> bool:
         return (
             field_name in model._meta._forward_fields_map
             or field_name in model._meta.fields_map

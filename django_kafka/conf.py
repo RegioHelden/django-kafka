@@ -27,14 +27,15 @@ DEFAULTS = {
     # `requests.auth.AuthBase` instance or tuple of (username, password) for Basic Auth
     "CONNECT_AUTH": None,
     # kwargs for `urllib3.util.retry.Retry` initialization
-    "CONNECT_RETRY": dict(
-        connect=5,
-        read=5,
-        status=5,
-        backoff_factor=0.5,
-        status_forcelist=[502, 503, 504],
-    ),
-    # `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call
+    "CONNECT_RETRY": {
+        "connect": 5,
+        "read": 5,
+        "status": 5,
+        "backoff_factor": 0.5,
+        "status_forcelist": [502, 503, 504],
+    },
+    # `django_kafka.connect.client.KafkaConnectSession` would pass this
+    # value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
 }

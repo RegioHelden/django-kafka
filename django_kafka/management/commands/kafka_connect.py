@@ -1,4 +1,5 @@
 import logging
+from http import HTTPStatus
 
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
@@ -23,7 +24,8 @@ class Command(BaseCommand):
             type=str,
             default=None,
             nargs="?",
-            help="Python path to the connector class(es). Processes all if not provided.",
+            help="Python path to the connector class(es). "
+            "Processes all if not provided.",
         )
         parser.add_argument(
             "--list",
@@ -47,14 +49,16 @@ class Command(BaseCommand):
             "--check-status",
             action="store_true",
             default=False,
-            help="Check status of connectors. Currently RUNNING status is considered as success.",
+            help="Check status of connectors. Currently RUNNING "
+            "status is considered as success.",
         )
         parser.add_argument(
             "--ignore-failures",
             action="store_true",
             default=False,
             help="The command wont fail if failures were detected. "
-            "By default if any failures were detected the command exist with error status.",
+            "By default if any failures were detected the "
+            "command exist with error status.",
         )
 
     def __init__(self, *args, **kwargs):
@@ -161,7 +165,10 @@ class Command(BaseCommand):
         try:
             status = connector.status()
         except DjangoKafkaError as error:
-            if isinstance(error.context, Response) and error.context.status_code == 404:
+            if (
+                isinstance(error.context, Response)
+                and error.context.status_code == HTTPStatus.NOT_FOUND
+            ):
                 # retry: on 404 as some delays are expected
                 raise
 

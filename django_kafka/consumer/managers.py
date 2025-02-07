@@ -1,5 +1,6 @@
+from collections.abc import Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING
 
 from confluent_kafka import TopicPartition
 from django.utils import timezone

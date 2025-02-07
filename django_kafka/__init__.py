@@ -1,6 +1,6 @@
 import logging
 from multiprocessing.pool import Pool
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from django.utils.functional import cached_property
@@ -12,17 +12,13 @@ from django_kafka.producer import Producer
 from django_kafka.registry import ConnectorsRegistry, ConsumersRegistry
 from django_kafka.retry.settings import RetrySettings
 
-if TYPE_CHECKING:
-    from django_kafka.connect.connector import Connector
-    from django_kafka.consumer import Consumer
-
 logger = logging.getLogger(__name__)
 
 __version__ = "0.5.15"
 
 __all__ = [
-    "autodiscover",
     "DjangoKafka",
+    "autodiscover",
     "kafka",
 ]
 

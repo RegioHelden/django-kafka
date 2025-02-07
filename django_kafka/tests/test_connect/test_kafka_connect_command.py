@@ -1,30 +1,33 @@
 from contextlib import contextmanager
 from io import StringIO
-from unittest.mock import patch, Mock, DEFAULT, MagicMock, call
+from unittest.mock import DEFAULT, MagicMock, Mock, call, patch
 
 from django.core.management import call_command
 from django.test import SimpleTestCase
 from requests.exceptions import RetryError
 
-from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.connect.connector import Connector, ConnectorStatus
+from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.management.commands.kafka_connect import Command
 
 
 @contextmanager
 def patch_kafka_connectors(**attrs):
-    attrs.setdefault('mark_for_removal', False)
+    attrs.setdefault("mark_for_removal", False)
 
     connector_instance = Mock(spec_set=Connector, **attrs)
     connector_class = Mock(spec_set=Connector, return_value=connector_instance)
 
-    with patch("django_kafka.kafka.connectors", {'connector.fake.path': connector_class}):
+    with patch(
+        "django_kafka.kafka.connectors",
+        {"connector.fake.path": connector_class},
+    ):
         yield connector_instance
 
 
 class KafkaConnectTestCase(SimpleTestCase):
     def setUp(self):
-        self.connector_path = 'connector.fake.path'
+        self.connector_path = "connector.fake.path"
         self.command_stdout = StringIO()
         self.command = Command(stdout=self.command_stdout)
         self.command.connectors = [self.connector_path]
@@ -48,11 +51,14 @@ class KafkaConnectTestCase(SimpleTestCase):
         handle_publish.assert_called_once_with()
         handle_status.assert_called_once_with()
 
-        manager.assert_has_calls([
-            call.handle_validate(),
-            call.handle_publish(),
-            call.handle_status(),
-        ], any_order=False)
+        manager.assert_has_calls(
+            [
+                call.handle_validate(),
+                call.handle_publish(),
+                call.handle_status(),
+            ],
+            any_order=False,
+        )
 
     def test_handle_validate(self):
         with patch_kafka_connectors() as connector:
@@ -70,7 +76,9 @@ class KafkaConnectTestCase(SimpleTestCase):
         self.assertFalse(self.command.has_failures)
 
     def test_handle_validate__exceptions(self):
-        with patch_kafka_connectors(**{"is_valid.side_effect": DjangoKafkaError}) as connector:
+        with patch_kafka_connectors(
+            **{"is_valid.side_effect": DjangoKafkaError},
+        ) as connector:
             self.command.handle_validate()
 
         connector.is_valid.assert_called_once_with(raise_exception=True)
@@ -78,7 +86,11 @@ class KafkaConnectTestCase(SimpleTestCase):
 
     @patch("django_kafka.management.commands.kafka_connect.Command.handle_delete")
     @patch("django_kafka.management.commands.kafka_connect.Command.handle_submit")
-    def test_handle_publish_marked_for_removal(self, mock_command_handle_submit, mock_command_handle_delete):
+    def test_handle_publish_marked_for_removal(
+        self,
+        mock_command_handle_submit,
+        mock_command_handle_delete,
+    ):
         with patch_kafka_connectors(mark_for_removal=True) as connector:
             self.command.handle_publish()
 
@@ -87,7 +99,11 @@ class KafkaConnectTestCase(SimpleTestCase):
 
     @patch("django_kafka.management.commands.kafka_connect.Command.handle_delete")
     @patch("django_kafka.management.commands.kafka_connect.Command.handle_submit")
-    def test_handle_publish_not_marked_for_removal(self, mock_command_handle_submit, mock_command_handle_delete):
+    def test_handle_publish_not_marked_for_removal(
+        self,
+        mock_command_handle_submit,
+        mock_command_handle_delete,
+    ):
         with patch_kafka_connectors(mark_for_removal=False) as connector:
             self.command.handle_publish()
 
@@ -102,7 +118,9 @@ class KafkaConnectTestCase(SimpleTestCase):
         self.assertFalse(self.command.has_failures)
 
     def test_handle_delete__django_kafka_error(self):
-        with patch_kafka_connectors(**{"delete.side_effect": DjangoKafkaError}) as connector:
+        with patch_kafka_connectors(
+            **{"delete.side_effect": DjangoKafkaError},
+        ) as connector:
             self.command.handle_delete(connector)
 
         connector.delete.assert_called_once_with()
@@ -123,7 +141,9 @@ class KafkaConnectTestCase(SimpleTestCase):
         connector.submit.assert_called_once_with()
 
     def test_handle_submit__django_kafka_error(self):
-        with patch_kafka_connectors(**{"submit.side_effect": DjangoKafkaError}) as connector:
+        with patch_kafka_connectors(
+            **{"submit.side_effect": DjangoKafkaError},
+        ) as connector:
             self.command.handle_submit(connector)
 
         connector.submit.assert_called_once_with()
@@ -143,21 +163,27 @@ class KafkaConnectTestCase(SimpleTestCase):
         connector.status.assert_not_called()
 
     def test_handle_status__running(self):
-        with patch_kafka_connectors(**{"status.return_value": ConnectorStatus.RUNNING}) as connector:
+        with patch_kafka_connectors(
+            **{"status.return_value": ConnectorStatus.RUNNING},
+        ) as connector:
             self.command.handle_status()
 
         connector.status.assert_called_once_with()
         self.assertFalse(self.command.has_failures)
 
     def test_handle_status__paused(self):
-        with patch_kafka_connectors(**{"status.return_value": ConnectorStatus.PAUSED}) as connector:
+        with patch_kafka_connectors(
+            **{"status.return_value": ConnectorStatus.PAUSED},
+        ) as connector:
             self.command.handle_status()
 
         connector.status.assert_called_once_with()
         self.assertTrue(self.command.has_failures)
 
     def test_handle_status__unassigned(self):
-        with patch_kafka_connectors(**{"status.return_value": ConnectorStatus.UNASSIGNED}) as connector:
+        with patch_kafka_connectors(
+            **{"status.return_value": ConnectorStatus.UNASSIGNED},
+        ) as connector:
             self.command.handle_status()
 
         # status UNASSIGNED is retried 3 times
@@ -166,7 +192,9 @@ class KafkaConnectTestCase(SimpleTestCase):
         self.assertTrue(self.command.has_failures)
 
     def test_handle_status__django_kafka_error(self):
-        with patch_kafka_connectors(**{"status.side_effect": DjangoKafkaError}) as connector:
+        with patch_kafka_connectors(
+            **{"status.side_effect": DjangoKafkaError},
+        ) as connector:
             self.command.handle_status()
 
         connector.status.assert_called_once_with()

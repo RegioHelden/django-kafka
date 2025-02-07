@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from django.utils import timezone
 
@@ -13,8 +13,8 @@ class RetrySettings:
         max_retries: int,
         delay: int,
         backoff: bool = False,
-        include: Optional[list[Type[Exception]]] = None,
-        exclude: Optional[list[Type[Exception]]] = None,
+        include: Optional[list[type[Exception]]] = None,
+        exclude: Optional[list[type[Exception]]] = None,
         blocking: bool = True,
     ):
         """
@@ -39,7 +39,7 @@ class RetrySettings:
         self.exclude = exclude
         self.blocking = blocking
 
-    def __call__(self, topic_cls: Type["TopicConsumer"]):
+    def __call__(self, topic_cls: type["TopicConsumer"]):
         topic_cls.retry_settings = self
         return topic_cls
 

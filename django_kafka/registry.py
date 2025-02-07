@@ -1,21 +1,21 @@
-from typing import Generic, TYPE_CHECKING, Type, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from django_kafka.exceptions import DjangoKafkaError
 
 if TYPE_CHECKING:
-    from django_kafka.consumer import Consumer
     from django_kafka.connect.connector import Connector
+    from django_kafka.consumer import Consumer
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Registry(Generic[T]):
     def __init__(self):
-        self._classes: dict[str, Type[T]] = {}
+        self._classes: dict[str, type[T]] = {}
 
     def __call__(self):
-        def add_to_registry(cls: Type[T]) -> Type[T]:
+        def add_to_registry(cls: type[T]) -> type[T]:
             self.register(cls)
             return cls
 
@@ -30,10 +30,10 @@ class Registry(Generic[T]):
     def __iter__(self):
         yield from self._classes.keys()
 
-    def get_key(self, cls: Type[T]) -> str:
+    def get_key(self, cls: type[T]) -> str:
         return f"{cls.__module__}.{cls.__name__}"
 
-    def register(self, cls: Type[T]):
+    def register(self, cls: type[T]):
         key = self.get_key(cls)
         if key in self._classes:
             raise DjangoKafkaError(f"`{key}` is already registered.")
@@ -46,11 +46,10 @@ class ConnectorsRegistry(Registry["Connector"]):
 
 
 class ConsumersRegistry(Registry["Consumer"]):
-
     def register(self, cls):
         from django_kafka.retry.consumer import RetryConsumer
-        
+
         super().register(cls)
-        
+
         if retry_consumer_cls := RetryConsumer.build(cls):
             self._classes[f"{self.get_key(cls)}.retry"] = retry_consumer_cls

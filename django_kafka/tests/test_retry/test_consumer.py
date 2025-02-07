@@ -1,6 +1,5 @@
 import datetime
 import traceback
-from typing import Type
 from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
@@ -31,7 +30,7 @@ class RetryConsumerTestCase(TestCase):
 
         return RetryableTopicConsumer()
 
-    def _get_retryable_consumer_cls(self, group_id="group_id") -> Type[Consumer]:
+    def _get_retryable_consumer_cls(self, group_id="group_id") -> type[Consumer]:
         class SomeConsumer(Consumer):
             topics = Topics(
                 self._get_topic_consumer(),
