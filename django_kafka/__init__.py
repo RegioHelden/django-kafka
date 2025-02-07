@@ -14,7 +14,7 @@ from django_kafka.retry.settings import RetrySettings
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.5.15"
+__version__ = "0.5.16"
 
 __all__ = [
     "DjangoKafka",
