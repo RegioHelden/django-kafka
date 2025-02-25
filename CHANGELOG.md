@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.17 (2025-02-07)
+* Fix `Suppression.active` returning `True` even if suppress was not used.
+* Update readme `ruff` section.
+
+## 0.5.16 (2025-01-27)
+* Integrate ruff and renovate.
+
+## 0.5.15 (2025-02-06)
+* Suppress messages serialization if producer is suppressed.
+
 ## 0.5.14 (2025-01-27)
 * Improve logging. Add consumer and topic names to the error message.
 

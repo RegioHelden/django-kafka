@@ -528,7 +528,7 @@ To maintain global message ordering between systems, all events for the same dat
 
 ## Making a new release
 - [bump-my-version](https://github.com/callowayproject/bump-my-version) is used to manage releases.
-- [Ruff](https://github.com/astral-sh/ruff) linter is used to validate the code style. Make sure your code complies withg the defined rules. You may use `ruff check --fix` for that. Ruff is executed by GitHub actions and the workflow will fail if Ruff validation fails. 
+- [Ruff](https://github.com/astral-sh/ruff) linter is used to validate the code style. Make sure your code complies with the defined rules. You may use `ruff check --fix` to fix violations and `ruff format` to reformat the code according to ruff rules. Ruff is executed by GitHub actions and the workflow will fail if Ruff validation fails. 
 
 - Add your changes to the [CHANGELOG](CHANGELOG.md), then run
 ```bash
