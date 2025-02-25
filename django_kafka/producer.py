@@ -62,27 +62,38 @@ class Producer:
 class Suppression(ContextDecorator):
     """context manager to help suppress producing messages to desired Kafka topics"""
 
-    _var = ContextVar(f"{__name__}.suppression", default=None)
+    _var = ContextVar(f"{__name__}.suppression")
 
     @classmethod
     def active(cls, topic: str):
         """returns if suppression is enabled for the given topic"""
-        topics = cls._var.get()
+        try:
+            topics = cls._var.get()
+        except LookupError:
+            # context var is not yet set, defaulting to empty list
+            topics = []
+
+        # topics will be None when suppress() is initialized without topics provided
         if topics is None:
             return True  # all topics
+
         return topic in topics
 
-    def __init__(self, topics: Optional[list[str]], deactivate=False):
-        current = self._var.get()
-        if current is None:
-            self._var.set([])
+    def __init__(self, topics: Optional[list[str]] = None, deactivate=False):
+        try:
+            topics_in_context = self._var.get()
+        except LookupError:
+            topics_in_context = []
 
         if deactivate:
             self.topics = []
-        elif topics is None or current is None:
+
+        elif topics is None or topics_in_context is None:
             self.topics = None  # indicates all topics
+
         elif isinstance(topics, list):
-            self.topics = current + topics
+            self.topics = topics_in_context + topics
+
         else:
             raise ValueError(f"invalid producer suppression setting {topics}")
 
@@ -96,11 +107,11 @@ class Suppression(ContextDecorator):
 
 def suppress(topics: Optional[Callable | list[str]] = None):
     if callable(topics):
-        return Suppression(None)(topics)
+        return Suppression()(topics)
     return Suppression(topics)
 
 
 def unsuppress(fn: Optional[Callable] = None):
     if fn:
-        return Suppression(None, deactivate=True)(fn)
-    return Suppression(None, deactivate=True)
+        return Suppression(deactivate=True)(fn)
+    return Suppression(deactivate=True)

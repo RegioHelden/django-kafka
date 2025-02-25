@@ -3,11 +3,15 @@ from unittest.mock import call
 
 from django.test import TestCase
 
-from django_kafka.producer import Producer, suppress, unsuppress
+from django_kafka.producer import Producer, Suppression, suppress, unsuppress
 
 
 @mock.patch("django_kafka.producer.ConfluentProducer")
 class ProducerSuppressTestCase(TestCase):
+    def test_suppression_active(self, mock_confluent_producer):
+        # suppress should not be active if it hasn't been called
+        self.assertFalse(Suppression.active("topicA"))
+
     def test_suppress_all(self, mock_confluent_producer):
         producer = Producer()
 
