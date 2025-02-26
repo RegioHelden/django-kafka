@@ -2,7 +2,6 @@
 
 ## Unreleased
 * Switch to trusted publishing
-* Add support for Python 3.9 and 3.10
 * Renovate test and build environment
 
 ## 0.5.17 (2025-02-07)

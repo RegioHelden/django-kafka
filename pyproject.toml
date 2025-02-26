@@ -9,7 +9,7 @@ dependencies = [
     "django>=4.2,<6.0",
     "confluent-kafka[avro, schemaregistry]==2.7.0"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [
     { name = "RegioHelden GmbH", email = "opensource@regiohelden.de" },
 ]
@@ -24,8 +24,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
