@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+* Switch to trusted publishing
+* Renovate test and build environment
+
 ## 0.5.17 (2025-02-07)
 * Fix `Suppression.active` returning `True` even if suppress was not used.
 * Update readme `ruff` section.
