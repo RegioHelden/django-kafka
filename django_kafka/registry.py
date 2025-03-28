@@ -30,6 +30,9 @@ class Registry(Generic[T]):
     def __iter__(self):
         yield from self._classes.keys()
 
+    def __contains__(self, item: T) -> bool:
+        return item in self._classes.values()
+
     def get_key(self, cls: type[T]) -> str:
         return f"{cls.__module__}.{cls.__name__}"
 

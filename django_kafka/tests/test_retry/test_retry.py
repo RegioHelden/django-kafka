@@ -3,27 +3,49 @@ from unittest import mock
 
 from django.test import TestCase
 
+from django_kafka.models import KeyOffsetTracker
 from django_kafka.retry.settings import RetrySettings
+from django_kafka.tests.utils import message_mock
 from django_kafka.topic import Topic
 
 
 class RetrySettingTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_msg = message_mock()
+        super().setUpClass()
+
     def test_should_retry__include(self):
         settings = RetrySettings(max_retries=5, delay=60, include=[ValueError])
 
-        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), True)
-        self.assertEqual(settings.can_retry(attempt=0, exc=IndexError()), False)
+        self.assertEqual(
+            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            True,
+        )
+        self.assertEqual(
+            settings.can_retry(self.mock_msg, attempt=0, exc=IndexError()),
+            False,
+        )
 
     def test_should_retry__exclude(self):
         settings = RetrySettings(max_retries=5, delay=60, exclude=[ValueError])
 
-        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), False)
-        self.assertEqual(settings.can_retry(attempt=0, exc=IndexError()), True)
+        self.assertEqual(
+            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            False,
+        )
+        self.assertEqual(
+            settings.can_retry(self.mock_msg, attempt=0, exc=IndexError()),
+            True,
+        )
 
     def test_should_retry__no_include_exclude(self):
         settings = RetrySettings(max_retries=5, delay=60)
 
-        self.assertEqual(settings.can_retry(attempt=0, exc=ValueError()), True)
+        self.assertEqual(
+            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            True,
+        )
 
     def test_attempts_exceeded(self):
         settings = RetrySettings(max_retries=5, delay=60)
@@ -77,6 +99,75 @@ class RetrySettingTestCase(TestCase):
             settings.get_retry_time(4),
             now + datetime.timedelta(seconds=480),
         )
+
+    def test_skip_by_offset(self):
+        msg = message_mock()
+        model_instance = KeyOffsetTracker.objects.create(
+            topic=msg.topic(),
+            key=msg.key(),
+            offset=msg.offset(),
+            timestamp=msg.timestamp(),
+        )
+
+        # not configured to use offset
+        settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            backoff=False,
+            use_offset_tracker=False,
+        )
+        for error in settings.relational_errors:
+            self.assertFalse(settings.skip_by_offset(msg, error()))
+
+        # configured to use offset, but exception is not among accepted
+        settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            backoff=False,
+            use_offset_tracker=True,
+        )
+        self.assertFalse(settings.skip_by_offset(msg, Exception()))
+
+        # configured to use offset, exceptions are valid but no future offset
+        settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            backoff=False,
+            use_offset_tracker=True,
+        )
+        for error in settings.relational_errors:
+            self.assertFalse(settings.skip_by_offset(self.mock_msg, error()))
+
+        # configured to use offset and everything is aligned
+        settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            backoff=False,
+            use_offset_tracker=True,
+        )
+
+        model_instance.offset += 1
+        model_instance.save(update_fields=["offset"])
+
+        for error in settings.relational_errors:
+            self.assertTrue(settings.skip_by_offset(msg, error()))
+
+    @mock.patch(
+        "django_kafka.retry.settings.RetrySettings.skip_by_offset",
+        return_value=True,
+    )
+    def test_can_retry_calls_skip_by_offset(self, skip_by_offset):
+        settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            backoff=False,
+            use_offset_tracker=True,
+        )
+        error = Exception()
+        result = settings.can_retry(self.mock_msg, 1, error)
+
+        skip_by_offset.assert_called_once_with(self.mock_msg, error)
+        self.assertIs(result, False)
 
 
 class RetryDecoratorTestCase(TestCase):

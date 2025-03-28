@@ -20,6 +20,8 @@ from django_kafka.producer import Suppression
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
 
+    from django_kafka.retry.settings import RetrySettings
+
 logger = logging.getLogger(__name__)
 
 
@@ -99,7 +101,7 @@ class TopicProducer(ABC):
 class TopicConsumer(ABC):
     key_deserializer: type[Deserializer] = StringDeserializer
     value_deserializer: type[Deserializer] = StringDeserializer
-    retry_settings = settings.get_retry_settings()
+    retry_settings: "RetrySettings" = settings.get_retry_settings()
 
     @property
     @abstractmethod

@@ -59,7 +59,7 @@ class RetryTopicProducer(TopicProducer):
         return f"{self.group_id}.{self.msg.topic()}.{suffix}"
 
     def retry(self, exc: Exception) -> bool:
-        if not self.settings.can_retry(attempt=self.attempt, exc=exc):
+        if not self.settings.can_retry(self.msg, attempt=self.attempt, exc=exc):
             return False
 
         retry_timestamp = self.settings.get_retry_time(self.attempt).timestamp()

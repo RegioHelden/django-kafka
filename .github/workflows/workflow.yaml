@@ -63,6 +63,9 @@ jobs:
         run: pip install "Django~=${{ matrix.django }}"
 
       - name: Install package
+        run: pip install -r ./example/requirements-ci.txt
+
+      - name: Install package
         run: pip install -e .
 
       - name: Run tests

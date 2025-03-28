@@ -1,0 +1,60 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-31 15:31+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: django_kafka/connect/models.py:27
+msgid "Kafka skip"
+msgstr "Kafka-Skip"
+
+#: django_kafka/connect/models.py:29
+msgid ""
+"Used by Kafka Connect to suppress event creation.\n"
+"Gets reset to False on .save() method call, unless explicitly set."
+msgstr ""
+"Wird von Kafka Connect zur Ünterdrückung der Eventerstellung verwendet.\n"
+"Wird, wenn nicht explizit angegeben, beim Aufruf von .save() auf False "
+"zurückgesetzt."
+
+#: django_kafka/models.py:27
+msgid "topic"
+msgstr "Topic"
+
+#: django_kafka/models.py:28
+msgid "key"
+msgstr "Key"
+
+#: django_kafka/models.py:29
+msgid "offset"
+msgstr "Offset"
+
+#: django_kafka/models.py:30
+msgid "create time"
+msgstr "Create-Time"
+
+#: django_kafka/models.py:31
+msgid "log append time"
+msgstr "Log-Append-Time"
+
+#: django_kafka/models.py:36
+msgid "key offset tracker"
+msgstr "Key-/Offset-Zuordnung"
+
+#: django_kafka/models.py:37
+msgid "key offsets tracker"
+msgstr "Key-/Offsets-Zuordnung"
