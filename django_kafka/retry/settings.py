@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
 from django.utils import timezone
 
 if TYPE_CHECKING:
@@ -8,6 +10,11 @@ if TYPE_CHECKING:
 
 
 class RetrySettings:
+    relational_errors = (
+        ObjectDoesNotExist,
+        IntegrityError,
+    )
+
     def __init__(
         self,
         max_retries: int,
@@ -16,6 +23,7 @@ class RetrySettings:
         include: Optional[list[type[Exception]]] = None,
         exclude: Optional[list[type[Exception]]] = None,
         blocking: bool = True,
+        use_offset_tracker: bool = False,
     ):
         """
         :param max_retries: maximum number of retry attempts (use -1 for infinite)
@@ -38,6 +46,7 @@ class RetrySettings:
         self.include = include
         self.exclude = exclude
         self.blocking = blocking
+        self.use_offset_tracker = use_offset_tracker
 
     def __call__(self, topic_cls: type["TopicConsumer"]):
         topic_cls.retry_settings = self
@@ -48,7 +57,9 @@ class RetrySettings:
             return False
         return attempt > self.max_retries
 
-    def can_retry(self, attempt: int, exc: Exception) -> bool:
+    def can_retry(self, msg, attempt: int, exc: Exception) -> bool:
+        if self.skip_by_offset(msg, exc):
+            return False
         if self.attempts_exceeded(attempt):
             return False
         if self.include is not None:
@@ -62,3 +73,15 @@ class RetrySettings:
 
     def get_retry_time(self, attempt: int) -> datetime:
         return timezone.now() + timedelta(seconds=self.get_retry_delay(attempt))
+
+    def skip_by_offset(self, msg, exc: Exception):
+        # avoiding import errors
+        from django_kafka.models import KeyOffsetTracker  # Apps aren't loaded yet
+
+        return all(
+            [
+                self.use_offset_tracker,
+                isinstance(exc, self.relational_errors),
+                KeyOffsetTracker.objects.has_future_offset(msg),
+            ],
+        )

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.18 (2025-03-31)
+* Add "Topic key offset tracker" to resolve race condition or missing "relation" messages which are blocking consumers.
+
 ## 0.5.17 (2025-02-07)
 * Fix `Suppression.active` returning `True` even if suppress was not used.
 * Update readme `ruff` section.

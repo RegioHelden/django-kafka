@@ -99,7 +99,7 @@ class Consumer:
         :return: whether the message will be retried
         """
         attempt = self._retries.next(msg)
-        if retry_settings.can_retry(attempt, exc):
+        if retry_settings.can_retry(msg, attempt, exc):
             until = retry_settings.get_retry_time(attempt)
             self.pause_partition(msg, until)
             self.log_error(msg, exc_info=exc)

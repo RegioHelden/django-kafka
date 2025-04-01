@@ -32,3 +32,6 @@ class Topics:
 
     def __iter__(self):
         yield from self._topic_consumers
+
+    def __bool__(self) -> bool:
+        return bool(self.names)

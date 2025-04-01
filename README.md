@@ -220,6 +220,15 @@ When the consumption of a message fails in a non-blocking retryable topic, the m
 
 When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a non-blocking retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
 
+### Retries with key offset tracker
+For cases when consumer is stuck retrying because it can't find a referenced relation in the database for the message, blocking other messages because of the race condition, we introduced "key offset tracker".
+
+It keeps track of the latest offset of the key within a topic by consuming all the messages from the pythonic topics configured with `use_offset_tracker=True` and stores them in the database ([KeyOffsetTracker](./django_kafka/models.py#L23) model).
+
+When the message consumption fails with the relational errors (`ObjectDoesNotExist`, `IntegrityError`), it looks up in the database if there is an offset in the future for the message key within the topic, if there is one then it skips the message.
+
+To enable this feature just call `KeyOffsetTrackerConsumer.enable(group_id="my-proj-key-offset-tracker")` defining the `group.id`. This consumer will consume all the topics with `retry_setings` configured to use offset tracker (`use_offset_tracker=True`).
+
 ## Connectors:
 
 Connectors are auto-discovered and are expected to be located under the `some_django_app/kafka/connectors.py` or `some_django_app/connectors.py`.

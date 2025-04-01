@@ -1,3 +1,4 @@
+-r requirements-ci.txt
 bump-my-version==0.32.0
 confluent-kafka[avro, schemaregistry]==2.8.0
 django==5.1.6
