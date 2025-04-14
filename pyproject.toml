@@ -1,6 +1,6 @@
 [project]
 name = "django-kafka"
-version = "0.5.18"
+version = "0.6.0"
 license = "MIT"
 requires-python = ">=3.11"
 description = "Confluent's Kafka Python Client combined with Django"
