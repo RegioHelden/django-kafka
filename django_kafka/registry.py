@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from django_kafka.exceptions import DjangoKafkaError
 
 if TYPE_CHECKING:
-    pass
+    from django_kafka.connect.connector import Connector  # noqa: F401
+    from django_kafka.consumer import Consumer  # noqa: F401
 
 
 T = TypeVar("T")
