@@ -18,7 +18,7 @@ class MyConnector(Connector):
 class ConnectorTestCase(SimpleTestCase):
     def test_name(self):
         class MyConnector2(Connector):
-            name = "custom-name"
+            name: ClassVar = "custom-name"
             config: ClassVar = {}
 
         self.assertEqual(MyConnector.name, "MyConnector")
