@@ -1,6 +1,5 @@
 import logging
 from multiprocessing.pool import Pool
-from typing import Optional
 
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from django.utils.functional import cached_property
@@ -57,7 +56,7 @@ class DjangoKafka:
         consumer = self.consumers[consumer_key]()
         consumer.run()
 
-    def run_consumers(self, consumers: Optional[list[str]] = None):
+    def run_consumers(self, consumers: list[str] | None = None):
         if not (consumers := consumers or list(self.consumers)):
             logger.debug("No consumers in registry. Exit the process.")
             return

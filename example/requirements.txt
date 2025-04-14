@@ -1,6 +1,0 @@
--r requirements-ci.txt
-bump-my-version==0.32.0
-confluent-kafka[avro, schemaregistry]==2.8.0
-django==5.1.6
-ruff==0.9.5
-setuptools==75.8.0 # without it PyCharm fails to index packages inside the Docker container

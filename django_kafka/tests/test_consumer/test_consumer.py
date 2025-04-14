@@ -1,6 +1,7 @@
 import datetime
 import traceback
 from contextlib import suppress
+from typing import ClassVar
 from unittest.mock import MagicMock, Mock, call, patch
 
 from confluent_kafka import TopicPartition
@@ -28,7 +29,7 @@ class StopWhileTrue:
 class ConsumerTestCase(TestCase):
     def test_group_id(self):
         class SomeConsumer(Consumer):
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
 
@@ -238,7 +239,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
             retry_msg = Mock(return_value=(True, False))  # successful retry
             dead_letter_msg = Mock()
             log_error = Mock()
@@ -257,7 +258,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
             retry_msg = Mock(return_value=(False, False))  # failed retry
             dead_letter_msg = Mock()
             log_error = Mock()
@@ -279,7 +280,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         consumer.pause_partition = Mock()
@@ -299,7 +300,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         consumer.pause_partition = Mock()
@@ -324,7 +325,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         exc = ValueError()
@@ -349,7 +350,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         consumer.blocking_retry = Mock()
@@ -374,7 +375,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         consumer.blocking_retry = Mock()
@@ -399,7 +400,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         consumer.blocking_retry = Mock()
@@ -421,7 +422,7 @@ class ConsumerTestCase(TestCase):
 
         class SomeConsumer(Consumer):
             topics = Topics()
-            config = {"group.id": "group_id"}
+            config: ClassVar = {"group.id": "group_id"}
 
         consumer = SomeConsumer()
         exc = ValueError()
@@ -440,7 +441,7 @@ class ConsumerTestCase(TestCase):
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_auto_offset_false(self, mock_consumer_client):
         class SomeConsumer(Consumer):
-            config = {"enable.auto.offset.store": False}
+            config: ClassVar = {"enable.auto.offset.store": False}
 
         consumer = SomeConsumer()
         msg = message_mock()
@@ -452,7 +453,7 @@ class ConsumerTestCase(TestCase):
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_auto_offset_true(self, mock_consumer_client):
         class SomeConsumer(Consumer):
-            config = {"enable.auto.offset.store": True}
+            config: ClassVar = {"enable.auto.offset.store": True}
 
         consumer = SomeConsumer()
 
@@ -491,7 +492,7 @@ class ConsumerTestCase(TestCase):
         """
 
         class SomeConsumer(Consumer):
-            config = {
+            config: ClassVar = {
                 "group.id": "group.id.overridden-by-consumer-class",
                 "enable.auto.offset.store": True,
             }

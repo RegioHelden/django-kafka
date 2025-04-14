@@ -1,5 +1,4 @@
 from abc import ABC
-from typing import Optional
 
 from django.db.models import Model
 
@@ -11,7 +10,7 @@ class DbzModelTopicConsumer(ModelTopicConsumer, ABC):
     """Syncs a debezium source connector topic directly in to Django model instances"""
 
     reroute_key_field_name = "__dbz__physicalTableIdentifier"  # see: https://debezium.io/documentation/reference/stable/transformations/topic-routing.html#by-logical-table-router-key-field-name
-    reroute_model_map: Optional[dict[str, type[Model]]] = None
+    reroute_model_map: dict[str, type[Model]] | None = None
 
     def get_model(self, key, value) -> type[Model]:
         if self.reroute_key_field_name in key:

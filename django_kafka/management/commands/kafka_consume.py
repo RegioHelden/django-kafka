@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from django.core.management.base import BaseCommand
 
@@ -20,5 +19,5 @@ class Command(BaseCommand):
             help="Python path to the consumer class(es). Starts all if not provided.",
         )
 
-    def handle(self, consumers: Optional[list[str]] = None, *args, **options):
+    def handle(self, consumers: list[str] | None = None, *args, **options):
         kafka.run_consumers(consumers)

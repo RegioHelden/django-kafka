@@ -1,6 +1,5 @@
 import contextlib
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,7 +13,7 @@ from django_kafka.topic import TopicConsumer
 class ModelTopicConsumer(TopicConsumer, ABC):
     """Syncs abstract kafka messages directly in to Django model instances"""
 
-    model: Optional[type[Model]] = None  # override get_model for dynamic model lookups
+    model: type[Model] | None = None  # override get_model for dynamic model lookups
     exclude_fields: list[str] = None  # fields to ignore from message value
 
     def transform(self, model, value) -> dict:

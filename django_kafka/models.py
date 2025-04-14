@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -35,7 +37,7 @@ class KeyOffsetTracker(models.Model):
     class Meta:
         verbose_name = _("key offset tracker")
         verbose_name_plural = _("key offsets tracker")
-        indexes = [
+        indexes: ClassVar = [
             models.Index(
                 fields=["topic", "key"],
                 include=["offset"],

@@ -1,7 +1,7 @@
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from confluent_kafka.serialization import (
     Deserializer,
@@ -48,7 +48,7 @@ class TopicProducer(ABC):
     def context(
         self,
         field: MessageField,
-        headers: Optional[list] = None,
+        headers: list | None = None,
     ) -> SerializationContext:
         return SerializationContext(self.name, field, headers=headers)
 
@@ -56,7 +56,7 @@ class TopicProducer(ABC):
         self,
         value,
         field: MessageField,
-        headers: Optional[list] = None,
+        headers: list | None = None,
         **kwargs,
     ):
         if field == MessageField.VALUE:
@@ -130,7 +130,7 @@ class TopicConsumer(ABC):
     def context(
         self,
         field: MessageField,
-        headers: Optional[list] = None,
+        headers: list | None = None,
     ) -> SerializationContext:
         return SerializationContext(self.name, field, headers=headers)
 
@@ -138,7 +138,7 @@ class TopicConsumer(ABC):
         self,
         value,
         field: MessageField,
-        headers: Optional[list] = None,
+        headers: list | None = None,
         **kwargs,
     ):
         if field == MessageField.VALUE:

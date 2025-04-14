@@ -1,13 +1,13 @@
 import datetime
 
-from django.test import TestCase
+from django.test import SimpleTestCase
 from django.utils import timezone
 
 from django_kafka.consumer.managers import PauseManager, RetryManager
 from django_kafka.tests.utils import message_mock
 
 
-class PauseManagerTestCase(TestCase):
+class PauseManagerTestCase(SimpleTestCase):
     def test_get_msg_partition(self):
         mock_msg = message_mock()
         manager = PauseManager()
@@ -40,7 +40,7 @@ class PauseManagerTestCase(TestCase):
         self.assertEqual(list(manager.pop_ready()), [])  # empty the second time
 
 
-class RetryManagerTestCase(TestCase):
+class RetryManagerTestCase(SimpleTestCase):
     def test_get_msg_partition(self):
         mock_msg = message_mock()
         manager = RetryManager()

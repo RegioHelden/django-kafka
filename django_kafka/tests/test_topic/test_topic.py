@@ -1,7 +1,7 @@
 from unittest.mock import call, patch
 
 from confluent_kafka.serialization import MessageField
-from django.test import TestCase
+from django.test import SimpleTestCase
 
 from django_kafka import producer
 from django_kafka.exceptions import DjangoKafkaError
@@ -12,7 +12,7 @@ class SomeTopicProducer(TopicProducer):
     name = "some-topic-producer"
 
 
-class TopicProducerTestCase(TestCase):
+class TopicProducerTestCase(SimpleTestCase):
     def setUp(self):
         self.topic_producer = SomeTopicProducer()
 
@@ -193,7 +193,7 @@ class SomeTopicConsumer(TopicConsumer):
         pass
 
 
-class TopicConsumerTestCase(TestCase):
+class TopicConsumerTestCase(SimpleTestCase):
     def setUp(self):
         self.topic_consumer = SomeTopicConsumer()
 

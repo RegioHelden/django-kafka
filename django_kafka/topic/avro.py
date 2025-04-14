@@ -23,12 +23,14 @@ class AvroTopicProducer(TopicProducer, ABC):
                 {"name": "value", "type": "string"},
             ]
         }
-        topic.produce({"value": 1}, value_serializer_kwargs={"schema_str": json.dumps(schema)})
+        topic.produce({"value": 1}, value_serializer_kwargs={
+            "schema_str": json.dumps(schema)
+        })
         ```
 
     [Cofluent AvroSerializer Config](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#avroserializer)
     [Avro schema definition](https://avro.apache.org/docs/1.11.1/specification/)
-    """  # noqa: E501
+    """
 
     key_schema: str
     value_schema: str
@@ -49,8 +51,9 @@ class AvroTopicProducer(TopicProducer, ABC):
 
 class AvroTopicConsumer(TopicConsumer, ABC):
     """
-    Defining schemas is not necessary as it gets retrieved automatically from the Schema Registry.
-    """  # noqa: E501
+    Defining schemas is not necessary as it gets retrieved
+    automatically from the Schema Registry.
+    """
 
     def get_key_deserializer(self, **kwargs):
         return AvroDeserializer(kafka.schema_client, **kwargs)

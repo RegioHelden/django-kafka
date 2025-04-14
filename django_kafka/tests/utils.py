@@ -1,4 +1,3 @@
-from typing import Optional
 from unittest.mock import Mock
 
 from faker import Faker
@@ -6,13 +5,13 @@ from faker import Faker
 from django_kafka.utils.message import MessageTimestamp
 
 
-def message_mock(
+def message_mock(  # noqa: PLR0913
     topic="topic",
     partition=0,
     offset=0,
     error=None,
     headers=None,
-    timestamp: Optional[list[MessageTimestamp, int]] = None,
+    timestamp: list[MessageTimestamp, int] | None = None,
 ):
     """mocking utility for confluent_kafka.cimpl.Message"""
     return Mock(

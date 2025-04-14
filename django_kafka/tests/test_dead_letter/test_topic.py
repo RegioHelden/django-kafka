@@ -1,6 +1,6 @@
 from unittest import mock
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, override_settings
 
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.dead_letter.header import DeadLetterHeader
@@ -16,7 +16,7 @@ from django_kafka.tests.utils import message_mock
         },
     },
 )
-class DeadLetterTopicProducerTestCase(TestCase):
+class DeadLetterTopicProducerTestCase(SimpleTestCase):
     def test_name(self):
         mock_msg_topic_consumer = mock.Mock(**{"topic.return_value": "topic.name"})
         mock_msg_retry_topic = mock.Mock(

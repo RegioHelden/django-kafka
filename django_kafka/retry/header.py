@@ -11,7 +11,7 @@ class RetryHeader(Header):
     TIMESTAMP = "RETRY_TIMESTAMP"
 
     @classmethod
-    def get_retry_time(cls, headers: Optional[list[tuple]]) -> Optional["datetime"]:
+    def get_retry_time(cls, headers: list[tuple] | None) -> Optional["datetime"]:
         """returns the retry time from the message headers"""
         header = RetryHeader.get(headers, RetryHeader.TIMESTAMP)
         try:
