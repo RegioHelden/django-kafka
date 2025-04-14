@@ -24,8 +24,10 @@ class Command(BaseCommand):
             type=str,
             default=None,
             nargs="?",
-            help="Python path to the connector class(es). "
-            "Processes all if not provided.",
+            help=(
+                "Python path to the connector class(es). "
+                "Processes all if not provided.",
+            ),
         )
         parser.add_argument(
             "--list",
@@ -49,8 +51,10 @@ class Command(BaseCommand):
             "--check-status",
             action="store_true",
             default=False,
-            help="Check status of connectors. Currently RUNNING "
-            "status is considered as success.",
+            help=(
+                "Check status of connectors. Currently RUNNING status is considered "
+                "as success.",
+            ),
         )
         parser.add_argument(
             "--ignore-failures",

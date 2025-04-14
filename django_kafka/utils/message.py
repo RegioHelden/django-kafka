@@ -1,20 +1,19 @@
 from datetime import UTC, datetime
 from enum import IntEnum
-from typing import Optional
 
 MessageHeaders = list[tuple[str, str]]
 
 
 class Header:
     @classmethod
-    def list(cls, headers: Optional[MessageHeaders], header: str) -> list[str]:
+    def list(cls, headers: MessageHeaders | None, header: str) -> list[str]:
         """returns all occurrences for the header"""
         if headers is not None:
             return [v for k, v in headers if k == header]
         return []
 
     @classmethod
-    def get(cls, headers: Optional[MessageHeaders], header: str) -> Optional[str]:
+    def get(cls, headers: MessageHeaders | None, header: str) -> str | None:
         """returns the first encountered value for the header"""
         if headers is not None:
             return next((v for k, v in headers if k == header), None)
@@ -32,7 +31,7 @@ class MessageTimestamp(IntEnum):
     LOG_APPEND_TIME = 2
 
     @classmethod
-    def to_datetime(cls, msg_timestamp: [int, int]) -> Optional[datetime]:
+    def to_datetime(cls, msg_timestamp: [int, int]) -> datetime | None:
         timestamp_type, timestamp = msg_timestamp
 
         if timestamp_type == MessageTimestamp.NOT_AVAILABLE:

@@ -1,9 +1,9 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 
 from django_kafka.utils.message import Header
 
 
-class HeaderTestCase(TestCase):
+class HeaderTestCase(SimpleTestCase):
     def test_get(self):
         headers = [("header", "abc"), ("header", "def")]
 

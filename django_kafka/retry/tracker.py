@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django_kafka import kafka
 from django_kafka.consumer import Consumer, Topics
@@ -27,7 +27,7 @@ class KeyOffsetTrackerTopic(TopicConsumer):
 
 class KeyOffsetTrackerConsumer(Consumer):
     topics = None
-    config = {
+    config: ClassVar = {
         "auto.offset.reset": "earliest",
         "enable.auto.offset.store": False,
     }
@@ -54,8 +54,8 @@ class KeyOffsetTrackerConsumer(Consumer):
 
         if not cls.topics:
             raise DjangoKafkaError(
-                "Key offset tracker consumer is registered but there are no"
-                " topics configured to use it.",
+                "Key offset tracker consumer is registered but there are no topics "
+                "configured to use it.",
             )
 
     @classmethod

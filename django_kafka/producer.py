@@ -1,8 +1,8 @@
 import logging
+from collections.abc import Callable
 from contextlib import ContextDecorator
 from contextvars import ContextVar
 from pydoc import locate
-from typing import Callable, Optional
 
 from confluent_kafka import Producer as ConfluentProducer
 
@@ -28,7 +28,7 @@ class Producer:
     default_logger = logger
     default_error_handler = settings.ERROR_HANDLER
 
-    def __init__(self, config: Optional[dict] = None, **kwargs):
+    def __init__(self, config: dict | None = None, **kwargs):
         kwargs.setdefault("logger", self.default_logger)
         kwargs.setdefault("error_cb", locate(self.default_error_handler)())
 
@@ -79,7 +79,7 @@ class Suppression(ContextDecorator):
 
         return topic in topics
 
-    def __init__(self, topics: Optional[list[str]] = None, deactivate=False):
+    def __init__(self, topics: list[str] | None = None, deactivate=False):
         try:
             topics_in_context = self._var.get()
         except LookupError:
@@ -105,13 +105,13 @@ class Suppression(ContextDecorator):
         self._var.reset(self.token)
 
 
-def suppress(topics: Optional[Callable | list[str]] = None):
+def suppress(topics: Callable | list[str] | None = None):
     if callable(topics):
         return Suppression()(topics)
     return Suppression(topics)
 
 
-def unsuppress(fn: Optional[Callable] = None):
+def unsuppress(fn: Callable | None = None):
     if fn:
         return Suppression(deactivate=True)(fn)
     return Suppression(deactivate=True)

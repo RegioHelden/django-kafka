@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import ClassVar
 from unittest.mock import MagicMock, Mock, call, patch
 
 from django.test import TestCase
@@ -70,8 +71,8 @@ class KeyOffsetTrackerConsumerTestCase(TestCase):
     def test_sanity_checks(self):
         no_group_id_msg = "'group.id' must be specified."
         no_topics_msg = (
-            "Key offset tracker consumer is registered but there are no"
-            " topics configured to use it."
+            "Key offset tracker consumer is registered but there are no "
+            "topics configured to use it."
         )
         with patch.multiple(
             "django_kafka.retry.tracker.KeyOffsetTrackerConsumer",
@@ -164,12 +165,12 @@ class KeyOffsetTrackerConsumerTestCase(TestCase):
 
         @kafka.consumers()
         class Consumer1(Consumer):
-            config = {"group.id": "group_id1"}
+            config: ClassVar = {"group.id": "group_id1"}
             topics = Topics(Topic1(), SimpleTopic())
 
         @kafka.consumers()
         class Consumer2(Consumer):
-            config = {"group.id": "group_id2"}
+            config: ClassVar = {"group.id": "group_id2"}
             topics = Topics(Topic2(), Topic1())
 
         topics_using_key_offset = (Topic1, Topic2)

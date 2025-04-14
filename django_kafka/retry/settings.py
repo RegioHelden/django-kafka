@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
@@ -20,8 +20,8 @@ class RetrySettings:
         max_retries: int,
         delay: int,
         backoff: bool = False,
-        include: Optional[list[type[Exception]]] = None,
-        exclude: Optional[list[type[Exception]]] = None,
+        include: list[type[Exception]] | None = None,
+        exclude: list[type[Exception]] | None = None,
         blocking: bool = True,
         use_offset_tracker: bool = False,
     ):

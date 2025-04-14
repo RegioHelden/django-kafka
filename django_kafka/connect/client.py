@@ -1,5 +1,3 @@
-from typing import Optional
-
 import requests
 from requests.adapters import HTTPAdapter
 from requests.auth import AuthBase
@@ -12,9 +10,9 @@ class KafkaConnectSession(requests.Session):
     def __init__(
         self,
         host: str,
-        auth: Optional[tuple | AuthBase] = None,
-        retry: Optional[dict] = None,
-        timeout: Optional[int] = None,
+        auth: tuple | AuthBase | None = None,
+        retry: dict | None = None,
+        timeout: int | None = None,
     ):
         super().__init__()
         self.auth = auth
@@ -40,9 +38,9 @@ class KafkaConnectClient:
     def __init__(
         self,
         host: str,
-        auth: Optional[tuple | AuthBase] = None,
-        retry: Optional[dict] = None,
-        timeout: Optional[int] = None,
+        auth: tuple | AuthBase | None = None,
+        retry: dict | None = None,
+        timeout: int | None = None,
     ):
         self._requests = KafkaConnectSession(host, auth, retry, timeout)
 

@@ -1,3 +1,4 @@
+from typing import ClassVar
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
@@ -9,7 +10,7 @@ from django_kafka.exceptions import DjangoKafkaError
 
 
 class MyConnector(Connector):
-    config = {}
+    config: ClassVar = {}
 
 
 @patch("django_kafka.connect.client.KafkaConnectSession", new=Mock())
@@ -18,7 +19,7 @@ class ConnectorTestCase(SimpleTestCase):
     def test_name(self):
         class MyConnector2(Connector):
             name = "custom-name"
-            config = {}
+            config: ClassVar = {}
 
         self.assertEqual(MyConnector.name, "MyConnector")
         self.assertEqual(MyConnector2.name, "custom-name")

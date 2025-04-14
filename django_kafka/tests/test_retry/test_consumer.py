@@ -1,5 +1,6 @@
 import datetime
 import traceback
+from typing import ClassVar
 from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
@@ -36,7 +37,7 @@ class RetryConsumerTestCase(TestCase):
                 self._get_topic_consumer(),
                 self._get_retryable_topic_consumer(),
             )
-            config = {"group.id": group_id}
+            config: ClassVar = {"group.id": group_id}
 
         return SomeConsumer
 
@@ -76,7 +77,7 @@ class RetryConsumerTestCase(TestCase):
         }
 
         class SomeRetryConsumer(RetryConsumer):
-            config = {
+            config: ClassVar = {
                 "group.id": "group.id.overridden-by-retry-consumer-class",
             }
 

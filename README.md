@@ -536,16 +536,6 @@ To maintain global message ordering between systems, all events for the same dat
 
 
 ## Making a new release
-- [bump-my-version](https://github.com/callowayproject/bump-my-version) is used to manage releases.
-- [Ruff](https://github.com/astral-sh/ruff) linter is used to validate the code style. Make sure your code complies with the defined rules. You may use `ruff check --fix` to fix violations and `ruff format` to reformat the code according to ruff rules. Ruff is executed by GitHub actions and the workflow will fail if Ruff validation fails. 
 
-- Add your changes to the [CHANGELOG](CHANGELOG.md), then run
-```bash
-docker compose run --rm app bump-my-version bump <major|minor|patch>
-```
-This will update version major/minor/patch version respectively and add a tag for release.
-
-- Once the changes are approved and merged, push the tag to publish the release to pypi.
-```bash
-git push origin tag <tag_name>
-```
+This project makes use of [RegioHelden's reusable GitHub workflows](https://github.com/RegioHelden/github-reusable-workflows). \
+Make a new release by manually triggering the `Open release PR` workflow.
