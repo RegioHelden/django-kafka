@@ -1,10 +1,10 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from django.utils import timezone
 
 from django_kafka.retry.header import RetryHeader
 
 
-class RetryHeaderTestCase(TestCase):
+class RetryHeaderTestCase(SimpleTestCase):
     def test_get_retry_time(self):
         now = timezone.now()
         headers = [(RetryHeader.TIMESTAMP, str(now.timestamp()))]

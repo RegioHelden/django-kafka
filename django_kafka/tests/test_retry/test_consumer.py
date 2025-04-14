@@ -3,7 +3,7 @@ import traceback
 from typing import ClassVar
 from unittest.mock import Mock, patch
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 
 from django_kafka.conf import SETTINGS_KEY
@@ -15,7 +15,7 @@ from django_kafka.tests.utils import message_mock
 from django_kafka.topic import TopicConsumer
 
 
-class RetryConsumerTestCase(TestCase):
+class RetryConsumerTestCase(SimpleTestCase):
     def _get_topic_consumer(self):
         class SomeTopicConsumer(TopicConsumer):
             name = "normal_topic"

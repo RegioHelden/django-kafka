@@ -1,13 +1,13 @@
 from unittest import mock
 
 from django.db.models import Model
-from django.test import TestCase
+from django.test import SimpleTestCase
 
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.topic.debezium import DbzModelTopicConsumer
 
 
-class DbzModelTopicConsumerTestCase(TestCase):
+class DbzModelTopicConsumerTestCase(SimpleTestCase):
     def _get_model_topic_consumer(self) -> DbzModelTopicConsumer:
         class SomeModelTopicConsumer(DbzModelTopicConsumer):
             name = "name"

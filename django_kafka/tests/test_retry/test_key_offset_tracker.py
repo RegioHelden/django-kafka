@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import ClassVar
 from unittest.mock import MagicMock, Mock, call, patch
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from faker import Faker
 
 from django_kafka import kafka
@@ -15,7 +15,7 @@ from django_kafka.topic import TopicConsumer
 from django_kafka.utils.message import MessageTimestamp
 
 
-class KeyOffsetTrackerConsumerTestCase(TestCase):
+class KeyOffsetTrackerConsumerTestCase(SimpleTestCase):
     @patch.multiple(
         "django_kafka.retry.tracker.KeyOffsetTrackerConsumer",
         config={},
@@ -190,7 +190,7 @@ class KeyOffsetTrackerConsumerTestCase(TestCase):
             self.assertIsInstance(topic, KeyOffsetTrackerTopic)
 
 
-class TestKeyOffsetTrackerTopic(TestCase):
+class TestKeyOffsetTrackerTopic(SimpleTestCase):
     def test_init_sets_topic_name(self):
         name = "topic-name"
         topic = KeyOffsetTrackerTopic(name)

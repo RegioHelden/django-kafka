@@ -114,7 +114,7 @@ class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
     def test_queryset_update_sets_kafka_skip(self, mock_update):
         """
         `update` method should automatically set `kafka_skip=False`
-          if `kafka_skip` is not provided in kwargs.
+        if `kafka_skip` is not provided in kwargs.
         """
         # update_kwargs does not contain kafka_skip
         update_kwargs = {"some_field": "some_value"}
@@ -130,7 +130,7 @@ class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
     def test_queryset_update_does_not_override_kafka_skip(self, mock_update):
         """
         `update` method should not change `kafka_skip`
-          if `kafka_skip` is provided in kwargs
+        if `kafka_skip` is provided in kwargs
         """
         # update_kwargs contains kafka_skip
         update_kwargs = {"kafka_skip": True, "some_field": "some_value"}

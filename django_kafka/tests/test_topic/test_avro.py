@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, override_settings
 
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.topic.avro import AvroTopicConsumer, AvroTopicProducer
@@ -14,7 +14,7 @@ class ATopicProducer(AvroTopicProducer):
     **{SETTINGS_KEY: {"SCHEMA_REGISTRY": {"url": "http://schema-registy"}}},
 )
 @patch("django_kafka.topic.kafka.schema_client")
-class AvroTopicTestCase(TestCase):
+class AvroTopicTestCase(SimpleTestCase):
     def setUp(self):
         self.topic_producer = ATopicProducer()
 
@@ -70,7 +70,7 @@ class ATopicConsumer(AvroTopicConsumer):
     **{SETTINGS_KEY: {"SCHEMA_REGISTRY": {"url": "http://schema-registy"}}},
 )
 @patch("django_kafka.topic.kafka.schema_client")
-class AvroTopicConsumerTestCase(TestCase):
+class AvroTopicConsumerTestCase(SimpleTestCase):
     def setUp(self):
         self.topic_consumer = ATopicConsumer()
 
