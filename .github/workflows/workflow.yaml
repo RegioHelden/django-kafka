@@ -38,6 +38,7 @@ jobs:
           - "4.2"
           - "5.0"
           - "5.1"
+          - "5.2"
         exclude:
           - python-version: "3.13"
             django: "4.2"
