@@ -36,14 +36,11 @@ jobs:
           - "3.13"
         django:
           - "4.2"
-          - "5.0"
           - "5.1"
           - "5.2"
         exclude:
           - python-version: "3.13"
             django: "4.2"
-          - python-version: "3.13"
-            django: "5.0"
 
     steps:
       - uses: actions/checkout@v4
