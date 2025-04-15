@@ -2,7 +2,7 @@ services:
   app:
     build: .
     user: app
-    command: /app/example/manage.py runserver 0:8000
+    command: /app/manage.py runserver 0:8000
     volumes:
       - .:/app:cached
     environment:
