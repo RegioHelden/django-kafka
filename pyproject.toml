@@ -1,3 +1,7 @@
+# -------------------------------------------
+# Managed by modulesync - DO NOT EDIT
+# -------------------------------------------
+
 [project]
 name = "django-kafka"
 dynamic = ["version"]
@@ -5,28 +9,33 @@ license = "MIT"
 requires-python = ">=3.11"
 description = "Confluent's Kafka Python Client combined with Django"
 readme = "README.md"
-keywords = ["django", "kafka"]
-authors = [{ name = "RegioHelden GmbH", email = "opensource@regiohelden.de" }]
+keywords = ["django", "kafka", "confluent"]
+authors = [
+    { name = "RegioHelden GmbH", email = "opensource@regiohelden.de" },
+]
 maintainers = [
     { name = "RegioHelden GmbH", email = "opensource@regiohelden.de" },
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Web Environment",
     "Framework :: Django",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    "django>=4.2,<6.0",
-    "confluent-kafka[avro, schemaregistry]>=2.9.0",
-]
+dependencies = ["django>=4.2,<6.0", "confluent-kafka[avro, schemaregistry]>=2.9.0"]
 
 [project.urls]
 Homepage = "https://github.com/RegioHelden/django-kafka"
-Documentation = "https://github.com/RegioHelden/django-kafka/blob/master/README.md"
+Documentation = "https://github.com/RegioHelden/django-kafka/blob/main/README.md"
 Repository = "https://github.com/RegioHelden/django-kafka.git"
 Issues = "https://github.com/RegioHelden/django-kafka/issues"
 Changelog = "https://github.com/RegioHelden/django-kafka/blob/main/CHANGELOG.md"
@@ -40,11 +49,11 @@ path = "version"
 pattern = "(?P<version>.+)"
 
 [tool.hatch.build.targets.wheel]
-packages = ["django_scrubber"]
+packages = ["django_kafka"]
 include = ["LICENSE", "README.md", "CHANGELOG.md"]
 
 [tool.hatch.build.targets.sdist]
-packages = ["django_scrubber"]
+packages = ["django_kafka"]
 include = ["LICENSE", "README.md", "CHANGELOG.md"]
 
 [tool.ruff]
@@ -54,7 +63,6 @@ exclude = [
     "__pycache",
     "docs",
     "migrations",
-    "rh_django_shared",
     "src",
 ]
 line-length = 88
