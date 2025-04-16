@@ -1,0 +1,11 @@
+---
+:global:
+  module_rootname: "django_kafka"
+  module_description: "Confluent's Kafka Python Client combined with Django"
+  module_keywords: ["django", "kafka", "confluent"]
+  dependencies:
+    ["django>=4.2,<6.0", "confluent-kafka[avro, schemaregistry]>=2.9.0"]
+  max_line_length: 88
+
+compose.yaml:
+  compose_command: runserver 0:8000
