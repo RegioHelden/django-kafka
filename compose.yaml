@@ -7,8 +7,7 @@ services:
   app:
     build: .
     user: app
-    entrypoint: /app/manage.py
-    command: runserver 0:8000
+    command: /app/manage.py runserver 0:8000
     volumes:
       - .:/app:cached
     environment:
