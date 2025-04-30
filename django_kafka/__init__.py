@@ -13,8 +13,6 @@ from django_kafka.retry.settings import RetrySettings
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.5.18"
-
 __all__ = [
     "DjangoKafka",
     "autodiscover",
