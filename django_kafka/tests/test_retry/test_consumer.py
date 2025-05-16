@@ -122,8 +122,8 @@ class RetryConsumerTestCase(SimpleTestCase):
 
     def test_retry_msg(self):
         mock_retry_topic_consumer = Mock()
-        mock_producer_for = mock_retry_topic_consumer.producer_for
-        mock_retry = mock_producer_for.return_value.retry
+        mock_get_producer_for = mock_retry_topic_consumer.get_producer_for
+        mock_retry = mock_get_producer_for.return_value.retry
         msg_mock = message_mock()
 
         retry_consumer = self._get_retry_consumer()
@@ -132,7 +132,7 @@ class RetryConsumerTestCase(SimpleTestCase):
 
         retried, blocking = retry_consumer.retry_msg(msg_mock, exc)
 
-        mock_producer_for.assert_called_once_with(msg_mock)
+        mock_get_producer_for.assert_called_once_with(msg_mock)
         mock_retry.assert_called_once_with(exc)
         self.assertEqual(retried, mock_retry.return_value)
         self.assertEqual(blocking, False)
@@ -154,7 +154,7 @@ class RetryConsumerTestCase(SimpleTestCase):
             msg=msg_mock,
         )
         mock_produce_for.assert_called_once_with(
-            header_message=str(exc),
+            header_summary=str(exc),
             header_detail=traceback.format_exc(),
         )
 

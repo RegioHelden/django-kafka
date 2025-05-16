@@ -19,11 +19,11 @@ class RetrySettingTestCase(TestCase):
         settings = RetrySettings(max_retries=5, delay=60, include=[ValueError])
 
         self.assertEqual(
-            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            settings.should_retry(self.mock_msg, attempt=0, exc=ValueError()),
             True,
         )
         self.assertEqual(
-            settings.can_retry(self.mock_msg, attempt=0, exc=IndexError()),
+            settings.should_retry(self.mock_msg, attempt=0, exc=IndexError()),
             False,
         )
 
@@ -31,11 +31,11 @@ class RetrySettingTestCase(TestCase):
         settings = RetrySettings(max_retries=5, delay=60, exclude=[ValueError])
 
         self.assertEqual(
-            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            settings.should_retry(self.mock_msg, attempt=0, exc=ValueError()),
             False,
         )
         self.assertEqual(
-            settings.can_retry(self.mock_msg, attempt=0, exc=IndexError()),
+            settings.should_retry(self.mock_msg, attempt=0, exc=IndexError()),
             True,
         )
 
@@ -43,7 +43,7 @@ class RetrySettingTestCase(TestCase):
         settings = RetrySettings(max_retries=5, delay=60)
 
         self.assertEqual(
-            settings.can_retry(self.mock_msg, attempt=0, exc=ValueError()),
+            settings.should_retry(self.mock_msg, attempt=0, exc=ValueError()),
             True,
         )
 
@@ -99,6 +99,14 @@ class RetrySettingTestCase(TestCase):
             settings.get_retry_time(4),
             now + datetime.timedelta(seconds=480),
         )
+
+    def test_should_log(self):
+        settings = RetrySettings(max_retries=5, delay=60, log_every=5)
+
+        self.assertEqual(settings.should_log(1), False)
+        self.assertEqual(settings.should_log(2), False)
+        self.assertEqual(settings.should_log(5), True)
+        self.assertEqual(settings.should_log(10), True)
 
     def test_skip_by_offset(self):
         msg = message_mock()
@@ -156,7 +164,7 @@ class RetrySettingTestCase(TestCase):
         "django_kafka.retry.settings.RetrySettings.skip_by_offset",
         return_value=True,
     )
-    def test_can_retry_calls_skip_by_offset(self, skip_by_offset):
+    def test_should_retry_calls_skip_by_offset(self, skip_by_offset):
         settings = RetrySettings(
             max_retries=5,
             delay=60,
@@ -164,7 +172,7 @@ class RetrySettingTestCase(TestCase):
             use_offset_tracker=True,
         )
         error = Exception()
-        result = settings.can_retry(self.mock_msg, 1, error)
+        result = settings.should_retry(self.mock_msg, 1, error)
 
         skip_by_offset.assert_called_once_with(self.mock_msg, error)
         self.assertIs(result, False)

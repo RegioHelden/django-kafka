@@ -17,26 +17,26 @@ from django_kafka.topic import TopicConsumer
 
 @override_settings(**{SETTINGS_KEY: {"RETRY_TOPIC_SUFFIX": "test-retry"}})
 class RetryTopicProducerTestCase(TestCase):
-    def test__get_next_attempt(self):
-        self.assertEqual(RetryTopicProducer.get_next_attempt("topic"), 1)
+    def test__get_attempt(self):
+        self.assertEqual(RetryTopicProducer.get_next_retry_attempt("topic"), 1)
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt("group.id.topic.fake.5"),
+            RetryTopicProducer.get_next_retry_attempt("group.id.topic.fake.5"),
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry"),
+            RetryTopicProducer.get_next_retry_attempt("group.id.topic.test-retry"),
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.0"),
+            RetryTopicProducer.get_next_retry_attempt("group.id.topic.test-retry.0"),
             1,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.2"),
+            RetryTopicProducer.get_next_retry_attempt("group.id.topic.test-retry.2"),
             3,
         )
         self.assertEqual(
-            RetryTopicProducer.get_next_attempt("group.id.topic.test-retry.10"),
+            RetryTopicProducer.get_next_retry_attempt("group.id.topic.test-retry.10"),
             11,
         )
 
@@ -53,7 +53,7 @@ class RetryTopicProducerTestCase(TestCase):
         self.assertEqual(rt_producer.group_id, "group.id")
         self.assertEqual(rt_producer.settings, retry_settings)
         self.assertEqual(rt_producer.msg, mock_msg_topic_consumer)
-        self.assertEqual(rt_producer.attempt, 1)
+        self.assertEqual(rt_producer.retry_attempt, 1)
 
     def test_name(self):
         retry_settings = RetrySettings(max_retries=5, delay=60, blocking=False)
@@ -239,7 +239,7 @@ class RetryTopicConsumerTestCase(TestCase):
         topic_consumer.consume.assert_called_once_with(mock_msg)
 
     @mock.patch("django_kafka.retry.topic.RetryTopicProducer")
-    def test_producer_for(self, mock_rt_producer):
+    def test_get_producer_for(self, mock_rt_producer):
         topic_consumer = self._get_retryable_topic_consumer()
         mock_msg = message_mock()
 
@@ -247,7 +247,7 @@ class RetryTopicConsumerTestCase(TestCase):
             group_id="group.id",
             topic_consumer=topic_consumer,
         )
-        rt_producer = rt_consumer.producer_for(mock_msg)
+        rt_producer = rt_consumer.get_producer_for(mock_msg)
 
         self.assertEqual(rt_producer, mock_rt_producer.return_value)
         mock_rt_producer.assert_called_once_with(

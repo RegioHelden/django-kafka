@@ -37,14 +37,14 @@ class DeadLetterTopicProducerTestCase(SimpleTestCase):
         self.assertEqual(dlt_producer_2.name, "group.id.topic.name.test-dlt")
 
     def test_produce_for(self):
-        msg_mock = message_mock()
+        msg_mock = message_mock(topic="topic.name", partition=5, offset=1)
         dlt_producer = DeadLetterTopicProducer(group_id="group.id", msg=msg_mock)
         dlt_producer.produce = mock.Mock()
-        header_message = "header message"
+        header_summary = "header summary"
         header_detail = "header detail"
 
         dlt_producer.produce_for(
-            header_message=header_message,
+            header_summary=header_summary,
             header_detail=header_detail,
         )
 
@@ -52,7 +52,10 @@ class DeadLetterTopicProducerTestCase(SimpleTestCase):
             key=msg_mock.key(),
             value=msg_mock.value(),
             headers=[
-                (DeadLetterHeader.MESSAGE, header_message),
+                (DeadLetterHeader.MESSAGE_TOPIC, "topic.name"),
+                (DeadLetterHeader.MESSAGE_PARTITION, "5"),
+                (DeadLetterHeader.MESSAGE_OFFSET, "1"),
+                (DeadLetterHeader.SUMMARY, header_summary),
                 (DeadLetterHeader.DETAIL, header_detail),
             ],
         )

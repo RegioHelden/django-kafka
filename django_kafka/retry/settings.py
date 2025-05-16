@@ -23,6 +23,7 @@ class RetrySettings:
         include: list[type[Exception]] | None = None,
         exclude: list[type[Exception]] | None = None,
         blocking: bool = True,
+        log_every: int | None = None,
         use_offset_tracker: bool = False,
     ):
         """
@@ -31,7 +32,9 @@ class RetrySettings:
         :param backoff: exponential backoff
         :param include: exception types to retry for
         :param exclude: exception types to exclude from retry
-        :param blocking: block consumer process during retry
+        :param blocking: block the consumer process during retry
+        :param log_every: log every Nth retry attempt, default is not to log
+        :param use_offset_tracker: use the offset tracker to skip failing messages
         """
         if max_retries < -1:
             raise ValueError("max_retries must be greater than -1")
@@ -46,6 +49,7 @@ class RetrySettings:
         self.include = include
         self.exclude = exclude
         self.blocking = blocking
+        self.log_every = log_every
         self.use_offset_tracker = use_offset_tracker
 
     def __call__(self, topic_cls: type["TopicConsumer"]):
@@ -56,23 +60,6 @@ class RetrySettings:
         if self.max_retries == -1:
             return False
         return attempt > self.max_retries
-
-    def can_retry(self, msg, attempt: int, exc: Exception) -> bool:
-        if self.skip_by_offset(msg, exc):
-            return False
-        if self.attempts_exceeded(attempt):
-            return False
-        if self.include is not None:
-            return any(isinstance(exc, e) for e in self.include)
-        if self.exclude is not None:
-            return not any(isinstance(exc, e) for e in self.exclude)
-        return True
-
-    def get_retry_delay(self, attempt: int) -> int:
-        return self.delay * (2 ** (attempt - 1)) if self.backoff else self.delay
-
-    def get_retry_time(self, attempt: int) -> datetime:
-        return timezone.now() + timedelta(seconds=self.get_retry_delay(attempt))
 
     def skip_by_offset(self, msg, exc: Exception):
         # avoiding import errors
@@ -85,3 +72,26 @@ class RetrySettings:
                 KeyOffsetTracker.objects.has_future_offset(msg),
             ],
         )
+
+    def should_retry(self, msg, attempt: int, exc: Exception) -> bool:
+        if self.skip_by_offset(msg, exc):
+            return False
+        if self.attempts_exceeded(attempt):
+            return False
+        if self.include is not None:
+            return any(isinstance(exc, e) for e in self.include)
+        if self.exclude is not None:
+            return not any(isinstance(exc, e) for e in self.exclude)
+        return True
+
+    def should_log(self, attempt: int):
+        """returns if a message attempt failure should be logged"""
+        if self.log_every is None:
+            return False
+        return attempt % self.log_every == 0
+
+    def get_retry_delay(self, attempt: int) -> int:
+        return self.delay * (2 ** (attempt - 1)) if self.backoff else self.delay
+
+    def get_retry_time(self, attempt: int) -> datetime:
+        return timezone.now() + timedelta(seconds=self.get_retry_delay(attempt))

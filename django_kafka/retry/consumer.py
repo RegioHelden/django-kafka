@@ -59,12 +59,12 @@ class RetryConsumer(Consumer):
 
     def retry_msg(self, msg: "cimpl.Message", exc: Exception) -> (bool, bool):
         retry_topic: RetryTopicConsumer = self.get_topic(msg)
-        return retry_topic.producer_for(msg).retry(exc), False
+        return retry_topic.get_producer_for(msg).retry(exc), False
 
     def dead_letter_msg(self, msg: "cimpl.Message", exc: Exception):
         retry_topic: RetryTopicConsumer = self.get_topic(msg)
         DeadLetterTopicProducer(group_id=retry_topic.group_id, msg=msg).produce_for(
-            header_message=str(exc),
+            header_summary=str(exc),
             header_detail=traceback.format_exc(),
         )
 

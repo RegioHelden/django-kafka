@@ -31,7 +31,7 @@ class RetryTopicProducer(TopicProducer):
         self.settings = retry_settings
         self.group_id = group_id
         self.msg = msg
-        self.attempt = self.get_next_attempt(msg.topic())
+        self.retry_attempt = self.get_next_retry_attempt(msg.topic())
         super().__init__()
 
     @classmethod
@@ -40,11 +40,12 @@ class RetryTopicProducer(TopicProducer):
 
     @classmethod
     def pattern(cls):
-        """returns regex pattern to match topics producing by this class"""
+        """returns a regex pattern to match topics produced by this class"""
         return rf"{re.escape(cls.suffix())}\.([0-9]+)$"
 
     @classmethod
-    def get_next_attempt(cls, topic_name: str) -> int:
+    def get_next_retry_attempt(cls, topic_name: str) -> int:
+        """returns the next retry attempt, based on the topic name"""
         match = re.search(cls.pattern(), topic_name)
         attempt = int(match.group(1)) if match else 0
         return attempt + 1
@@ -52,17 +53,21 @@ class RetryTopicProducer(TopicProducer):
     @property
     def name(self) -> str:
         topic = self.msg.topic()
-        suffix = f"{self.suffix()}.{self.attempt}"
+        suffix = f"{self.suffix()}.{self.retry_attempt}"
 
         if re.search(self.pattern(), topic):
             return re.sub(self.pattern(), suffix, topic)
         return f"{self.group_id}.{self.msg.topic()}.{suffix}"
 
     def retry(self, exc: Exception) -> bool:
-        if not self.settings.can_retry(self.msg, attempt=self.attempt, exc=exc):
+        if not self.settings.should_retry(
+            self.msg,
+            attempt=self.retry_attempt,
+            exc=exc,
+        ):
             return False
 
-        retry_timestamp = self.settings.get_retry_time(self.attempt).timestamp()
+        retry_timestamp = self.settings.get_retry_time(self.retry_attempt).timestamp()
 
         self.produce(
             key=self.msg.key(),
@@ -103,7 +108,7 @@ class RetryTopicConsumer(TopicConsumer):
     def consume(self, msg: "cimpl.Message"):
         self.topic_consumer.consume(msg)
 
-    def producer_for(self, msg: "cimpl.Message") -> RetryTopicProducer:
+    def get_producer_for(self, msg: "cimpl.Message") -> RetryTopicProducer:
         return RetryTopicProducer(
             retry_settings=self.topic_consumer.retry_settings,
             group_id=self.group_id,

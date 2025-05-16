@@ -32,12 +32,15 @@ class DeadLetterTopicProducer(TopicProducer):
             return re.sub(RetryTopicProducer.pattern(), self.suffix(), topic)
         return f"{self.group_id}.{topic}.{self.suffix()}"
 
-    def produce_for(self, header_message, header_detail):
+    def produce_for(self, header_summary, header_detail):
         self.produce(
             key=self.msg.key(),
             value=self.msg.value(),
             headers=[
-                (DeadLetterHeader.MESSAGE, header_message),
+                (DeadLetterHeader.MESSAGE_TOPIC, self.msg.topic()),
+                (DeadLetterHeader.MESSAGE_PARTITION, str(self.msg.partition())),
+                (DeadLetterHeader.MESSAGE_OFFSET, str(self.msg.offset())),
+                (DeadLetterHeader.SUMMARY, header_summary),
                 (DeadLetterHeader.DETAIL, header_detail),
             ],
         )
