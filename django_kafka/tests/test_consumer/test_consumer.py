@@ -278,7 +278,12 @@ class ConsumerTestCase(TestCase):
 
     def test_blocking_retry(self):
         retry_time = timezone.now()
-        retry_settings = RetrySettings(max_retries=5, delay=60, blocking=True)
+        retry_settings = RetrySettings(
+            max_retries=5,
+            delay=60,
+            blocking=True,
+            log_every=1,
+        )
         retry_settings.get_retry_time = Mock(return_value=retry_time)
         msg_mock = message_mock()
 
@@ -299,7 +304,12 @@ class ConsumerTestCase(TestCase):
 
     @patch("django_kafka.consumer.Consumer.log_error")
     def test_blocking_retry__maximum_attempts(self, log_error):
-        retry_settings = RetrySettings(max_retries=2, delay=60, blocking=True)
+        retry_settings = RetrySettings(
+            max_retries=2,
+            delay=60,
+            blocking=True,
+            log_every=2,
+        )
         msg_mock = message_mock()
 
         class SomeConsumer(Consumer):
@@ -319,7 +329,7 @@ class ConsumerTestCase(TestCase):
         self.assertTrue(retry_2)
         self.assertFalse(retry_3)
         self.assertEqual(consumer.pause_partition.call_count, 2)
-        self.assertEqual(consumer.log_error.call_count, 2)
+        self.assertEqual(consumer.log_error.call_count, 1)
 
     @patch("django_kafka.retry.topic.RetryTopicProducer")
     def test_non_blocking_retry(self, mock_rt_producer_cls):
@@ -438,7 +448,7 @@ class ConsumerTestCase(TestCase):
             msg=msg_mock,
         )
         mock_produce_for.assert_called_once_with(
-            header_message=str(exc),
+            header_summary=str(exc),
             header_detail=traceback.format_exc(),
         )
 

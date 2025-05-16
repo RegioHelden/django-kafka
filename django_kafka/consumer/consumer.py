@@ -99,10 +99,13 @@ class Consumer:
         :return: whether the message will be retried
         """
         attempt = self._retries.next(msg)
-        if retry_settings.can_retry(msg, attempt, exc):
+        if retry_settings.should_retry(msg, attempt, exc):
             until = retry_settings.get_retry_time(attempt)
             self.pause_partition(msg, until)
-            self.log_error(msg, exc_info=exc)
+
+            if retry_settings.should_log(attempt):
+                self.log_error(msg, exc_info=exc)
+
             return True
         return False
 
@@ -119,11 +122,18 @@ class Consumer:
         """
         from django_kafka.retry.topic import RetryTopicProducer
 
-        return RetryTopicProducer(
+        topic = RetryTopicProducer(
             retry_settings=retry_settings,
             group_id=self.group_id,
             msg=msg,
-        ).retry(exc=exc)
+        )
+
+        retried = topic.retry(exc=exc)
+
+        if retried and retry_settings.should_log(topic.retry_attempt):
+            self.log_error(msg, exc_info=exc)
+
+        return retried
 
     def retry_msg(self, msg: "cimpl.Message", exc: Exception) -> (bool, bool):
         """
@@ -142,7 +152,7 @@ class Consumer:
         from django_kafka.dead_letter.topic import DeadLetterTopicProducer
 
         DeadLetterTopicProducer(group_id=self.group_id, msg=msg).produce_for(
-            header_message=str(exc),
+            header_summary=str(exc),
             header_detail=traceback.format_exc(),
         )
 

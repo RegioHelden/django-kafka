@@ -376,6 +376,17 @@ Default: `None`
 
 Defines the configuration of the default retry settings. See [retries](#retries).
 
+Supports the following parameters: 
+
+- `max_retries`: maximum number of retry attempts (use -1 for infinite)
+- `delay`: delay (seconds)
+- `backoff`: use an exponential backoff delay
+- `include`: exception types to retry for
+- `exclude`: exception types to exclude from retry
+- `blocking`: block the consumer process during retry
+- `log_every`: log every Nth retry attempt, default is not to log
+- `use_offset_tracker`: use the offset tracker to skip failing messages
+
 For example, `{ ..., "RETRY_SETTINGS": dict(max_retries=-1, delay=10) }`
 
 #### `DEAD_LETTER_TOPIC_SUFFIX`
