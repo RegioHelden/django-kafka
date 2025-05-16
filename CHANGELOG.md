@@ -1,22 +1,12 @@
 # Changelog
 
-## [v0.8.0](https://github.com/RegioHelden/django-kafka/tree/v0.8.0) (2025-05-16)
+## [v0.9.0](https://github.com/RegioHelden/django-kafka/tree/v0.9.0) (2025-05-16)
 
-[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.7.0...v0.8.0)
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.8.0...v0.9.0)
 
 **Implemented enhancements:**
 
-- Remove unused version from init file [\#85](https://github.com/RegioHelden/django-kafka/pull/85) (@lociii)
-
-**Fixed bugs:**
-
-- fix: resume partitions should resume at the paused offsets, refs \#88 [\#89](https://github.com/RegioHelden/django-kafka/pull/89) (@stefan-cardnell-rh)
-
-**Merged pull requests:**
-
-- Update uv to 0.7.4 [\#87](https://github.com/RegioHelden/django-kafka/pull/87) (@regiohelden-dev)
-- Update uv to 0.7.3 [\#86](https://github.com/RegioHelden/django-kafka/pull/86) (@regiohelden-dev)
-- Updates from modulesync [\#83](https://github.com/RegioHelden/django-kafka/pull/83) (@regiohelden-dev)
+- fix: add retry setting to log every Nth attempt and add more info headers to dead letter topic, refs \#91 [\#92](https://github.com/RegioHelden/django-kafka/pull/92) (@stefan-cardnell-rh)
 
 ## 0.5.18 (2025-03-31)
 
