@@ -29,7 +29,7 @@ class RetrySettings:
         """
         :param max_retries: maximum number of retry attempts (use -1 for infinite)
         :param delay: delay (seconds)
-        :param backoff: exponential backoff
+        :param backoff: use an exponential backoff delay
         :param include: exception types to retry for
         :param exclude: exception types to exclude from retry
         :param blocking: block the consumer process during retry
