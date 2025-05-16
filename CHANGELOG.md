@@ -1,28 +1,22 @@
 # Changelog
 
-## [v0.7.0](https://github.com/RegioHelden/django-kafka/tree/v0.7.0) (2025-04-28)
+## [v0.8.0](https://github.com/RegioHelden/django-kafka/tree/v0.8.0) (2025-05-16)
 
-[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.6.0...v0.7.0)
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.7.0...v0.8.0)
 
 **Implemented enhancements:**
 
-- Updates from modulesync [\#78](https://github.com/RegioHelden/django-kafka/pull/78) (@regiohelden-dev)
-- Removed unused wsgi file from example app [\#67](https://github.com/RegioHelden/django-kafka/pull/67) (@lociii)
+- Remove unused version from init file [\#85](https://github.com/RegioHelden/django-kafka/pull/85) (@lociii)
 
 **Fixed bugs:**
 
-- fix: fix start command of the "app" container. [\#68](https://github.com/RegioHelden/django-kafka/pull/68) (@bodja)
+- fix: resume partitions should resume at the paused offsets, refs \#88 [\#89](https://github.com/RegioHelden/django-kafka/pull/89) (@stefan-cardnell-rh)
 
 **Merged pull requests:**
 
-- Updates from modulesync [\#81](https://github.com/RegioHelden/django-kafka/pull/81) (@regiohelden-dev)
-- Updates from modulesync [\#80](https://github.com/RegioHelden/django-kafka/pull/80) (@regiohelden-dev)
-- Updates from modulesync [\#77](https://github.com/RegioHelden/django-kafka/pull/77) (@regiohelden-dev)
-- Updates from modulesync [\#76](https://github.com/RegioHelden/django-kafka/pull/76) (@regiohelden-dev)
-- Updates from modulesync [\#75](https://github.com/RegioHelden/django-kafka/pull/75) (@regiohelden-dev)
-- chore\(deps\): bump regiohelden/github-reusable-workflows from 2.0.0 to 2.1.0 [\#74](https://github.com/RegioHelden/django-kafka/pull/74) (@dependabot[bot])
-- Updates from modulesync  [\#73](https://github.com/RegioHelden/django-kafka/pull/73) (@regiohelden-dev)
-- Preparations for modulesync rollout [\#72](https://github.com/RegioHelden/django-kafka/pull/72) (@lociii)
+- Update uv to 0.7.4 [\#87](https://github.com/RegioHelden/django-kafka/pull/87) (@regiohelden-dev)
+- Update uv to 0.7.3 [\#86](https://github.com/RegioHelden/django-kafka/pull/86) (@regiohelden-dev)
+- Updates from modulesync [\#83](https://github.com/RegioHelden/django-kafka/pull/83) (@regiohelden-dev)
 
 ## 0.5.18 (2025-03-31)
 
