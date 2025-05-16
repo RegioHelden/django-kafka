@@ -18,25 +18,27 @@ class PauseManagerTestCase(SimpleTestCase):
         self.assertEqual(tp.partition, mock_msg.partition())
 
     def test_set(self):
-        mock_msg = message_mock()
+        mock_msg = message_mock(offset=1000)
         manager = PauseManager()
 
         tp = manager.set(mock_msg, timezone.now())
 
-        self.assertEqual(manager.get_msg_partition(mock_msg), tp)
+        result_tp = manager.get_msg_partition(mock_msg)
+        self.assertEqual(result_tp, tp)
+        self.assertEqual(result_tp.offset, 1000)
 
     def test_pop_ready(self):
         manager = PauseManager()
-        mock_msg_1 = message_mock(partition=1)
-        mock_msg_2 = message_mock(partition=2)
+        mock_msg_1 = message_mock(partition=1, offset=1000)
+        mock_msg_2 = message_mock(partition=2, offset=2000)
 
         manager.set(mock_msg_1, timezone.now() - datetime.timedelta(minutes=1))
         manager.set(mock_msg_2, timezone.now() + datetime.timedelta(minutes=1))
 
-        self.assertEqual(
-            list(manager.pop_ready()),
-            [manager.get_msg_partition(mock_msg_1)],
-        )
+        ready_tps = list(manager.pop_ready())
+        self.assertEqual(len(ready_tps), 1)
+        self.assertEqual(ready_tps[0], manager.get_msg_partition(mock_msg_1))
+        self.assertEqual(ready_tps[0].offset, 1000)
         self.assertEqual(list(manager.pop_ready()), [])  # empty the second time
 
 

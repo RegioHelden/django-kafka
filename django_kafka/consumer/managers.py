@@ -20,7 +20,7 @@ class PauseManager:
     @staticmethod
     def get_msg_partition(msg: "cimpl.Message") -> TopicPartition:
         """returns the message topic partition"""
-        return TopicPartition(msg.topic(), msg.partition())
+        return TopicPartition(msg.topic(), msg.partition(), msg.offset())
 
     def set(self, msg: "cimpl.Message", until: datetime) -> TopicPartition:
         """adds message partition to the pause list, returning the partition"""
@@ -33,8 +33,8 @@ class PauseManager:
         now = timezone.now()
         for tp, pause in list(self.__pauses.items()):
             if now >= pause:
-                yield tp
                 del self.__pauses[tp]
+                yield tp
 
     def reset(self):
         self.__pauses = {}

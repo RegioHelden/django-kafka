@@ -97,7 +97,9 @@ class ConsumerTestCase(TestCase):
 
         consumer._pauses.set.assert_called_once_with(mock_msg, retry_time)
         mock_confluent_consumer.return_value.seek.assert_called_once_with(partition)
-        mock_confluent_consumer.return_value.pause.assert_called_once_with([partition])
+        pause = mock_confluent_consumer.return_value.pause
+        pause.assert_called_once_with([partition])
+        self.assertEqual(pause.call_args.args[0][0].offset, mock_msg.offset())
 
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_resume_partitions__before_time(self, mock_confluent_consumer):
@@ -130,7 +132,9 @@ class ConsumerTestCase(TestCase):
         consumer.pause_partition(mock_msg, retry_time)
         consumer.resume_partitions()
 
-        mock_confluent_consumer.return_value.resume.assert_called_once_with([partition])
+        resume = mock_confluent_consumer.return_value.resume
+        resume.assert_called_once_with([partition])
+        self.assertEqual(resume.call_args.args[0][0].offset, mock_msg.offset())
 
     @patch("django_kafka.consumer.Consumer.commit_offset")
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
