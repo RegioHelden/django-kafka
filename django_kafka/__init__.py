@@ -1,11 +1,14 @@
 import logging
 from multiprocessing.pool import Pool
 
-from confluent_kafka.schema_registry import SchemaRegistryClient
+from temporalio import workflow
+
+with workflow.unsafe.imports_passed_through():
+    from confluent_kafka.schema_registry import SchemaRegistryClient
+    from django_kafka.conf import settings
 from django.utils.functional import cached_property
 from django.utils.module_loading import autodiscover_modules
 
-from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Producer
 from django_kafka.registry import ConnectorsRegistry, ConsumersRegistry

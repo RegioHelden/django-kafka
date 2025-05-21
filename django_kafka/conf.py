@@ -1,4 +1,5 @@
 import socket
+from datetime import timedelta
 
 from django.conf import settings as django_settings
 
@@ -37,6 +38,9 @@ DEFAULTS = {
     # value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
+    # temporal relation resolver settings
+    "TEMPORAL_TASK_QUEUE": "django-kafka",
+    "TEMPORAL_START_TO_CLOSE_TIMEOUT": timedelta(seconds=20)
 }
 
 
