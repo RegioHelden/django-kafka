@@ -150,7 +150,7 @@ class ConsumerTestCase(TestCase):
         # checks msg had error before processing
         msg.error.assert_called_once_with()
         # Topic.consume called
-        consumer.get_topic(msg).consume.assert_called_once_with(msg)
+        consumer.get_topic(msg)._consume.assert_called_once_with(msg)
         # commit_offset triggered
         mock_commit_offset.assert_called_once_with(msg)
 
@@ -192,7 +192,7 @@ class ConsumerTestCase(TestCase):
         topic_consume_side_effect = TypeError("test")
         topic_consumer = Mock(
             **{
-                "consume.side_effect": topic_consume_side_effect,
+                "_consume.side_effect": topic_consume_side_effect,
             },
         )
         topic_consumer.name = "topic"
@@ -221,7 +221,7 @@ class ConsumerTestCase(TestCase):
         topic_consume_side_effect = TypeError("test")
         topic_consumer = Mock(
             **{
-                "consume.side_effect": topic_consume_side_effect,
+                "_consume.side_effect": topic_consume_side_effect,
             },
         )
         topic_consumer.name = "topic"

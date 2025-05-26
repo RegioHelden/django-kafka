@@ -56,3 +56,11 @@ class ConsumersRegistry(Registry["Consumer"]):
 
         if retry_consumer_cls := RetryConsumer.build(cls):
             self._classes[f"{self.get_key(cls)}.retry"] = retry_consumer_cls
+
+    def topic(self, topic_name: str):
+        for key in self:
+            try:
+                return self[key].topics.get(topic_name=topic_name)
+            except KeyError:
+                pass
+        return None

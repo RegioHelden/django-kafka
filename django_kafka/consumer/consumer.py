@@ -188,7 +188,7 @@ class Consumer:
         logger.error(error, exc_info=exc_info)
 
     def consume(self, msg):
-        self.get_topic(msg).consume(msg)
+        self.get_topic(msg)._consume(msg)
 
     def process_message(self, msg: "cimpl.Message"):
         if msg.error():

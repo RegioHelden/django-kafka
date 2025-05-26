@@ -1,6 +1,7 @@
 import logging
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from confluent_kafka.serialization import (
@@ -16,6 +17,8 @@ from django_kafka import kafka
 from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.producer import Suppression
+from django_kafka.relations_resolver.relation import ModelRelation
+from django_kafka.relations_resolver.resolver import RelationResolver
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
@@ -102,6 +105,7 @@ class TopicConsumer(ABC):
     key_deserializer: type[Deserializer] = StringDeserializer
     value_deserializer: type[Deserializer] = StringDeserializer
     retry_settings: "RetrySettings" = settings.get_retry_settings()
+    relations_resolver: "RelationResolver" = None
 
     @property
     @abstractmethod
@@ -154,6 +158,20 @@ class TopicConsumer(ABC):
     def consume(self, msg: "cimpl.Message"):
         """Implement message processing"""
         raise NotImplementedError
+
+    def _consume(self, msg: "cimpl.Message"):
+        if not self.relations_resolver or self.relations_resolver.resolve(
+            self.get_relations(msg),
+            msg,
+        ):
+            self.consume(msg)
+
+    def get_relations(self, msg: "cimpl.Message") -> Iterator[ModelRelation]:
+        """
+        Temporal dependency awaiting workflow will kick-in in case this method yields
+        yield self.relations_resolver.relation_cls(...)
+        """
+        yield from []
 
 
 class Topic(TopicConsumer, TopicProducer, ABC):

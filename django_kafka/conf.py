@@ -37,6 +37,10 @@ DEFAULTS = {
     # value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
+    # relation resolver settings
+    # ruff: noqa: E501
+    "RELATION_RESOLVER_CACHE": "django_kafka.relations_resolver.cache.model.RelationResolverModelCache",
+    "TEMPORAL_TASK_QUEUE": "django-kafka",
 }
 
 

@@ -72,3 +72,19 @@ class KeyOffsetTracker(models.Model):
         else:
             self.create_time = None
             self.log_append_time = None
+
+
+class RelationResolverCacheModel(models.Model):
+    relation_identifier = models.CharField(
+        _("relation identifier"),
+        max_length=256,
+        db_index=True,
+        unique=True,
+    )
+
+    class Meta:
+        verbose_name = _("relation resolver tracker")
+        verbose_name_plural = _("relation resolver tracker")
+
+    def __str__(self):
+        return self.relation_identifier
