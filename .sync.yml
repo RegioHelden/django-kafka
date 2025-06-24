@@ -6,6 +6,7 @@
   dependencies:
     ["django>=4.2,<6.0", "confluent-kafka[avro, schemaregistry]>=2.9.0"]
   max_line_length: 88
+  changelog_since_tag: "v0.5.18"
 
 compose.yaml:
   compose_command: runserver 0:8000
