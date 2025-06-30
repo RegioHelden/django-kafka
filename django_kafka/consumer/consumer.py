@@ -1,19 +1,22 @@
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydoc import locate
 from typing import TYPE_CHECKING, Optional
 
 from confluent_kafka import Consumer as ConfluentConsumer
+from django.utils import timezone
 
+from django_kafka import kafka
 from django_kafka.conf import settings
+from django_kafka.exceptions import DjangoKafkaError
 
 from .managers import PauseManager, RetryManager
-from .topics import Topics
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
 
+    from django_kafka.consumer import Topics
     from django_kafka.retry.settings import RetrySettings
     from django_kafka.topic import TopicConsumer
 
@@ -32,7 +35,7 @@ class Consumer:
         https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#pythonclient-consumer
     """
 
-    topics: Topics
+    topics: "Topics"
     config: dict
 
     polling_freq = settings.POLLING_FREQUENCY
@@ -70,6 +73,7 @@ class Consumer:
             # Stored offsets are committed to Kafka by a background
             #  thread every 'auto.commit.interval.ms'.
             # Explicitly storing offsets after processing gives at-least once semantics.
+            logger.debug("Commit offset %s", msg.offset())
             self.store_offsets(msg)
 
     def pause_partition(self, msg: "cimpl.Message", until: datetime):
@@ -78,6 +82,7 @@ class Consumer:
         note: pausing is only retained within the python consumer class, and is not
         retained between separate consumer processes.
         """
+        logger.debug("Pause partition %s", msg.partition())
         partition = self._pauses.set(msg, until)
         self.seek(partition)  # seek back to message offset to re-poll on unpause
         self.pause([partition])
@@ -85,6 +90,7 @@ class Consumer:
     def resume_partitions(self):
         """resumes any paused partitions that are now ready"""
         for partition in self._pauses.pop_ready():
+            logger.debug("Resume partition %s", partition.partition)
             self.resume([partition])
 
     def blocking_retry(
@@ -187,8 +193,48 @@ class Consumer:
 
         logger.error(error, exc_info=exc_info)
 
-    def consume(self, msg):
-        self.get_topic(msg).consume(msg)
+    def consume(self, msg) -> bool:
+        """
+        return value tells if the offset should be committed.
+        """
+        logger.debug(
+            "Consume message - topic='%s' partition=%s offset=%s",
+            msg.topic(),
+            msg.partition(),
+            msg.offset(),
+        )
+        topic = self.get_topic(msg)
+
+        if topic.use_relations_resolver:
+            return self._resolve_relations(msg, topic)
+
+        topic.consume(msg)
+        return True
+
+    def _resolve_relations(self, msg, topic) -> bool:
+        resolve_action = kafka.relations_resolver.resolve(topic.get_relations(msg), msg)
+
+        # 1. relation resolver didn't find anything to handle
+        # - consume and commit
+        if resolve_action == kafka.relations_resolver.Action.CONTINUE:
+            topic.consume(msg)
+            return True
+
+        # 2. relation does not exist, the message was sent to waiting queue
+        # - commit offset without consumption and keep processing messages
+        if resolve_action == kafka.relations_resolver.Action.SKIP:
+            return True
+
+        # 3 relation exists but there are messages waiting to be resolved,
+        # - stop consumption until all waiting messages are resolved,
+        #   don't commit offset
+        if resolve_action == kafka.relations_resolver.Action.PAUSE:
+            self.pause_partition(msg, timezone.now() + timedelta(seconds=10))
+            return False
+
+        raise DjangoKafkaError(
+            f"'RelationResolver.Action({resolve_action})' case is not implemented.",
+        )
 
     def process_message(self, msg: "cimpl.Message"):
         if msg.error():
@@ -196,14 +242,18 @@ class Consumer:
             return
 
         try:
-            self.consume(msg)
+            commit = self.consume(msg)
         except Exception as exc:
             # ruff: noqa: BLE001 (do not stop consumer if message consumption fails in any circumstances)
-            processed = self.handle_exception(msg, exc)
-        else:
-            processed = True
+            commit = self.handle_exception(msg, exc)
 
-        if processed:
+        if commit is None:
+            raise DjangoKafkaError(
+                "'Consumer.consume' must return 'bool'."
+                " Did you call 'super().consume()' without return?",
+            )
+
+        if commit:
             self.commit_offset(msg)
 
     def poll(self) -> Optional["cimpl.Message"]:

@@ -1,4 +1,4 @@
-from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.exceptions import TopicNotRegisteredError
 from django_kafka.topic import TopicConsumer
 
 
@@ -14,7 +14,7 @@ class Topics:
         if topic_name not in self._match:
             topic_consumer = next((t for t in self if t.matches(topic_name)), None)
             if not topic_consumer:
-                raise DjangoKafkaError(f"No topic registered for `{topic_name}`")
+                raise TopicNotRegisteredError(f"No topic registered for `{topic_name}`")
             self._match[topic_name] = topic_consumer
 
         return self._match[topic_name]

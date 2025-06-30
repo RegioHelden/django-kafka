@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["django>=4.2,<6.0", "confluent-kafka[avro, schemaregistry]>=2.9.0"]
+dependencies = ["django>=4.2,<6.0", "confluent-kafka[avro, schemaregistry]>=2.9.0", "django-temporalio==1.3.0"]
 
 [project.urls]
 Homepage = "https://github.com/RegioHelden/django-kafka"

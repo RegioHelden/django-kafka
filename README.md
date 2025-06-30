@@ -229,6 +229,42 @@ When the message consumption fails with the relational errors (`ObjectDoesNotExi
 
 To enable this feature just call `KeyOffsetTrackerConsumer.enable(group_id="my-proj-key-offset-tracker")` defining the `group.id`. This consumer will consume all the topics with `retry_setings` configured to use offset tracker (`use_offset_tracker=True`).
 
+### Relations resolver
+To make sure your consumer are not getting stuck when using blocking retries, you can use relations resolver.
+
+#### Usage:
+```python
+from django_kafka.relations_resolver.relation import ModelRelation
+
+
+class MyTopicConsumer(TopicConsumer):
+
+    def get_relations(self, msg: "cimpl.Message"):
+        value = self.deserialize(msg.value(), MessageField.VALUE, msg.headers())
+        yield ModelRelation(Order, id_value=value["customer_id"], id_field="id")
+```
+
+#### Entities
+- `RelationResolver` - basically routing the messages
+- `Relation` - implements serialization of the relation to pass it around and holds the logic of the relation (if it exists, has waiting messages etc.)
+- `MessageProcessor` - defines how messages which are missing relations are stored, and processed.
+- `RelationResolverDaemon` - runs background tasks to resolve the relations.
+
+#### Brief flow:
+1. When `TopicConsumer.get_relations` is overwritten, then relations resolver will check for missing relations.
+2. When relation does not exist, then the message is placed to the store for later processing.
+3. When relation exists, but there are waiting messages, then the partition is paused until the messages are consumed.
+
+#### Requirements:
+- Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own `RelationResolverDaemon` if you want to use smth else.
+
+#### Relations resolver daemons:
+
+- `TemporalDaemon`
+```bash
+./manage.py sync_temporalio_schedules
+```
+
 ## Connectors:
 
 Connectors are auto-discovered and are expected to be located under the `some_django_app/kafka/connectors.py` or `some_django_app/connectors.py`.
@@ -328,6 +364,11 @@ DJANGO_KAFKA = {
     # `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
+    "TEMPORAL_TASK_QUEUE": "django-kafka",
+    "RELATION_RESOLVER": "django_kafka.relations_resolver.resolver.RelationResolver",
+    "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
+    "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
+    "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
 }
 ```
 
@@ -445,6 +486,22 @@ Prefix which will be added to the connector name when publishing the connector.
 
 Used by `django_kafka.connect.connector.Connector` to initialize `django_kafka.connect.client.KafkaConnectClient`.
 
+#### `TEMPORAL_TASK_QUEUE`
+default: `django-kafka`
+
+#### `RELATION_RESOLVER`
+default: `django_kafka.relations_resolver.resolver.RelationResolver`
+
+#### `RELATION_RESOLVER_PROCESSOR`
+default: `django_kafka.relations_resolver.processor.model.ModelMessageProcessor`
+
+#### `RELATION_RESOLVER_DAEMON`
+default: `django_kafka.relations_resolver.daemon.temporal.TemporalDaemon`
+
+#### `RELATION_RESOLVER_DAEMON_INTERVAL`
+default: `timedelta(seconds=5)`
+
+Defines how often check if relations are resolved for messages in waiting queue.
 
 ## Suppressing producers:
 

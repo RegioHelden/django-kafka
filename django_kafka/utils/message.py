@@ -38,3 +38,54 @@ class MessageTimestamp(IntEnum):
             return None
 
         return datetime.fromtimestamp(timestamp / 1000, UTC)
+
+
+class Message:
+    """
+    This only exists because cimpl.Message is not instantiatable.
+    https://github.com/confluentinc/confluent-kafka-python/issues/1535
+    """
+
+    # ruff: noqa: PLR0913
+    def __init__(
+        self,
+        topic: str,
+        key: bytes | str,
+        value: bytes | str | None,
+        headers: list[tuple[str, bytes]] | None,
+        offset: int,
+        partition: int,
+        timestamp: datetime,
+    ):
+        self._topic = topic
+        self._key = key
+        self._value = value
+        self._headers = headers
+        self._offset = offset
+        self._partition = partition
+        self._timestamp = timestamp
+
+    def topic(self) -> str:
+        return self._topic
+
+    def key(self) -> bytes | str:
+        if type(self._key) is list:
+            return bytes(self._key)
+        return self._key
+
+    def value(self) -> bytes | str:
+        if type(self._value) is list:
+            return bytes(self._value)
+        return self._value
+
+    def headers(self) -> list[tuple[str, bytes]] | None:
+        return self._headers
+
+    def timestamp(self) -> datetime:
+        return self._timestamp
+
+    def partition(self) -> int:
+        return self._partition
+
+    def offset(self) -> int:
+        return self._offset

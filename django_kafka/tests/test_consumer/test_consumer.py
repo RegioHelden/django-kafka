@@ -8,6 +8,7 @@ from confluent_kafka import TopicPartition
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
+from django_kafka.relations_resolver.resolver import RelationResolver
 from django_kafka.conf import SETTINGS_KEY, settings
 from django_kafka.consumer import Consumer, Topics
 from django_kafka.retry.settings import RetrySettings
@@ -193,6 +194,7 @@ class ConsumerTestCase(TestCase):
         topic_consumer = Mock(
             **{
                 "consume.side_effect": topic_consume_side_effect,
+                "use_relations_resolver": False,
             },
         )
         topic_consumer.name = "topic"
@@ -222,6 +224,7 @@ class ConsumerTestCase(TestCase):
         topic_consumer = Mock(
             **{
                 "consume.side_effect": topic_consume_side_effect,
+                "use_relations_resolver": False,
             },
         )
         topic_consumer.name = "topic"
@@ -452,6 +455,49 @@ class ConsumerTestCase(TestCase):
             header_detail=traceback.format_exc(),
         )
 
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer", new=Mock())
+    def test_use_relation_resolver(self):
+        class SomeConsumer(Consumer):
+            config = {"group.id": "group_id"}
+
+        consumer = SomeConsumer()
+
+        topic_consumer_a = Mock(use_relations_resolver=True)
+        msg_a = message_mock()
+        with (
+            patch("django_kafka.consumer.consumer.Consumer.get_topic", return_value=topic_consumer_a),
+            patch("django_kafka.consumer.consumer.Consumer._resolve_relations") as mock_resolve_relations,
+        ):
+            consumer.consume(msg_a)
+            mock_resolve_relations.assert_called_once_with(msg_a, topic_consumer_a)
+            topic_consumer_a.consume.assert_not_called()
+
+        topic_consumer_b = Mock(use_relations_resolver=False)
+        msg_b = message_mock()
+        with (patch("django_kafka.consumer.consumer.Consumer.get_topic", return_value=topic_consumer_b),
+                patch("django_kafka.consumer.consumer.Consumer._resolve_relations") as mock_resolve_relations):
+            consumer.consume(msg_b)
+            mock_resolve_relations.assert_not_called()
+            topic_consumer_b.consume.assert_called_once_with(msg_b)
+
+    @patch("django_kafka.consumer.consumer.ConfluentConsumer", new=Mock())
+    def test_resolve_relations_return_value(self):
+        class SomeConsumer(Consumer):
+            config = {"group.id": "group_id"}
+
+        consumer = SomeConsumer()
+        topic = Mock()
+        msg = message_mock()
+
+        with patch("django_kafka.kafka.relations_resolver.resolve", return_value=RelationResolver.Action.CONTINUE):
+            self.assertTrue(consumer._resolve_relations(msg, topic))
+
+        with patch("django_kafka.kafka.relations_resolver.resolve", return_value=RelationResolver.Action.SKIP):
+            self.assertTrue(consumer._resolve_relations(msg, topic))
+
+        with patch("django_kafka.kafka.relations_resolver.resolve", return_value=RelationResolver.Action.PAUSE):
+            self.assertFalse(consumer._resolve_relations(msg, topic))
+        
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_auto_offset_false(self, mock_consumer_client):
         class SomeConsumer(Consumer):

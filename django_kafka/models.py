@@ -1,9 +1,16 @@
-from typing import ClassVar
+from datetime import datetime
+from typing import TYPE_CHECKING, ClassVar
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import JSONField
 from django.utils.translation import gettext_lazy as _
 
+from django_kafka.relations_resolver.relation import RelationType
 from django_kafka.utils.message import MessageTimestamp
+
+if TYPE_CHECKING:
+    from confluent_kafka import cimpl
 
 
 class KeyOffsetTrackerQuerySet(models.QuerySet):
@@ -72,3 +79,91 @@ class KeyOffsetTracker(models.Model):
         else:
             self.create_time = None
             self.log_append_time = None
+
+
+class WaitingMessageQuerySet(models.QuerySet):
+    def add_message(self, msg: "cimpl.Message", relation):
+        timestamp = msg.timestamp()
+        if not isinstance(timestamp, datetime):
+            timestamp = MessageTimestamp.to_datetime(msg.timestamp())
+
+        return self.create(
+            key=msg.key(),
+            value=msg.value(),
+            timestamp=timestamp,
+            topic=msg.topic(),
+            partition=msg.partition(),
+            offset=msg.offset(),
+            relation_content_type=ContentType.objects.get_for_model(relation.model),
+            relation_id_field=relation.id_field,
+            relation_id_value=relation.id_value,
+            serialized_relation=relation.serialize(),
+        )
+
+    def for_relation(self, relation):
+        return self.filter(
+            relation_content_type=ContentType.objects.get_for_model(relation.model),
+            relation_id_field=relation.id_field,
+            relation_id_value=relation.id_value,
+        )
+
+    def relations(self):
+        return (
+            self.order_by(
+                "relation_content_type",
+                "relation_id_field",
+                "relation_id_value",
+            )
+            .distinct("relation_content_type", "relation_id_field", "relation_id_value")
+            .select_related("relation_content_type")
+            .only("relation_content_type", "relation_id_field", "relation_id_value")
+        )
+
+    def waiting(self):
+        return self.filter(status=self.model.Status.WAITING)
+
+    def mark_resolving(self, relation):
+        self.for_relation(relation).update(status=self.model.Status.RESOLVING)
+
+
+class WaitingMessage(models.Model):
+    class Status(models.IntegerChoices):
+        WAITING = 1
+        RESOLVING = 2
+        RESOLVED = 3
+
+    status = models.IntegerField(
+        _("status"),
+        choices=Status.choices,
+        default=Status.WAITING,
+    )
+
+    key = models.BinaryField(_("key"))
+    value = models.BinaryField(_("value"))
+    timestamp = models.DateTimeField(_("timestamp"))
+    topic = models.TextField(_("topic"))
+    partition = models.TextField(_("partition"))
+    offset = models.TextField(_("offset"))
+    headers = JSONField(_("headers"), null=True)
+
+    relation_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    relation_id_field = models.CharField(_("relation id field"), max_length=256)
+    relation_id_value = models.CharField(_("relation id value"), max_length=256)
+
+    serialized_relation = JSONField(_("relation kwargs"))
+
+    objects = WaitingMessageQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("waiting message")
+        verbose_name_plural = _("waiting messages")
+        ordering = ("offset",)
+
+    def __str__(self):
+        return (
+            f"{self.relation_content_type}"
+            f"({self.relation_id_field}={self.relation_id_value})"
+        )
+
+    def relation(self):
+        return RelationType.instance(self.serialized_relation)
