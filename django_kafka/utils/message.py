@@ -55,7 +55,7 @@ class Message:
         headers: list[tuple[str, bytes]] | None,
         offset: int,
         partition: int,
-        timestamp: datetime,
+        timestamp: datetime | tuple[MessageTimestamp, int],
     ):
         self._topic = topic
         self._key = key

@@ -47,10 +47,10 @@ class Relation(ABC):
         return RelationType(self.__class__).name
 
     async def has_waiting_messages(self) -> bool:
-        return await kafka.relations_resolver.processor.exist(self)
+        return await kafka.relations_resolver.processor.exists(self)
 
     async def add_message(self, msg: "cimpl.Message"):
-        await kafka.relations_resolver.processor.add_msg(msg, self)
+        await kafka.relations_resolver.processor.add_message(msg, self)
 
     async def resolve(self):
         await kafka.relations_resolver.processor.process_messages(self)

@@ -21,13 +21,13 @@ class ModelMessageProcessor(MessageProcessor):
 
         self.model = WaitingMessage
 
-    async def add_msg(self, msg: "cimpl.Message", relation: "Relation"):
+    async def add_message(self, msg: "cimpl.Message", relation: "Relation"):
         await sync_to_async(self.model.objects.add_message)(msg, relation)
 
     async def delete(self, relation: "Relation"):
         await (await sync_to_async(self.model.objects.for_relation)(relation)).adelete()
 
-    async def exist(self, relation: "Relation") -> bool:
+    async def exists(self, relation: "Relation") -> bool:
         return await (
             await sync_to_async(self.model.objects.for_relation)(relation)
         ).aexists()
@@ -70,9 +70,7 @@ class ModelMessageProcessor(MessageProcessor):
         return False
 
     async def to_resolve(self) -> AsyncIterator["Relation"]:
-        async for item in (
-            self.model.objects.waiting().relations().aiterator(chunk_size=500)
-        ):
+        async for item in self.model.objects.aiter_relations_to_resolve(chunk_size=500):
             relation = await sync_to_async(item.relation)()
             if await relation.exists():
                 yield relation

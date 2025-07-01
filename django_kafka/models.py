@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
@@ -11,6 +12,8 @@ from django_kafka.utils.message import MessageTimestamp
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
+
+    from django_kafka.relations_resolver.relation import ModelRelation
 
 
 class KeyOffsetTrackerQuerySet(models.QuerySet):
@@ -82,7 +85,7 @@ class KeyOffsetTracker(models.Model):
 
 
 class WaitingMessageQuerySet(models.QuerySet):
-    def add_message(self, msg: "cimpl.Message", relation):
+    def add_message(self, msg: "cimpl.Message", relation: "ModelRelation"):
         timestamp = msg.timestamp()
         if not isinstance(timestamp, datetime):
             timestamp = MessageTimestamp.to_datetime(msg.timestamp())
@@ -93,6 +96,7 @@ class WaitingMessageQuerySet(models.QuerySet):
             timestamp=timestamp,
             topic=msg.topic(),
             partition=msg.partition(),
+            headers=msg.headers(),
             offset=msg.offset(),
             relation_content_type=ContentType.objects.get_for_model(relation.model),
             relation_id_field=relation.id_field,
@@ -124,6 +128,15 @@ class WaitingMessageQuerySet(models.QuerySet):
 
     def mark_resolving(self, relation):
         self.for_relation(relation).update(status=self.model.Status.RESOLVING)
+
+    async def aiter_relations_to_resolve(
+        self,
+        chunk_size=500,
+    ) -> AsyncIterator["WaitingMessage"]:
+        async for relation in (
+            self.waiting().relations().aiterator(chunk_size=chunk_size)
+        ):
+            yield relation
 
 
 class WaitingMessage(models.Model):

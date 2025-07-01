@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_kafka",
+    "example.apps.ExampleConfig",
 ]
 
 MIDDLEWARE = [
@@ -62,8 +63,12 @@ TEMPLATES = [
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "app",
+        "USER": "app",
+        "PASSWORD": "app",
+        "HOST": "db",
+        "PORT": "5432",
     },
 }
 

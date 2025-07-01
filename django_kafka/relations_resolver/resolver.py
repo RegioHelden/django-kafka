@@ -1,13 +1,11 @@
 import logging
 from collections.abc import Iterator
 from enum import IntEnum
-from pydoc import locate
 from typing import TYPE_CHECKING
 
 from asgiref.sync import async_to_sync
 
-from django_kafka.conf import settings
-from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.relations_resolver.processor import get_message_processor
 
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
@@ -27,9 +25,7 @@ class RelationResolver:
         PAUSE = 3
 
     def __init__(self):
-        if not (processor_cls := locate(settings.RELATION_RESOLVER_PROCESSOR)):
-            raise DjangoKafkaError(f"{settings.RELATION_RESOLVER_PROCESSOR} not found.")
-        self.processor = processor_cls()
+        self.processor = get_message_processor()
 
     async def await_for_relation(self, msg: "cimpl.Message", relation: "Relation"):
         """

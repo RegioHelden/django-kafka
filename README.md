@@ -232,6 +232,8 @@ To enable this feature just call `KeyOffsetTrackerConsumer.enable(group_id="my-p
 ### Relations resolver
 To make sure your consumer are not getting stuck when using blocking retries, you can use relations resolver.
 
+NOTE: Currently works only with PostgreSQL.
+
 #### Usage:
 ```python
 from django_kafka.relations_resolver.relation import ModelRelation

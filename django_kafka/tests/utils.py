@@ -26,3 +26,19 @@ def message_mock(  # noqa: PLR0913
             or (MessageTimestamp.NOT_AVAILABLE, Faker().unix_time() * 1000),
         },
     )
+
+
+class AsyncIteratorMock(Mock):
+    def __init__(self, items):
+        super().__init__()
+        self._iter = iter(items)
+        self.return_value = self
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._iter)
+        except StopIteration as e:
+            raise StopAsyncIteration from e
