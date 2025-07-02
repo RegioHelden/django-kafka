@@ -12,4 +12,3 @@ class KeyOffsetTrackerAdmin(admin.ModelAdmin):
 @admin.register(WaitingMessage)
 class WaitingMessageAdmin(admin.ModelAdmin):
     search_fields = ("topic", "key")
-    select_related = ("relation_content_type",)

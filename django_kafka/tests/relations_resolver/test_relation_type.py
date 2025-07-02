@@ -1,10 +1,7 @@
 from django.test import SimpleTestCase
 
-from django_kafka.relations_resolver.relation import RelationType
-
-
-class RelationModel:
-    pass
+from django_kafka.relations_resolver.relation import ModelRelation, RelationType
+from example.models import Order
 
 
 class RelationTypeTestCase(SimpleTestCase):
@@ -12,7 +9,7 @@ class RelationTypeTestCase(SimpleTestCase):
         serialized_relation = {
             "type": "MODEL",
             "kwargs": {
-                "model": f"{RelationModel.__module__}.{RelationModel.__name__}",
+                "model": ModelRelation.get_model_key(Order),
                 "id_value": 1,
                 "id_field": "id",
             },
@@ -20,7 +17,7 @@ class RelationTypeTestCase(SimpleTestCase):
 
         relation = RelationType.instance(serialized_relation)
 
-        self.assertEqual(relation.model, RelationModel)
+        self.assertEqual(relation.model, Order)
         self.assertEqual(relation.id_field, serialized_relation["kwargs"]["id_field"])
         self.assertEqual(relation.id_value, serialized_relation["kwargs"]["id_value"])
-        self.assertEqual(relation.model_path, serialized_relation["kwargs"]["model"])
+        self.assertEqual(relation.model_key, serialized_relation["kwargs"]["model"])

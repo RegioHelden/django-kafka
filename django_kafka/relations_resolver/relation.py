@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from pydoc import locate
 from typing import TYPE_CHECKING, TypedDict
 
 from asgiref.sync import sync_to_async
+from django.apps import apps
 from temporalio import workflow
 
 from django_kafka import kafka
@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from confluent_kafka import cimpl
 
 with workflow.unsafe.imports_passed_through():
-    from django.contrib.contenttypes.models import ContentType
     from django.db.models import Model
 
 
@@ -55,17 +54,16 @@ class ModelRelation(Relation):
     model: type[Model]
     id_value: int
     id_field: str
-    model_path: str
+    model_key: str
 
     def __init__(self, model: type[Model], id_field: str, id_value: int | str):
         self.model = model
         self.id_field = id_field
         self.id_value = id_value
-        self.model_path = f"{model.__module__}.{self.model.__name__}"
+        self.model_key = self.get_model_key(model)
 
     def identifier(self):
-        ct = ContentType.objects.get_for_model(self.model)
-        return f"ct{ct.id}-{ct.app_label}-{ct.model}-{self.id_value}".lower()
+        return f"{self.model_key}-{self.id_value}".lower()
 
     async def get(self) -> Model:
         return await self.model.objects.aget(**{self.id_field: self.id_value})
@@ -79,7 +77,7 @@ class ModelRelation(Relation):
         return {
             "type": self.type(),
             "kwargs": {
-                "model": self.model_path,
+                "model": self.model_key,
                 "id_value": self.id_value,
                 "id_field": self.id_field,
             },
@@ -92,7 +90,11 @@ class ModelRelation(Relation):
         id_field: str,
         id_value: int | str,
     ) -> "ModelRelation":
-        return cls(locate(model), id_field, id_value)
+        return cls(apps.get_model(model), id_field, id_value)
+
+    @staticmethod
+    def get_model_key(model: type[Model]) -> str:
+        return f"{model._meta.app_label}.{model._meta.model_name}"
 
 
 class RelationType(Enum):

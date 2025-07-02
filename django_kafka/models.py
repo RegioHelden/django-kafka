@@ -2,7 +2,6 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import JSONField
 from django.utils.translation import gettext_lazy as _
@@ -86,6 +85,8 @@ class KeyOffsetTracker(models.Model):
 
 class WaitingMessageQuerySet(models.QuerySet):
     def add_message(self, msg: "cimpl.Message", relation: "ModelRelation"):
+        from django_kafka.relations_resolver.relation import ModelRelation
+
         timestamp = msg.timestamp()
         if not isinstance(timestamp, datetime):
             timestamp = MessageTimestamp.to_datetime(msg.timestamp())
@@ -98,15 +99,17 @@ class WaitingMessageQuerySet(models.QuerySet):
             partition=msg.partition(),
             headers=msg.headers(),
             offset=msg.offset(),
-            relation_content_type=ContentType.objects.get_for_model(relation.model),
+            relation_model_key=ModelRelation.get_model_key(relation.model),
             relation_id_field=relation.id_field,
             relation_id_value=relation.id_value,
             serialized_relation=relation.serialize(),
         )
 
     def for_relation(self, relation):
+        from django_kafka.relations_resolver.relation import ModelRelation
+
         return self.filter(
-            relation_content_type=ContentType.objects.get_for_model(relation.model),
+            relation_model_key=ModelRelation.get_model_key(relation.model),
             relation_id_field=relation.id_field,
             relation_id_value=relation.id_value,
         )
@@ -114,13 +117,12 @@ class WaitingMessageQuerySet(models.QuerySet):
     def relations(self):
         return (
             self.order_by(
-                "relation_content_type",
+                "relation_model_key",
                 "relation_id_field",
                 "relation_id_value",
             )
-            .distinct("relation_content_type", "relation_id_field", "relation_id_value")
-            .select_related("relation_content_type")
-            .only("relation_content_type", "relation_id_field", "relation_id_value")
+            .distinct("relation_model_key", "relation_id_field", "relation_id_value")
+            .only("relation_model_key", "relation_id_field", "relation_id_value")
         )
 
     def waiting(self):
@@ -159,7 +161,7 @@ class WaitingMessage(models.Model):
     offset = models.TextField(_("offset"))
     headers = JSONField(_("headers"), null=True)
 
-    relation_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    relation_model_key = models.CharField(_("relation model key"), max_length=255)
     relation_id_field = models.CharField(_("relation id field"), max_length=256)
     relation_id_value = models.CharField(_("relation id value"), max_length=256)
 
@@ -174,7 +176,7 @@ class WaitingMessage(models.Model):
 
     def __str__(self):
         return (
-            f"{self.relation_content_type}"
+            f"{self.relation_model_key}"
             f"({self.relation_id_field}={self.relation_id_value})"
         )
 

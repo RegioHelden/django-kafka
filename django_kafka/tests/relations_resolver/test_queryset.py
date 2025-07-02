@@ -1,7 +1,6 @@
 import os
 
 from asgiref.sync import sync_to_async
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.utils import timezone
 
@@ -47,7 +46,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
 
         WaitingMessageFactory.create_batch(
             5,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field=relation_a.id_field,
             relation_id_value=relation_a.id_value,
             serialized_relation=relation_a.serialize(),
@@ -55,7 +54,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
 
         WaitingMessageFactory.create_batch(
             3,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field=relation_b.id_field,
             relation_id_value=relation_b.id_value,
             serialized_relation=relation_b.serialize(),
@@ -73,7 +72,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
     def test_relations(self):
         WaitingMessageFactory.create_batch(
             5,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field="id",
             relation_id_value=100,
             serialized_relation={},
@@ -81,7 +80,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
 
         WaitingMessageFactory.create_batch(
             3,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field="id",
             relation_id_value=200,
             serialized_relation={},
@@ -97,7 +96,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
             WaitingMessageFactory.create_batch(
                 3,
                 status=status.value,
-                relation_content_type=ContentType.objects.get_for_model(Order),
+                relation_model_key=ModelRelation.get_model_key(Order),
                 relation_id_field="id",
                 relation_id_value=100,
                 serialized_relation={},
@@ -115,7 +114,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
         WaitingMessageFactory.create_batch(
             3,
             status=WaitingMessage.Status.WAITING,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field=relation_a.id_field,
             relation_id_value=relation_a.id_value,
             serialized_relation={},
@@ -124,7 +123,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
         WaitingMessageFactory.create_batch(
             3,
             status=WaitingMessage.Status.WAITING,
-            relation_content_type=ContentType.objects.get_for_model(Order),
+            relation_model_key=ModelRelation.get_model_key(Order),
             relation_id_field=relation_b.id_field,
             relation_id_value=relation_b.id_value,
             serialized_relation={},
@@ -139,13 +138,11 @@ class WaitingMessageQuerySetTestCase(TestCase):
             self.assertEqual(msg.status, WaitingMessage.Status.WAITING)
 
     async def test_aiter_relations_to_resolve(self):
-        ct = await sync_to_async(ContentType.objects.get_for_model)(Order)
-
         for status in WaitingMessage.Status:
             await sync_to_async(WaitingMessageFactory.create_batch)(
                 3,
                 status=status.value,
-                relation_content_type=ct,
+                relation_model_key=ModelRelation.get_model_key(Order),
                 relation_id_field="id",
                 relation_id_value=1000,
                 serialized_relation={},
@@ -156,7 +153,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
             await sync_to_async(WaitingMessageFactory.create_batch)(
                 3,
                 status=status.value,
-                relation_content_type=ct,
+                relation_model_key=ModelRelation.get_model_key(Order),
                 relation_id_field="id",
                 relation_id_value=relation.id,
                 serialized_relation={},

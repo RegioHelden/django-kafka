@@ -247,7 +247,7 @@ class MyTopicConsumer(TopicConsumer):
 ```
 
 #### Entities
-- `RelationResolver` - basically routing the messages
+- `RelationResolver` - is an entry point of the handling of the missing relations. It knows what APIs to call to decide what to do with the message: consume, send to waiting queue or pause the consumption from the parition.
 - `Relation` - implements serialization of the relation to pass it around and holds the logic of the relation (if it exists, has waiting messages etc.)
 - `MessageProcessor` - defines how messages which are missing relations are stored, and processed.
 - `RelationResolverDaemon` - runs background tasks to resolve the relations.
@@ -258,7 +258,7 @@ class MyTopicConsumer(TopicConsumer):
 3. When relation exists, but there are waiting messages, then the partition is paused until the messages are consumed.
 
 #### Requirements:
-- Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own `RelationResolverDaemon` if you want to use smth else.
+- Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own `RelationResolverDaemon` if you want to use something else.
 
 #### Relations resolver daemons:
 
