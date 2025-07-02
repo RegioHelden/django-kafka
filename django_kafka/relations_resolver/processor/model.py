@@ -33,7 +33,7 @@ class ModelMessageProcessor(MessageProcessor):
         ).aexists()
 
     async def process_messages(self, relation: "Relation"):
-        for m in await sync_to_async(self.model.objects.for_relation)(relation):
+        async for m in await sync_to_async(self.model.objects.for_relation)(relation):
             msg = Message(
                 key=m.key,
                 value=m.value,
@@ -49,7 +49,7 @@ class ModelMessageProcessor(MessageProcessor):
                 await m.adelete()
                 return
 
-            if missing_relation := self._get_missing_relation(topic, msg):
+            if missing_relation := await self._get_missing_relation(topic, msg):
                 # doublecheck if there are other relations still missing
                 # and send message for waiting into another queue
                 await kafka.relations_resolver.await_for_relation(msg, missing_relation)
