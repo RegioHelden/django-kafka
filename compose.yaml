@@ -17,16 +17,16 @@ services:
       PYTHONPATH: /app  # make app available without installation
     restart: "no"
     depends_on:
-      - db
-  db:
+      - postgres
+  postgres:
     image: postgres:17-alpine
     shm_size: 256m
     user: postgres
     command: -c 'fsync=off' -c 'effective_io_concurrency=10' -c 'max_connections=200' -c 'wal_level=logical'  # yamllint disable-line rule:line-length
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     volumes:
       - db_data:/var/lib/postgresql/data
     restart: unless-stopped
