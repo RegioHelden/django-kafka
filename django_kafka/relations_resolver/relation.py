@@ -18,24 +18,19 @@ with workflow.unsafe.imports_passed_through():
 
 class Relation(ABC):
     @abstractmethod
-    def identifier(self) -> str:
-        """"""
+    def identifier(self) -> str: ...
 
     @abstractmethod
-    async def get(self):
-        """"""
+    async def get(self): ...
 
     @abstractmethod
-    async def exists(self) -> bool:
-        """"""
+    async def exists(self) -> bool: ...
 
     @abstractmethod
-    def serialize(self) -> dict:
-        """"""
+    def serialize(self) -> dict: ...
 
     @abstractmethod
-    def deserialize(self, **kwargs) -> "Relation":
-        """"""
+    def deserialize(self, **kwargs) -> "Relation": ...
 
     async def mark_resolving(self):
         await kafka.relations_resolver.processor.mark_resolving(self)

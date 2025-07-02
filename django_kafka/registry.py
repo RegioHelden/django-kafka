@@ -1,3 +1,4 @@
+import contextlib
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from django_kafka.exceptions import DjangoKafkaError
@@ -59,8 +60,6 @@ class ConsumersRegistry(Registry["Consumer"]):
 
     def topic(self, topic_name: str):
         for key in self:
-            try:
+            with contextlib.suppress(KeyError):
                 return self[key].topics.get(topic_name=topic_name)
-            except KeyError:
-                pass
         return None

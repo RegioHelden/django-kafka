@@ -10,25 +10,19 @@ if TYPE_CHECKING:
 
 class MessageProcessor(ABC):
     @abstractmethod
-    async def add_message(self, msg: "cimpl.Message", relation: "Relation"):
-        """"""
+    async def add_message(self, msg: "cimpl.Message", relation: "Relation"): ...
 
     @abstractmethod
-    async def delete(self, relation: "Relation") -> bool:
-        """"""
+    async def delete(self, relation: "Relation") -> bool: ...
 
     @abstractmethod
-    async def exists(self, relation: "Relation") -> bool:
-        """"""
+    async def exists(self, relation: "Relation") -> bool: ...
 
     @abstractmethod
-    async def process_messages(self, relation: "Relation"):
-        """"""
+    async def process_messages(self, relation: "Relation"): ...
 
     @abstractmethod
-    async def to_resolve(self) -> AsyncIterator["Relation"]:
-        """"""
+    async def to_resolve(self) -> AsyncIterator["Relation"]: ...
 
     @abstractmethod
-    async def mark_resolving(self):
-        """"""
+    async def mark_resolving(self): ...

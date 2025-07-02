@@ -12,8 +12,7 @@ if TYPE_CHECKING:
 
 class RelationResolverDaemon(ABC):
     @abstractmethod
-    def resolve_relation(self, relation: "Relation"):
-        """"""
+    def resolve_relation(self, relation: "Relation"): ...
 
     async def resolve_relations(self):
         async for relation in kafka.relations_resolver.processor.to_resolve():

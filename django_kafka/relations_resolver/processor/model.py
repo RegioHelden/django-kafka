@@ -33,7 +33,7 @@ class ModelMessageProcessor(MessageProcessor):
         ).aexists()
 
     async def process_messages(self, relation: "Relation"):
-        async for m in await sync_to_async(self.model.objects.for_relation)(relation):
+        for m in await sync_to_async(self.model.objects.for_relation)(relation):
             msg = Message(
                 key=m.key,
                 value=m.value,
