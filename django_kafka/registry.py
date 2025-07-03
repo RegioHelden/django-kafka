@@ -1,6 +1,7 @@
+import contextlib
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.exceptions import DjangoKafkaError, TopicNotRegisteredError
 
 if TYPE_CHECKING:
     from django_kafka.connect.connector import Connector  # noqa: F401
@@ -56,3 +57,9 @@ class ConsumersRegistry(Registry["Consumer"]):
 
         if retry_consumer_cls := RetryConsumer.build(cls):
             self._classes[f"{self.get_key(cls)}.retry"] = retry_consumer_cls
+
+    def topic(self, topic_name: str):
+        for key in self:
+            with contextlib.suppress(KeyError, TopicNotRegisteredError):
+                return self[key].topics.get(topic_name=topic_name)
+        return None

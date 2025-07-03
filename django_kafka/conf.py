@@ -1,8 +1,12 @@
 import socket
+from datetime import timedelta
 
-from django.conf import settings as django_settings
+from temporalio import workflow
 
-from django_kafka.retry.settings import RetrySettings
+with workflow.unsafe.imports_passed_through():
+    from django.conf import settings as django_settings
+
+    from django_kafka.retry.settings import RetrySettings
 
 SETTINGS_KEY = "DJANGO_KAFKA"
 DEFAULTS = {
@@ -37,6 +41,13 @@ DEFAULTS = {
     # value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
+    # relation resolver settings
+    # ruff: noqa: E501
+    "TEMPORAL_TASK_QUEUE": "django-kafka",
+    "RELATION_RESOLVER": "django_kafka.relations_resolver.resolver.RelationResolver",
+    "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
+    "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
+    "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
 }
 
 

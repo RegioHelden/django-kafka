@@ -16,3 +16,20 @@ services:
       HISTFILE: /app/.bash_history
       PYTHONPATH: /app  # make app available without installation
     restart: "no"
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:17-alpine
+    shm_size: 256m
+    user: postgres
+    command: -c 'fsync=off' -c 'effective_io_concurrency=10' -c 'max_connections=200' -c 'wal_level=logical'  # yamllint disable-line rule:line-length
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  db_data: {}

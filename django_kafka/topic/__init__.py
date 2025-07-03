@@ -1,6 +1,8 @@
+import inspect
 import logging
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from confluent_kafka.serialization import (
@@ -20,6 +22,7 @@ from django_kafka.producer import Suppression
 if TYPE_CHECKING:
     from confluent_kafka import cimpl
 
+    from django_kafka.relations_resolver.relation import Relation
     from django_kafka.retry.settings import RetrySettings
 
 logger = logging.getLogger(__name__)
@@ -154,6 +157,19 @@ class TopicConsumer(ABC):
     def consume(self, msg: "cimpl.Message"):
         """Implement message processing"""
         raise NotImplementedError
+
+    def get_relations(self, msg: "cimpl.Message") -> Iterator["Relation"]:
+        """
+        Dependency resolver will kick-in in case this method yields
+        yield ModelRelation(...)
+        """
+        yield from []
+
+    @property
+    def use_relations_resolver(self) -> bool:
+        base_method = inspect.getattr_static(TopicConsumer, "get_relations", None)
+        obj_method = inspect.getattr_static(type(self), "get_relations", None)
+        return obj_method is not base_method
 
 
 class Topic(TopicConsumer, TopicProducer, ABC):
