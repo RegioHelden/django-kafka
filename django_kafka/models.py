@@ -185,7 +185,9 @@ class WaitingMessage(models.Model):
         if not value:
             self._headers = None
         else:
-            self._headers = [(k, list(v) if isinstance(v, bytes) else v) for k, v in value]
+            self._headers = [
+                (k, list(v) if isinstance(v, bytes) else v) for k, v in value
+            ]
 
     def relation(self):
         return RelationType.instance(self.serialized_relation)

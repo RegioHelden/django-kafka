@@ -17,10 +17,10 @@ from django_kafka.relations_resolver.relation import Relation
     ),
 )
 class RelationTestCase(SimpleTestCase):
-    async def test_mark_resolving_uses_msg_processor(self, mock_msg_processor):
+    async def test_amark_resolving_uses_msg_processor(self, mock_msg_processor):
         relation = Relation()
-        await relation.mark_resolving()
-        mock_msg_processor.mark_resolving.assert_called_once_with(relation)
+        await relation.amark_resolving()
+        mock_msg_processor.amark_resolving.assert_called_once_with(relation)
 
     @patch(
         "django_kafka.relations_resolver.relation.sync_to_async",
@@ -43,18 +43,18 @@ class RelationTestCase(SimpleTestCase):
     ):
         self.assertEqual(Relation().type(), mock_relation_type.return_value.name)
 
-    async def test_has_waiting_messages_uses_msg_processor(self, mock_msg_processor):
+    async def test_ahas_waiting_messages_uses_msg_processor(self, mock_msg_processor):
         relation = Relation()
-        await relation.has_waiting_messages()
-        mock_msg_processor.exists.assert_called_once_with(relation)
+        await relation.ahas_waiting_messages()
+        mock_msg_processor.aexists.assert_called_once_with(relation)
 
-    async def test_add_message_uses_msg_processor(self, mock_msg_processor):
+    async def test_aadd_message_uses_msg_processor(self, mock_msg_processor):
         relation = Relation()
         msg = Mock()
-        await relation.add_message(msg)
-        mock_msg_processor.add_message.assert_called_once_with(msg, relation)
+        await relation.aadd_message(msg)
+        mock_msg_processor.aadd_message.assert_called_once_with(msg, relation)
 
     async def test_resolve_uses_msg_processor(self, mock_msg_processor):
         relation = Relation()
-        await relation.resolve()
-        mock_msg_processor.process_messages.assert_called_once_with(relation)
+        await relation.aresolve()
+        mock_msg_processor.aprocess_messages.assert_called_once_with(relation)

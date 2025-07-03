@@ -20,10 +20,7 @@ class Relation(ABC):
     def identifier(self) -> str: ...
 
     @abstractmethod
-    async def get(self): ...
-
-    @abstractmethod
-    async def exists(self) -> bool: ...
+    async def aexists(self) -> bool: ...
 
     @abstractmethod
     def serialize(self) -> dict: ...
@@ -31,8 +28,8 @@ class Relation(ABC):
     @abstractmethod
     def deserialize(self, **kwargs) -> "Relation": ...
 
-    async def mark_resolving(self):
-        await kafka.relations_resolver.processor.mark_resolving(self)
+    async def amark_resolving(self):
+        await kafka.relations_resolver.processor.amark_resolving(self)
 
     async def aidentifier(self) -> str:
         return await sync_to_async(self.identifier)()
@@ -40,14 +37,14 @@ class Relation(ABC):
     def type(self) -> str:
         return RelationType(self.__class__).name
 
-    async def has_waiting_messages(self) -> bool:
-        return await kafka.relations_resolver.processor.exists(self)
+    async def ahas_waiting_messages(self) -> bool:
+        return await kafka.relations_resolver.processor.aexists(self)
 
-    async def add_message(self, msg: "cimpl.Message"):
-        await kafka.relations_resolver.processor.add_message(msg, self)
+    async def aadd_message(self, msg: "cimpl.Message"):
+        await kafka.relations_resolver.processor.aadd_message(msg, self)
 
-    async def resolve(self):
-        await kafka.relations_resolver.processor.process_messages(self)
+    async def aresolve(self):
+        await kafka.relations_resolver.processor.aprocess_messages(self)
 
 
 class ModelRelation(Relation):
@@ -65,10 +62,7 @@ class ModelRelation(Relation):
     def identifier(self):
         return f"{self.model_key}-{self.id_value}".lower()
 
-    async def get(self) -> Model:
-        return await self.model.objects.aget(**{self.id_field: self.id_value})
-
-    async def exists(self) -> bool:
+    async def aexists(self) -> bool:
         return await self.model.objects.filter(
             **{self.id_field: self.id_value},
         ).aexists()

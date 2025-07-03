@@ -31,7 +31,7 @@ class RelationResolver:
         """
         Send the message to the comfortable place to wait for a relation.
         """
-        await relation.add_message(msg)
+        await relation.aadd_message(msg)
 
     async def aresolve(
         self,
@@ -40,12 +40,12 @@ class RelationResolver:
     ) -> Action:
         logger.debug("Check for missing relations.")
         for relation in relations:
-            if not await relation.exists():
+            if not await relation.aexists():
                 logger.debug("Relation is missing - send message to wait.")
                 await self.await_for_relation(msg, relation)
                 return self.Action.SKIP
 
-            if await relation.has_waiting_messages():
+            if await relation.ahas_waiting_messages():
                 logger.debug("Relation exists but has waiting messages.")
                 return self.Action.PAUSE
 
@@ -55,5 +55,5 @@ class RelationResolver:
     def resolve(self, relations: Iterator["Relation"], msg: "cimpl.Message") -> Action:
         return async_to_sync(self.aresolve)(relations, msg)
 
-    async def resolve_relation(self, relation: "Relation"):
-        await relation.resolve()
+    async def aresolve_relation(self, relation: "Relation"):
+        await relation.aresolve()

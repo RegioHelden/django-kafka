@@ -19,11 +19,11 @@ class ModelMessageProcessorTestCase(TestCase):
         "django_kafka.relations_resolver.processor.model.sync_to_async",
         return_value=AsyncMock(),
     )
-    async def test_add_message(self, mock_sync_to_async, mock_qs):
+    async def test_aadd_message(self, mock_sync_to_async, mock_qs):
         msg = Mock()
         relation = Mock()
 
-        await self.msg_processor.add_message(msg, relation)
+        await self.msg_processor.aadd_message(msg, relation)
 
         mock_sync_to_async.assert_called_once_with(mock_qs.add_message)
         mock_sync_to_async().assert_called_once_with(msg, relation)
@@ -33,10 +33,10 @@ class ModelMessageProcessorTestCase(TestCase):
         "django_kafka.relations_resolver.processor.model.sync_to_async",
         return_value=AsyncMock(),
     )
-    async def test_delete(self, mock_sync_to_async, mock_qs):
+    async def test_adelete(self, mock_sync_to_async, mock_qs):
         relation = Mock()
 
-        await self.msg_processor.delete(relation)
+        await self.msg_processor.adelete(relation)
 
         mock_sync_to_async.assert_called_once_with(mock_qs.for_relation)
         mock_sync_to_async().assert_called_once_with(relation)
@@ -47,10 +47,10 @@ class ModelMessageProcessorTestCase(TestCase):
         "django_kafka.relations_resolver.processor.model.sync_to_async",
         return_value=AsyncMock(),
     )
-    async def test_exists(self, mock_sync_to_async, mock_qs):
+    async def test_aexists(self, mock_sync_to_async, mock_qs):
         relation = Mock()
 
-        await self.msg_processor.exists(relation)
+        await self.msg_processor.aexists(relation)
 
         mock_sync_to_async.assert_called_once_with(mock_qs.for_relation)
         mock_sync_to_async().assert_called_once_with(relation)
@@ -61,22 +61,22 @@ class ModelMessageProcessorTestCase(TestCase):
         "django_kafka.relations_resolver.processor.model.sync_to_async",
         return_value=AsyncMock(),
     )
-    async def test_mark_resolving(self, mock_sync_to_async, mock_qs):
+    async def test_amark_resolving(self, mock_sync_to_async, mock_qs):
         relation = Mock()
 
-        await self.msg_processor.mark_resolving(relation)
+        await self.msg_processor.amark_resolving(relation)
 
         mock_sync_to_async.assert_called_once_with(mock_qs.mark_resolving)
         mock_sync_to_async().assert_called_once_with(relation)
 
-    async def test_to_resolve(self):
+    async def test_ato_resolve(self):
         not_to_resolve = [
-            AsyncMock(**{"exists.return_value": False}),
+            AsyncMock(**{"aexists.return_value": False}),
         ]
         to_resolve = [
-            AsyncMock(**{"exists.return_value": True}),
-            AsyncMock(**{"exists.return_value": True}),
-            AsyncMock(**{"exists.return_value": True}),
+            AsyncMock(**{"aexists.return_value": True}),
+            AsyncMock(**{"aexists.return_value": True}),
+            AsyncMock(**{"aexists.return_value": True}),
         ]
         relations = [
             *not_to_resolve,
@@ -88,7 +88,7 @@ class ModelMessageProcessorTestCase(TestCase):
             "django_kafka.models.WaitingMessage.objects",
             aiter_relations_to_resolve=AsyncIteratorMock(qs_items),
         ):
-            result = [r async for r in self.msg_processor.to_resolve()]
+            result = [r async for r in self.msg_processor.ato_resolve()]
 
         for relation in not_to_resolve:
             self.assertNotIn(relation, result)

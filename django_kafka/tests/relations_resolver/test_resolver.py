@@ -15,7 +15,7 @@ class RelationResolverTestCase(SimpleTestCase):
 
         await resolver.await_for_relation(msg, relation)
 
-        relation.add_message.assert_called_once_with(msg)
+        relation.aadd_message.assert_called_once_with(msg)
 
     @patch(
         "django_kafka.relations_resolver.resolver.RelationResolver.await_for_relation",
@@ -27,44 +27,44 @@ class RelationResolverTestCase(SimpleTestCase):
 
         relation = MagicMock(spec=Relation)
         # relations missing - send to waiting queue
-        relation.exists.return_value = False
+        relation.aexists.return_value = False
 
         action = await resolver.aresolve([relation], msg)
 
         mock_await_for_relation.assert_called_once_with(msg, relation)
-        relation.exists.assert_called_once_with()
+        relation.aexists.assert_called_once_with()
         self.assertEqual(action, RelationResolver.Action.SKIP)
 
         # relations exists and already has waiting messages - pause
         mock_await_for_relation.reset_mock()
         relation.reset_mock()
-        relation.exists.return_value = True
-        relation.has_waiting_messages.return_value = True
+        relation.aexists.return_value = True
+        relation.ahas_waiting_messages.return_value = True
 
         action = await resolver.aresolve([relation], msg)
 
         mock_await_for_relation.assert_not_called()
-        relation.exists.assert_called_once_with()
-        relation.has_waiting_messages.assert_called_once_with()
+        relation.aexists.assert_called_once_with()
+        relation.ahas_waiting_messages.assert_called_once_with()
         self.assertEqual(action, RelationResolver.Action.PAUSE)
 
         # relation exists, no waiting messages - continue
         mock_await_for_relation.reset_mock()
         relation.reset_mock()
-        relation.exists.return_value = True
-        relation.has_waiting_messages.return_value = False
+        relation.aexists.return_value = True
+        relation.ahas_waiting_messages.return_value = False
 
         action = await resolver.aresolve([relation], msg)
 
         mock_await_for_relation.assert_not_called()
-        relation.exists.assert_called_once_with()
-        relation.has_waiting_messages.assert_called_once_with()
+        relation.aexists.assert_called_once_with()
+        relation.ahas_waiting_messages.assert_called_once_with()
         self.assertEqual(action, RelationResolver.Action.CONTINUE)
 
-    async def test_resolve_relation(self):
+    async def test_aresolve_relation(self):
         resolver = RelationResolver()
         relation = MagicMock(spec=Relation)
 
-        await resolver.resolve_relation(relation)
+        await resolver.aresolve_relation(relation)
 
-        relation.resolve.assert_called_once_with()
+        relation.aresolve.assert_called_once_with()

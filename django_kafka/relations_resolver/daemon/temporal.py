@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class TemporalDaemon(RelationResolverDaemon):
     task_queue = settings.TEMPORAL_TASK_QUEUE
 
-    async def resolve_relation(self, relation: "Relation"):
+    async def aresolve_relation(self, relation: "Relation"):
         await (await init_client()).start_workflow(
             ResolveRelation.run,
             relation.serialize(),

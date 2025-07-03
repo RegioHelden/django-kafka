@@ -14,7 +14,7 @@ from django_kafka.relations_resolver.relation import RelationType, SerializedRel
 @activity.defn
 async def resolve_relation(serialized_relation: SerializedRelation):
     async with heartbeat(timedelta(seconds=5)):
-        await kafka.relations_resolver.resolve_relation(
+        await kafka.relations_resolver.aresolve_relation(
             RelationType.instance(serialized_relation),
         )
 
@@ -23,4 +23,4 @@ async def resolve_relation(serialized_relation: SerializedRelation):
 @activity.defn
 async def check_resolved_relations():
     async with heartbeat(timedelta(seconds=5)):
-        await get_daemon().resolve_relations()
+        await get_daemon().aresolve_relations()

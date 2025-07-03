@@ -25,12 +25,12 @@ class ModelRelationTestCase(TestCase):
             f"{relation.model_key}-{relation.id_value}".lower(),
         )
 
-    async def test_exists(self):
+    async def test_aexists(self):
         relation = ModelRelation(Order, id_field="id", id_value=1)
-        self.assertFalse(await relation.exists())
+        self.assertFalse(await relation.aexists())
 
         await Order.objects.acreate(id=1)
-        self.assertTrue(await relation.exists())
+        self.assertTrue(await relation.aexists())
 
     def test_serialize(self):
         relation = ModelRelation(Order, id_field="id", id_value=1)

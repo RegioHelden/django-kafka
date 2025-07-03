@@ -21,19 +21,19 @@ class ModelMessageProcessor(MessageProcessor):
 
         self.model = WaitingMessage
 
-    async def add_message(self, msg: "cimpl.Message", relation: "Relation"):
+    async def aadd_message(self, msg: "cimpl.Message", relation: "Relation"):
         await sync_to_async(self.model.objects.add_message)(msg, relation)
 
-    async def delete(self, relation: "Relation"):
+    async def adelete(self, relation: "Relation"):
         async_qs = await sync_to_async(self.model.objects.for_relation)(relation)
         await async_qs.adelete()
 
-    async def exists(self, relation: "Relation") -> bool:
+    async def aexists(self, relation: "Relation") -> bool:
         return await (
             await sync_to_async(self.model.objects.for_relation)(relation)
         ).aexists()
 
-    async def process_messages(self, relation: "Relation"):
+    async def aprocess_messages(self, relation: "Relation"):
         async for msg in await sync_to_async(self.model.objects.for_relation)(relation):
             kafka_msg = Message(
                 key=msg.key,
@@ -50,7 +50,7 @@ class ModelMessageProcessor(MessageProcessor):
                 await msg.adelete()
                 return
 
-            if missing_relation := await self._get_missing_relation(topic, kafka_msg):
+            if missing_relation := await self._aget_missing_relation(topic, kafka_msg):
                 # doublecheck if there are other relations still missing
                 # and send message for waiting into another queue
                 await kafka.relations_resolver.await_for_relation(
@@ -65,21 +65,21 @@ class ModelMessageProcessor(MessageProcessor):
             )(kafka_msg)
             await msg.adelete()
 
-    async def _get_missing_relation(
+    async def _aget_missing_relation(
         self,
         topic: "TopicConsumer",
         msg: "cimpl.Message",
     ) -> bool:
         for relation in topic.get_relations(msg):
-            if not await relation.exists():
+            if not await relation.aexists():
                 return True
         return False
 
-    async def to_resolve(self) -> AsyncIterator["Relation"]:
+    async def ato_resolve(self) -> AsyncIterator["Relation"]:
         async for item in self.model.objects.aiter_relations_to_resolve(chunk_size=500):
             relation = await sync_to_async(item.relation)()
-            if await relation.exists():
+            if await relation.aexists():
                 yield relation
 
-    async def mark_resolving(self, relation: "Relation"):
+    async def amark_resolving(self, relation: "Relation"):
         await sync_to_async(self.model.objects.mark_resolving)(relation)
