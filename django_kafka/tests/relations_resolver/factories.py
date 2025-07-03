@@ -1,10 +1,11 @@
 import os
-from datetime import UTC
+import time
 
 import factory
 from factory.django import DjangoModelFactory
 
 from django_kafka.models import WaitingMessage
+from django_kafka.utils.message import MessageTimestamp
 from example.models import Order
 
 
@@ -14,7 +15,9 @@ class WaitingMessageFactory(DjangoModelFactory):
 
     key = factory.LazyFunction(lambda: os.urandom(16))
     value = factory.LazyFunction(lambda: os.urandom(16))
-    timestamp = factory.Faker("date_time", tzinfo=UTC)
+    timestamp = factory.LazyAttribute(
+        lambda o: (MessageTimestamp.CREATE_TIME.value, int(time.time() * 1000)),
+    )
     topic = factory.Faker("uuid4")
     partition = 1
     offset = 1000

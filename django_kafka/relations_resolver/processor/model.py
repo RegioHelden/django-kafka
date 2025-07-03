@@ -25,7 +25,8 @@ class ModelMessageProcessor(MessageProcessor):
         await sync_to_async(self.model.objects.add_message)(msg, relation)
 
     async def delete(self, relation: "Relation"):
-        await (await sync_to_async(self.model.objects.for_relation)(relation)).adelete()
+        async_qs = await sync_to_async(self.model.objects.for_relation)(relation)
+        await async_qs.adelete()
 
     async def exists(self, relation: "Relation") -> bool:
         return await (
@@ -33,31 +34,36 @@ class ModelMessageProcessor(MessageProcessor):
         ).aexists()
 
     async def process_messages(self, relation: "Relation"):
-        async for m in await sync_to_async(self.model.objects.for_relation)(relation):
-            msg = Message(
-                key=m.key,
-                value=m.value,
-                topic=m.topic,
-                headers=m.headers,
-                timestamp=m.timestamp,
-                partition=m.partition,
-                offset=m.offset,
+        async for msg in await sync_to_async(self.model.objects.for_relation)(relation):
+            kafka_msg = Message(
+                key=msg.key,
+                value=msg.value,
+                topic=msg.topic,
+                headers=msg.headers,
+                timestamp=msg.timestamp,
+                partition=msg.partition,
+                offset=msg.offset,
             )
             try:
-                topic: TopicConsumer = kafka.consumers.topic(msg.topic())
+                topic: TopicConsumer = kafka.consumers.topic(kafka_msg.topic())
             except TopicNotRegisteredError:
-                await m.adelete()
+                await msg.adelete()
                 return
 
-            if missing_relation := await self._get_missing_relation(topic, msg):
+            if missing_relation := await self._get_missing_relation(topic, kafka_msg):
                 # doublecheck if there are other relations still missing
                 # and send message for waiting into another queue
-                await kafka.relations_resolver.await_for_relation(msg, missing_relation)
-                await m.adelete()
+                await kafka.relations_resolver.await_for_relation(
+                    kafka_msg,
+                    missing_relation,
+                )
+                await msg.adelete()
                 return
 
-            await sync_to_async(kafka.consumers.topic(msg.topic()).consume)(msg)
-            await m.adelete()
+            await sync_to_async(
+                kafka.consumers.topic(kafka_msg.topic()).consume,
+            )(kafka_msg)
+            await msg.adelete()
 
     async def _get_missing_relation(
         self,

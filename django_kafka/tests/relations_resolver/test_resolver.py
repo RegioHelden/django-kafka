@@ -2,10 +2,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
 
-from django_kafka.relations_resolver.processor.base import MessageProcessor
 from django_kafka.relations_resolver.relation import Relation
 from django_kafka.relations_resolver.resolver import RelationResolver
-from django_kafka.tests.utils import AsyncIteratorMock, message_mock
+from django_kafka.tests.utils import message_mock
 
 
 class RelationResolverTestCase(SimpleTestCase):
@@ -61,20 +60,6 @@ class RelationResolverTestCase(SimpleTestCase):
         relation.exists.assert_called_once_with()
         relation.has_waiting_messages.assert_called_once_with()
         self.assertEqual(action, RelationResolver.Action.CONTINUE)
-
-    async def test_process_resolved(self):
-        relation = MagicMock(spec=Relation)
-
-        msg_processor = MagicMock(
-            spec=MessageProcessor,
-            to_resolve=AsyncIteratorMock([relation]),
-        )
-
-        resolver = RelationResolver()
-        resolver.processor = msg_processor
-
-        await resolver.process_resolved()
-        msg_processor.to_resolve.assert_called_once_with()
 
     async def test_resolve_relation(self):
         resolver = RelationResolver()

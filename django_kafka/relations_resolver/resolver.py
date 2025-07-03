@@ -55,9 +55,5 @@ class RelationResolver:
     def resolve(self, relations: Iterator["Relation"], msg: "cimpl.Message") -> Action:
         return async_to_sync(self.aresolve)(relations, msg)
 
-    async def process_resolved(self):
-        async for relation in self.processor.to_resolve():
-            await self.resolve_relation(relation)
-
     async def resolve_relation(self, relation: "Relation"):
         await relation.resolve()

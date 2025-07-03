@@ -55,7 +55,7 @@ class Message:
         headers: list[tuple[str, bytes]] | None,
         offset: int,
         partition: int,
-        timestamp: datetime | tuple[MessageTimestamp, int],
+        timestamp: tuple[MessageTimestamp, int],
     ):
         self._topic = topic
         self._key = key
@@ -81,7 +81,7 @@ class Message:
     def headers(self) -> list[tuple[str, bytes]] | None:
         return self._headers
 
-    def timestamp(self) -> datetime:
+    def timestamp(self) -> tuple[MessageTimestamp, int] | None:
         return self._timestamp
 
     def partition(self) -> int:

@@ -17,6 +17,7 @@ class RelationTypeTestCase(SimpleTestCase):
 
         relation = RelationType.instance(serialized_relation)
 
+        self.assertIsInstance(relation, ModelRelation)
         self.assertEqual(relation.model, Order)
         self.assertEqual(relation.id_field, serialized_relation["kwargs"]["id_field"])
         self.assertEqual(relation.id_value, serialized_relation["kwargs"]["id_value"])

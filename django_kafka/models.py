@@ -1,9 +1,7 @@
 from collections.abc import AsyncIterator
-from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 from django.db import models
-from django.db.models import JSONField
 from django.utils.translation import gettext_lazy as _
 
 from django_kafka.relations_resolver.relation import RelationType
@@ -87,14 +85,10 @@ class WaitingMessageQuerySet(models.QuerySet):
     def add_message(self, msg: "cimpl.Message", relation: "ModelRelation"):
         from django_kafka.relations_resolver.relation import ModelRelation
 
-        timestamp = msg.timestamp()
-        if not isinstance(timestamp, datetime):
-            timestamp = MessageTimestamp.to_datetime(msg.timestamp())
-
         return self.create(
             key=msg.key(),
             value=msg.value(),
-            timestamp=timestamp,
+            timestamp=msg.timestamp(),
             topic=msg.topic(),
             partition=msg.partition(),
             headers=msg.headers(),
@@ -112,7 +106,7 @@ class WaitingMessageQuerySet(models.QuerySet):
             relation_model_key=ModelRelation.get_model_key(relation.model),
             relation_id_field=relation.id_field,
             relation_id_value=relation.id_value,
-        )
+        ).order_by("topic", "partition", "offset")
 
     def relations(self):
         return (
@@ -155,17 +149,17 @@ class WaitingMessage(models.Model):
 
     key = models.BinaryField(_("key"))
     value = models.BinaryField(_("value"))
-    timestamp = models.DateTimeField(_("timestamp"))
+    timestamp = models.JSONField(_("kafka timestamp"))
     topic = models.TextField(_("topic"))
     partition = models.TextField(_("partition"))
     offset = models.TextField(_("offset"))
-    headers = JSONField(_("headers"), null=True)
+    headers = models.JSONField(_("headers"), null=True)
 
     relation_model_key = models.CharField(_("relation model key"), max_length=255)
     relation_id_field = models.CharField(_("relation id field"), max_length=256)
     relation_id_value = models.CharField(_("relation id value"), max_length=256)
 
-    serialized_relation = JSONField(_("relation kwargs"))
+    serialized_relation = models.JSONField(_("relation kwargs"))
 
     objects = WaitingMessageQuerySet.as_manager()
 

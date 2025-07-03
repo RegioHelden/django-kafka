@@ -90,7 +90,12 @@ class Consumer:
     def resume_partitions(self):
         """resumes any paused partitions that are now ready"""
         for partition in self._pauses.pop_ready():
-            logger.debug("Resume partition %s", partition.partition)
+            logger.debug(
+                "Resume partition - topic='%s' partition=%s offset=%s",
+                partition.topic,
+                partition.partition,
+                partition.offset,
+            )
             self.resume([partition])
 
     def blocking_retry(

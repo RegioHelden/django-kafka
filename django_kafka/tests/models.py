@@ -4,28 +4,9 @@ from django.db.models.base import ModelBase
 from django.test import TestCase
 
 
-class DynamicModelTestCase(TestCase):
-    model: type[Model]
-
-    @classmethod
-    def setUpClass(cls):
-        with connection.schema_editor() as editor:
-            editor.create_model(cls.model)
-        # super has to be at the end, otherwise model won't initialize
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-
-        with connection.schema_editor() as editor:
-            editor.delete_model(cls.model)
-
-        connection.close()
-
-
-class AbstractModelTestCase(DynamicModelTestCase):
+class AbstractModelTestCase(TestCase):
     abstract_model: type[Model]
+    model: type[Model]
 
     @classmethod
     def setUpClass(cls):
@@ -38,4 +19,17 @@ class AbstractModelTestCase(DynamicModelTestCase):
             {"__module__": cls.abstract_model.__module__, "Meta": Meta},
         )
 
+        with connection.schema_editor() as editor:
+            editor.create_model(cls.model)
+
+        # super has to be at the end, otherwise model won't initialize
         super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+
+        with connection.schema_editor() as editor:
+            editor.delete_model(cls.model)
+
+        connection.close()

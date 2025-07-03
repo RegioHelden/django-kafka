@@ -24,7 +24,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
             headers=[("key", "value")],
             offset=1,
             partition=1,
-            timestamp=(MessageTimestamp.CREATE_TIME, kafka_timestamp),
+            timestamp=(MessageTimestamp.CREATE_TIME.value, kafka_timestamp),
         )
         relation = ModelRelation(Order, id_field="id", id_value=1)
         waiting_msg = WaitingMessage.objects.add_message(kafka_msg, relation)
@@ -37,7 +37,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
         self.assertEqual(waiting_msg.partition, kafka_msg.partition())
         self.assertEqual(
             waiting_msg.timestamp,
-            MessageTimestamp.to_datetime(kafka_msg.timestamp()),
+            (MessageTimestamp.CREATE_TIME.value, kafka_timestamp),
         )
 
     def test_for_relation(self):

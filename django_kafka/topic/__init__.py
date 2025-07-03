@@ -160,8 +160,8 @@ class TopicConsumer(ABC):
 
     def get_relations(self, msg: "cimpl.Message") -> Iterator["Relation"]:
         """
-        Temporal dependency awaiting workflow will kick-in in case this method yields
-        yield self.relations_resolver.relation_cls(...)
+        Dependency resolver will kick-in in case this method yields
+        yield ModelRelation(...)
         """
         yield from []
 
