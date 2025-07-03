@@ -31,7 +31,7 @@ class MessageTimestamp(IntEnum):
     LOG_APPEND_TIME = 2
 
     @classmethod
-    def to_datetime(cls, msg_timestamp: list[int, int]) -> datetime | None:
+    def to_datetime(cls, msg_timestamp: tuple["MessageTimestamp", int]) -> datetime | None:
         timestamp_type, timestamp = msg_timestamp
 
         if timestamp_type == MessageTimestamp.NOT_AVAILABLE:

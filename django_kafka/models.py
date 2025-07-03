@@ -62,7 +62,7 @@ class KeyOffsetTracker(models.Model):
         return self.create_time or self.log_append_time
 
     @timestamp.setter
-    def timestamp(self, value: [MessageTimestamp, int]):
+    def timestamp(self, value: tuple[MessageTimestamp, int]):
         if not value:
             return
 
@@ -153,7 +153,7 @@ class WaitingMessage(models.Model):
     topic = models.TextField(_("topic"))
     partition = models.TextField(_("partition"))
     offset = models.TextField(_("offset"))
-    headers = models.JSONField(_("headers"), null=True)
+    _headers = models.JSONField(_("headers"), null=True)
 
     relation_model_key = models.CharField(_("relation model key"), max_length=255)
     relation_id_field = models.CharField(_("relation id field"), max_length=256)
@@ -173,6 +173,19 @@ class WaitingMessage(models.Model):
             f"{self.relation_model_key}"
             f"({self.relation_id_field}={self.relation_id_value})"
         )
+
+    @property
+    def headers(self) -> list[tuple[str, bytes]] | None:
+        if not self._headers:
+            return None
+        return [(k, bytes(v) if isinstance(v, list) else v) for k, v in self._headers]
+
+    @headers.setter
+    def headers(self, value: list[tuple[str, bytes]]):
+        if not value:
+            self._headers = None
+        else:
+            self._headers = [(k, list(v) if isinstance(v, bytes) else v) for k, v in value]
 
     def relation(self):
         return RelationType.instance(self.serialized_relation)

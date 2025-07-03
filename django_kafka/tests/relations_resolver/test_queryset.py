@@ -21,7 +21,7 @@ class WaitingMessageQuerySetTestCase(TestCase):
             topic="topic",
             key=os.urandom(16),
             value=os.urandom(16),
-            headers=[("key", "value")],
+            headers=[("key", b"value")],
             offset=1,
             partition=1,
             timestamp=(MessageTimestamp.CREATE_TIME.value, kafka_timestamp),
