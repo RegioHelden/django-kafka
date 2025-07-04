@@ -69,11 +69,11 @@ class ModelMessageProcessor(MessageProcessor):
         self,
         topic: "TopicConsumer",
         msg: "cimpl.Message",
-    ) -> bool:
+    ) -> Relation | None:
         for relation in topic.get_relations(msg):
             if not await relation.aexists():
-                return True
-        return False
+                return relation
+        return None
 
     async def ato_resolve(self) -> AsyncIterator["Relation"]:
         async for item in self.model.objects.aiter_relations_to_resolve(chunk_size=500):
