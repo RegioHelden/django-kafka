@@ -23,6 +23,7 @@ class KeyOffsetTrackerTopic(TopicConsumer):
         from django_kafka.models import KeyOffsetTracker
 
         KeyOffsetTracker.objects.log_msg_offset(msg)
+        return True
 
 
 class KeyOffsetTrackerConsumer(Consumer):
