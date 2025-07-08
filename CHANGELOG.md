@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.11.1](https://github.com/RegioHelden/django-kafka/tree/v0.11.1) (2025-07-08)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.11.0...v0.11.1)
+
+**Fixed bugs:**
+
+- fix: `KeyOffsetTrackerTopic.consume` returns proper value now. [\#120](https://github.com/RegioHelden/django-kafka/pull/120) (@bodja)
+
 ## [v0.11.0](https://github.com/RegioHelden/django-kafka/tree/v0.11.0) (2025-07-07)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.10.0...v0.11.0)
