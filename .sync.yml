@@ -10,3 +10,4 @@
 
 compose.yaml:
   compose_command: runserver 0:8000
+  require_postgres: true
