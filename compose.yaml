@@ -18,6 +18,7 @@ services:
     restart: "no"
     depends_on:
       - postgres
+
   postgres:
     image: postgres:17-alpine
     shm_size: 256m
