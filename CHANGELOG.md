@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.12.0](https://github.com/RegioHelden/django-kafka/tree/v0.12.0) (2025-07-17)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.11.1...v0.12.0)
+
+**Implemented enhancements:**
+
+- feat: improve debug logging, refs \#128 [\#129](https://github.com/RegioHelden/django-kafka/pull/129) (@stefan-cardnell-rh)
+- Set dependencies in sync config for modulesync to pick them up [\#126](https://github.com/RegioHelden/django-kafka/pull/126) (@lociii)
+- Require postgres container from modulesync [\#124](https://github.com/RegioHelden/django-kafka/pull/124) (@lociii)
+- Update test dependencies [\#123](https://github.com/RegioHelden/django-kafka/pull/123) (@lociii)
+
+**Merged pull requests:**
+
+- Update uv to 0.7.21 [\#127](https://github.com/RegioHelden/django-kafka/pull/127) (@regiohelden-dev)
+
 ## [v0.11.1](https://github.com/RegioHelden/django-kafka/tree/v0.11.1) (2025-07-08)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.11.0...v0.11.1)
