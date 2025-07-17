@@ -14,7 +14,7 @@ from django_kafka.exceptions import DjangoKafkaError
 from .managers import PauseManager, RetryManager
 
 if TYPE_CHECKING:
-    from confluent_kafka import cimpl
+    from confluent_kafka import TopicPartition, cimpl
 
     from django_kafka.consumer import Topics
     from django_kafka.retry.settings import RetrySettings
@@ -67,13 +67,38 @@ class Consumer:
     def group_id(self) -> str:
         return self.config["group.id"]
 
+    @staticmethod
+    def debug_log(
+        description: str,
+        msg: "cimpl.Message" = None,
+        partition: "TopicPartition" = None,
+    ):
+        if msg is not None:
+            logger.debug(
+                "%s - topic='%s' partition=%d offset=%d",
+                description,
+                msg.topic(),
+                msg.partition(),
+                msg.offset(),
+            )
+        elif partition is not None:
+            logger.debug(
+                "%s - topic='%s' partition=%d offset=%d",
+                description,
+                partition.topic,
+                partition.partition,
+                partition.offset,
+            )
+        else:
+            logger.debug(description)
+
     def commit_offset(self, msg: "cimpl.Message"):
         if not self.config.get("enable.auto.offset.store"):
             # Store the offset associated with msg to a local cache.
             # Stored offsets are committed to Kafka by a background
             #  thread every 'auto.commit.interval.ms'.
             # Explicitly storing offsets after processing gives at-least once semantics.
-            logger.debug("Commit offset %s", msg.offset())
+            self.debug_log("Commit offset", msg=msg)
             self.store_offsets(msg)
 
     def pause_partition(self, msg: "cimpl.Message", until: datetime):
@@ -82,7 +107,7 @@ class Consumer:
         note: pausing is only retained within the python consumer class, and is not
         retained between separate consumer processes.
         """
-        logger.debug("Pause partition %s", msg.partition())
+        self.debug_log("Pause partition", msg=msg)
         partition = self._pauses.set(msg, until)
         self.seek(partition)  # seek back to message offset to re-poll on unpause
         self.pause([partition])
@@ -90,12 +115,7 @@ class Consumer:
     def resume_partitions(self):
         """resumes any paused partitions that are now ready"""
         for partition in self._pauses.pop_ready():
-            logger.debug(
-                "Resume partition - topic='%s' partition=%s offset=%s",
-                partition.topic,
-                partition.partition,
-                partition.offset,
-            )
+            self.debug_log("Resume partition", partition=partition)
             self.resume([partition])
 
     def blocking_retry(
@@ -202,12 +222,7 @@ class Consumer:
         """
         return value tells if the offset should be committed.
         """
-        logger.debug(
-            "Consume message - topic='%s' partition=%s offset=%s",
-            msg.topic(),
-            msg.partition(),
-            msg.offset(),
-        )
+        self.debug_log("Consume message", msg=msg)
         topic = self.get_topic(msg)
 
         if topic.use_relations_resolver:
