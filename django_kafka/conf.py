@@ -20,6 +20,9 @@ DEFAULTS = {
         "enable.auto.offset.store": False,
         "topic.metadata.refresh.interval.ms": 10000,
     },
+    "REPRODUCER_CONFIG": {
+        "namespace": None,
+    },
     "RETRY_SETTINGS": None,
     "RETRY_TOPIC_SUFFIX": "retry",
     "DEAD_LETTER_TOPIC_SUFFIX": "dlt",

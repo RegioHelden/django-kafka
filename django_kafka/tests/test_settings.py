@@ -12,6 +12,7 @@ class SettingsTestCase(SimpleTestCase):
         "GLOBAL_CONFIG",
         "PRODUCER_CONFIG",
         "CONSUMER_CONFIG",
+        "REPRODUCER_CONFIG",
         "RETRY_CONSUMER_CONFIG",
         "RETRY_SETTINGS",
         "RETRY_TOPIC_SUFFIX",
@@ -38,6 +39,9 @@ class SettingsTestCase(SimpleTestCase):
             "CLIENT_ID": "client-id",
             "ERROR_HANDLER": "error.handler.class",
             "GLOBAL_CONFIG": {"bootstrap.servers": "kafka1"},
+            "REPRODUCER_CONFIG": {
+                "namespace": "namespace",
+            },
             "PRODUCER_CONFIG": {
                 "enable.idempotence": True,
             },
