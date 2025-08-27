@@ -119,7 +119,7 @@ DJANGO_KAFKA = {
 
 ## Specialized Topics:
 
-### ModelTopicConsumer:
+### `ModelTopicConsumer`:
 
 `ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model, the topic to consume from and define a few abstract methods.
 
@@ -156,7 +156,7 @@ class MyModelConsumer(ModelTopicConsumer):
         return 'first_name', value["name"].upper()
 ```
 
-### DbzModelTopicConsumer:
+### `DbzModelTopicConsumer`:
 
 `DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer` and  defines default implementations for `is_deletion` and `get_lookup_kwargs` methods.
 
@@ -180,6 +180,65 @@ A few notes:
 1. The connector must be using the [event flattening SMT](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html) to simplify the message structure.
 2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field.
 3. The message key is assumed to contain the model PK as a field, [which is the default behaviour](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-message-key-columns) for Debezium source connectors. If you need more complicated lookup behaviour, override `get_lookup_kwargs`.
+
+### `TopicReproducer`:
+
+When using debezium source connectors, a common problem arises; the events need to be augmented with extra data (e.g.
+related table data) so they can be processed by the target system. This requires interacting with two closely related 
+topics:
+
+1. The internal debezium source connector topic, with the raw data.
+2. The public topic which contains the debezium source event plus some augmented data. 
+
+The pattern is that events should be consumed from the debezium source connector topic (`1.`) and then passed through a "reproducer" which augments the data and re-produces it to the main public topic (`2.`).
+
+`TopicReproducer` helps implement this pattern. `TopicReproducer.get_reproduce_topic` returns a topic consumer which consumes from the debezium source connector topic (`1.`) for a Django model and distributes the message back to the `TopicReproducer.reproduce` method which can then implement the data augmentation logic (`2.`). As a simple example:
+
+```py
+# topics.py
+from django_kafka.topic.avro import AvroTopicProducer
+from django_kafka.topic.reproducer import TopicReproducer
+
+from app.models import MyModel
+
+
+class MyModelTopic(AvroTopicProducer, TopicReproducer):
+    name = "mymodel"
+    reproduce_model = MyModel
+
+    def _reproduce_upsert(self, instance, key, value):
+        self.produce(key={"id": instance.id}, value={**value, 'extra': 1}) # add extra data to value as necessary
+
+    def _reproduce_deletion(self, instance_id, key, value):
+        self.produce(key={"id": instance_id}, value=None)
+```
+```py
+# consumers.py
+from django_kafka import kafka
+from django_kafka.consumer import Consumer, Topics
+from .topics import MyModelTopic
+
+@kafka.consumers()
+class MyTopicReproducerConsumer(Consumer):
+    topics = Topics(MyModelTopic.get_reproduce_topic())
+```
+
+In this example, events will be consumed from the debezium source connector table for `MyModel`, and then re-produced to the `mymodel` topic with any extra
+data. This set-up still requires you to add the model table to your debezium source connector configuration as necessary.
+
+The following attributes/methods of `TopicReproducer` can be overridden:
+
+1. `reproduce_model` (optional) - the model class for which messages will be reproduced from events to a debezium source
+    connector topic. If not set, then `reproduce_name` must be set and `reproduce` overridden.
+2. `reproduce_name` (optional) - the topic name to reproduce messages from, for when there is no `reproduce_model` or a
+    custom topic name is required.
+3. `reproduce_namespace` (optional) - if the debezium source connector prepends topic names with a namespace, 
+    specify this here.
+4. `reproduce` (optional) - defines default reproduce behaviour by calling `_reproduce_upsert` and `_reproduce_deletion`
+    depending on instance upsert or deletion respectively. These latter two methods must be implemented if this method 
+    is not overridden.
+5. `_reproduce_upsert` and `_reproduce_deletion` (required if `reproduce` not overridden) - entry point to perform
+   the actual message produce with the augmented data, depending on instance upsert or deletion.
 
 ## Dead Letter Topic:
 
