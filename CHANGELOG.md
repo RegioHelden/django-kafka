@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.13.0](https://github.com/RegioHelden/django-kafka/tree/v0.13.0) (2025-08-27)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.12.0...v0.13.0)
+
+**Implemented enhancements:**
+
+- feat: add TopicReproducer for debezium source connector message augmentation, refs \#136 [\#137](https://github.com/RegioHelden/django-kafka/pull/137) (@stefan-cardnell-rh)
+- Update uv to 0.8.13 [\#135](https://github.com/RegioHelden/django-kafka/pull/135) (@regiohelden-dev)
+- Update uv to 0.8.12 and reusable workflows to 2.3.0 [\#134](https://github.com/RegioHelden/django-kafka/pull/134) (@regiohelden-dev)
+- Update uv to 0.8.2 [\#132](https://github.com/RegioHelden/django-kafka/pull/132) (@regiohelden-dev)
+
+**Merged pull requests:**
+
+- Update uv to 0.8.3 [\#133](https://github.com/RegioHelden/django-kafka/pull/133) (@regiohelden-dev)
+- Update uv to 0.8.0 [\#131](https://github.com/RegioHelden/django-kafka/pull/131) (@regiohelden-dev)
+
 ## [v0.12.0](https://github.com/RegioHelden/django-kafka/tree/v0.12.0) (2025-07-17)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.11.1...v0.12.0)
