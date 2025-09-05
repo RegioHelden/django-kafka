@@ -83,6 +83,7 @@ class KeyOffsetTracker(models.Model):
 
 class WaitingMessageQuerySet(models.QuerySet):
     def add_message(self, msg: "cimpl.Message", relation: "ModelRelation"):
+        # ruff: noqa: PLC0415
         from django_kafka.relations_resolver.relation import ModelRelation
 
         return self.create(
@@ -100,6 +101,7 @@ class WaitingMessageQuerySet(models.QuerySet):
         )
 
     def for_relation(self, relation):
+        # ruff: noqa: PLC0415
         from django_kafka.relations_resolver.relation import ModelRelation
 
         return self.filter(

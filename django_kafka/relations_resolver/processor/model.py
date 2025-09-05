@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class ModelMessageProcessor(MessageProcessor):
     def __init__(self):
+        # ruff: noqa: PLC0415
         from django_kafka.models import WaitingMessage
 
         self.model = WaitingMessage

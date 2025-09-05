@@ -51,6 +51,7 @@ class ConnectorsRegistry(Registry["Connector"]):
 
 class ConsumersRegistry(Registry["Consumer"]):
     def register(self, cls):
+        # ruff: noqa: PLC0415
         from django_kafka.retry.consumer import RetryConsumer
 
         super().register(cls)

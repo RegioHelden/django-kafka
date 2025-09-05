@@ -3,6 +3,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from django_kafka import kafka
+from django_kafka.consumer.runner import KafkaConsumeRunner
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +16,9 @@ class Command(BaseCommand):
             "consumers",
             nargs="*",
             type=str,
-            default=None,
+            default=list(kafka.consumers),
             help="Python path to the consumer class(es). Starts all if not provided.",
         )
 
-    def handle(self, consumers: list[str] | None = None, *args, **options):
-        kafka.run_consumers(consumers)
+    def handle(self, consumers: list[str], *args, **options):
+        KafkaConsumeRunner(consumers).start()

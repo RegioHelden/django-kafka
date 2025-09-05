@@ -20,6 +20,7 @@ class KeyOffsetTrackerTopic(TopicConsumer):
         super().__init__()
 
     def consume(self, msg: "cimpl.Message"):
+        # ruff: noqa: PLC0415
         from django_kafka.models import KeyOffsetTracker
 
         KeyOffsetTracker.objects.log_msg_offset(msg)

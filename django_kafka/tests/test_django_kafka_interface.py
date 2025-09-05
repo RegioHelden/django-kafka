@@ -48,12 +48,3 @@ class DjangoKafkaTestCase(SimpleTestCase):
             self.assertIs(kafka.schema_client, mock_schema_registry_client.return_value)
             # called with right args
             mock_schema_registry_client.assert_called_once_with(schema_registry_config)
-
-    @patch("django_kafka.DjangoKafka.consumers")
-    def test_run_consumer(self, mock_django_kafka_consumers):
-        kafka = DjangoKafka()
-        mock_consumer = mock_django_kafka_consumers["path.to.Consumer"]()
-
-        kafka.run_consumer("path.to.Consumer")
-
-        mock_consumer.run.assert_called_once()
