@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import logging
 import traceback
 from datetime import datetime, timedelta
 from pydoc import locate
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from confluent_kafka import Consumer as ConfluentConsumer
 from django.utils import timezone
@@ -14,6 +16,8 @@ from django_kafka.exceptions import DjangoKafkaError
 from .managers import PauseManager, RetryManager
 
 if TYPE_CHECKING:
+    from multiprocessing import Event
+
     from confluent_kafka import TopicPartition, cimpl
 
     from django_kafka.consumer import Topics
@@ -35,7 +39,7 @@ class Consumer:
         https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#pythonclient-consumer
     """
 
-    topics: "Topics"
+    topics: Topics
     config: dict
 
     polling_freq = settings.POLLING_FREQUENCY
@@ -70,8 +74,8 @@ class Consumer:
     @staticmethod
     def debug_log(
         description: str,
-        msg: "cimpl.Message" = None,
-        partition: "TopicPartition" = None,
+        msg: cimpl.Message = None,
+        partition: TopicPartition = None,
     ):
         if msg is not None:
             logger.debug(
@@ -92,7 +96,7 @@ class Consumer:
         else:
             logger.debug(description)
 
-    def commit_offset(self, msg: "cimpl.Message"):
+    def commit_offset(self, msg: cimpl.Message):
         if not self.config.get("enable.auto.offset.store"):
             # Store the offset associated with msg to a local cache.
             # Stored offsets are committed to Kafka by a background
@@ -101,7 +105,7 @@ class Consumer:
             self.debug_log("Commit offset", msg=msg)
             self.store_offsets(msg)
 
-    def pause_partition(self, msg: "cimpl.Message", until: datetime):
+    def pause_partition(self, msg: cimpl.Message, until: datetime):
         """pauses message partition to process the message at a later time
 
         note: pausing is only retained within the python consumer class, and is not
@@ -120,8 +124,8 @@ class Consumer:
 
     def blocking_retry(
         self,
-        retry_settings: "RetrySettings",
-        msg: "cimpl.Message",
+        retry_settings: RetrySettings,
+        msg: cimpl.Message,
         exc: Exception,
     ) -> bool:
         """
@@ -142,8 +146,8 @@ class Consumer:
 
     def non_blocking_retry(
         self,
-        retry_settings: "RetrySettings",
-        msg: "cimpl.Message",
+        retry_settings: RetrySettings,
+        msg: cimpl.Message,
         exc: Exception,
     ):
         """
@@ -151,6 +155,7 @@ class Consumer:
 
         :return: whether the message will be retried
         """
+        # ruff: noqa: PLC0415
         from django_kafka.retry.topic import RetryTopicProducer
 
         topic = RetryTopicProducer(
@@ -166,7 +171,7 @@ class Consumer:
 
         return retried
 
-    def retry_msg(self, msg: "cimpl.Message", exc: Exception) -> (bool, bool):
+    def retry_msg(self, msg: cimpl.Message, exc: Exception) -> (bool, bool):
         """
         :return tuple: The first element indicates if the message was retried and the
         second indicates if the retry was blocking.
@@ -178,8 +183,9 @@ class Consumer:
             return self.blocking_retry(retry_settings, msg, exc), True
         return self.non_blocking_retry(retry_settings, msg, exc), False
 
-    def dead_letter_msg(self, msg: "cimpl.Message", exc: Exception):
+    def dead_letter_msg(self, msg: cimpl.Message, exc: Exception):
         """publishes a message to the dead letter topic, with exception details"""
+        # ruff: noqa: PLC0415
         from django_kafka.dead_letter.topic import DeadLetterTopicProducer
 
         DeadLetterTopicProducer(group_id=self.group_id, msg=msg).produce_for(
@@ -187,7 +193,7 @@ class Consumer:
             header_detail=traceback.format_exc(),
         )
 
-    def handle_exception(self, msg: "cimpl.Message", exc: Exception) -> bool:
+    def handle_exception(self, msg: cimpl.Message, exc: Exception) -> bool:
         """
         return bool: Indicates if the message was processed and offset can be committed.
         """
@@ -198,12 +204,12 @@ class Consumer:
             return True
         return not blocking
 
-    def get_topic(self, msg: "cimpl.Message") -> "TopicConsumer":
+    def get_topic(self, msg: cimpl.Message) -> TopicConsumer:
         return self.topics.get(topic_name=msg.topic())
 
     def log_error(
         self,
-        msg: Optional["cimpl.Message"] = None,
+        msg: cimpl.Message | None = None,
         exc_info: bool | Exception = False,
     ):
         error = f"'{self.__class__.__module__}.{self.__class__.__name__} failed'"
@@ -256,7 +262,7 @@ class Consumer:
             f"'RelationResolver.Action({resolve_action})' case is not implemented.",
         )
 
-    def process_message(self, msg: "cimpl.Message"):
+    def process_message(self, msg: cimpl.Message):
         if msg.error():
             self.log_error(msg)
             return
@@ -276,17 +282,18 @@ class Consumer:
         if commit:
             self.commit_offset(msg)
 
-    def poll(self) -> Optional["cimpl.Message"]:
+    def poll(self) -> cimpl.Message | None:
         # poll for self.polling_freq seconds
         return self._consumer.poll(timeout=self.polling_freq)
 
-    def start(self):
-        self.subscribe(topics=self.topics.names)
+    def subscribe(self):
+        self._consumer.subscribe(topics=self.topics.names)
 
-    def run(self):
+    def start(self, stop_event: Event | None = None):
+        logger.info("Starting consumer %s", self.__class__)
         try:
-            self.start()
-            while True:
+            self.subscribe()
+            while stop_event is None or not stop_event.is_set():
                 self.resume_partitions()
                 if (msg := self.poll()) is not None:
                     self.process_message(msg)
@@ -297,4 +304,5 @@ class Consumer:
             self.stop()
 
     def stop(self):
+        logger.info("Stopping consumer %s", self.__class__)
         self.close()
