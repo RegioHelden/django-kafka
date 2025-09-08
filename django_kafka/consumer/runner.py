@@ -66,6 +66,7 @@ class KafkaConsumeRunner:
         for process in self.procs:
             if process.is_alive():
                 process.kill()
+                process.join(timeout=0.5)
         # after hard shutdown, make further SIGINT reset to default
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
