@@ -29,6 +29,11 @@ class KafkaConsumeRunner:
 
             # waiting loop
             while True:
+                # shut down if any has failed.
+                if any(p.exitcode not in (None, 0) for p in self.procs):
+                    self._soft_shutdown(None, None)
+                    break
+
                 if all(p.exitcode is not None for p in self.procs):
                     # quit when all processes are done
                     break
@@ -42,9 +47,9 @@ class KafkaConsumeRunner:
             signal.signal(signal.SIGINT, signal.SIG_DFL)
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
-    def _soft_shutdown(self, sig, frame):
+    def _soft_shutdown(self, signum, frame):
         logger.info("Soft shutdown - waiting for consumers to finish")
-        if sig == signal.SIGINT:
+        if signum == signal.SIGINT:
             logger.warning("Hitting Ctrl+C again will kill running processes!")
         self.stop_event.set()
         if signal.getsignal(signal.SIGINT) is not self._hard_shutdown:
@@ -88,3 +93,4 @@ class ConsumerWorker:
             kafka.consumers[self.consumer_key]().start(self.stop_event)
         except Exception:
             logger.exception("Consumer %s crashed", self.consumer_key)
+            raise
