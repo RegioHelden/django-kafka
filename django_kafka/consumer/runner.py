@@ -50,7 +50,7 @@ class KafkaConsumeRunner:
             signal.signal(signal.SIGINT, self._hard_shutdown)
 
     def _hard_shutdown(self, signum, frame):
-        logger.info("Hard shutdown - terminating consumers")
+        logger.info("Hard shutdown - immediatly stopping consumers")
 
         for process in self.procs:
             if process.is_alive():
