@@ -44,7 +44,7 @@ class KafkaConsumeRunner:
 
     def _soft_shutdown(self, sig, frame):
         logger.info("Soft shutdown - waiting for consumers to finish")
-        logger.warning("Hitting Ctrl+C again will kill running processes!")
+        logger.warning("Hitting Ctrl+C again will kill running processes immediatly!")
         self.stop_event.set()
         if signal.getsignal(signal.SIGINT) is not self._hard_shutdown:
             signal.signal(signal.SIGINT, self._hard_shutdown)
