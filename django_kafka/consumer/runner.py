@@ -28,17 +28,13 @@ class KafkaConsumeRunner:
                 self.processes.append(process)
 
             # waiting loop
-            while True:
+            while any(p.exitcode is None for p in self.processes):
                 if any(p.exitcode not in (None, 0) for p in self.processes):
                     # shut down if any has failed.
                     self._soft_shutdown(None, None)
                     raise DjangoKafkaError(
                         "The consumer runner process exited unexpectedly.",
                     )
-
-                if all(p.exitcode is not None for p in self.processes):
-                    # quit when all processes are done
-                    break
                 time.sleep(0.2)
 
             for process in self.processes:
