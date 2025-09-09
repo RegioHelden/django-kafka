@@ -37,11 +37,10 @@ class KafkaConsumeRunner:
                     )
                 time.sleep(0.2)
 
+        finally:
             for process in self.processes:
                 # timeout is to avoid infinite wait, if anything goes wrong
                 process.join(timeout=1.0)
-
-        finally:
             signal.signal(signal.SIGINT, signal.SIG_DFL)
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
@@ -72,7 +71,6 @@ class KafkaConsumeRunner:
         for process in self.processes:
             if process.is_alive():
                 process.kill()
-                process.join(timeout=0.5)
         # after hard shutdown, make further SIGINT reset to default
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
