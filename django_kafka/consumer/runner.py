@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class KafkaConsumeRunner:
     def __init__(self, consumers: list[str]):
         self.consumers = consumers
-        self.procs: list[Process] = []
+        self.processes: list[Process] = []
         self.stop_event: Event = Event()
 
     def start(self):
@@ -25,24 +25,24 @@ class KafkaConsumeRunner:
                 worker = ConsumerWorker(key, self.stop_event)
                 process = Process(target=worker.start, name=f"consumer-{key}")
                 process.start()
-                self.procs.append(process)
+                self.processes.append(process)
 
             # waiting loop
             while True:
-                if any(p.exitcode not in (None, 0) for p in self.procs):
+                if any(p.exitcode not in (None, 0) for p in self.processes):
                     # shut down if any has failed.
                     self._soft_shutdown(None, None)
                     raise DjangoKafkaError(
                         "The consumer runner process exited unexpectedly.",
                     )
 
-                if all(p.exitcode is not None for p in self.procs):
+                if all(p.exitcode is not None for p in self.processes):
                     # quit when all processes are done
                     break
                 time.sleep(0.2)
 
-            for process in self.procs:
-                # avoid infinit wait, if anything goes wrong
+            for process in self.processes:
+                # timeout is to avoid infinite wait, if anything goes wrong
                 process.join(timeout=1.0)
 
         finally:
@@ -52,26 +52,28 @@ class KafkaConsumeRunner:
     def _soft_shutdown(self, signum, frame):
         logger.info("Soft shutdown - waiting for consumers to finish")
         if signum == signal.SIGINT:
-            logger.warning("Hitting Ctrl+C again will kill running processes!")
+            logger.warning(
+                "Hitting Ctrl+C again will kill running processes immediately!",
+            )
         self.stop_event.set()
         if signal.getsignal(signal.SIGINT) is not self._hard_shutdown:
             signal.signal(signal.SIGINT, self._hard_shutdown)
 
     def _hard_shutdown(self, signum, frame):
-        logger.info("Hard shutdown - immediatly stopping consumers")
+        logger.info("Hard shutdown - immediately stopping consumers")
 
-        for process in self.procs:
+        for process in self.processes:
             if process.is_alive():
                 with contextlib.suppress(Exception):
                     process.terminate()
 
         # little waiting loop, to cover delays in terminations
         end = time.time() + 2  # loop for 2 seconds maximum
-        while time.time() < end and any(p.is_alive() for p in self.procs):
+        while time.time() < end and any(p.is_alive() for p in self.processes):
             time.sleep(0.05)
 
         # if someone is still alive - hard kill
-        for process in self.procs:
+        for process in self.processes:
             if process.is_alive():
                 process.kill()
                 process.join(timeout=0.5)
