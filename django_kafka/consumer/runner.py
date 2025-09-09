@@ -4,7 +4,7 @@ import signal
 import time
 from multiprocessing import Event, Process
 
-from django_kafka import kafka
+from django_kafka import DjangoKafkaError, kafka
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +29,12 @@ class KafkaConsumeRunner:
 
             # waiting loop
             while True:
-                # shut down if any has failed.
                 if any(p.exitcode not in (None, 0) for p in self.procs):
+                    # shut down if any has failed.
                     self._soft_shutdown(None, None)
-                    break
+                    raise DjangoKafkaError(
+                        "The consumer runner process exited unexpectedly.",
+                    )
 
                 if all(p.exitcode is not None for p in self.procs):
                     # quit when all processes are done
