@@ -63,6 +63,7 @@ class RetrySettings:
 
     def skip_by_offset(self, msg, exc: Exception):
         # avoiding import errors
+        # ruff: noqa: PLC0415
         from django_kafka.models import KeyOffsetTracker  # Apps aren't loaded yet
 
         return all(

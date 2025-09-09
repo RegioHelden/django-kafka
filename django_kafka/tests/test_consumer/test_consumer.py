@@ -61,7 +61,7 @@ class ConsumerTestCase(TestCase):
         # `consumer.start` is using `while True:` loop which never ends
         # in order to test it we need to break it which is achievable with side_effect
         with suppress(StopWhileTrue.Error):
-            consumer.run()
+            consumer.start()
 
         # assert partitions were resumed for each poll
         self.assertEqual(consumer.resume_partitions.call_count, 3)

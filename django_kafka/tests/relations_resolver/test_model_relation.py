@@ -4,7 +4,6 @@ from django_kafka.relations_resolver.relation import ModelRelation
 from example.models import Order
 
 
-# ruff: noqa: DJ008
 class ModelRelationTestCase(TestCase):
     def test__init__(self):
         relation = ModelRelation(Order, id_field="id", id_value=1)

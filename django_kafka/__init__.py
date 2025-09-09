@@ -1,5 +1,4 @@
 import logging
-from multiprocessing.pool import Pool
 from pydoc import locate
 from typing import TYPE_CHECKING
 
@@ -65,34 +64,6 @@ class DjangoKafka:
         if not (relations_resolver_cls := locate(settings.RELATION_RESOLVER)):
             raise DjangoKafkaError(f"{settings.RELATION_RESOLVER} not found.")
         return relations_resolver_cls()
-
-    def run_consumer(self, consumer_key: str):
-        consumer = self.consumers[consumer_key]()
-        consumer.run()
-
-    def run_consumers(self, consumers: list[str] | None = None):
-        if not (consumers := consumers or list(self.consumers)):
-            logger.debug("No consumers in registry. Exit the process.")
-            return
-
-        with Pool(processes=len(consumers)) as pool:
-            try:
-                pool.map(self.run_consumer, consumers)
-            except KeyboardInterrupt:
-                # Stops the worker processes immediately without completing
-                #  outstanding work.
-                pool.terminate()
-                # Wait for the worker processes to exit.
-                # Should be called after close() or terminate().
-                pool.join()
-                logger.debug("KeyboardInterrupt. Pool workers terminated.")
-            else:
-                # Prevents any more tasks from being submitted to the pool.
-                # Once all the tasks have been completed the worker processes will exit.
-                pool.close()
-                # Wait for the worker processes to exit.
-                # Should be called after close() or terminate().
-                pool.join()
 
 
 kafka = DjangoKafka()

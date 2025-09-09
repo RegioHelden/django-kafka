@@ -18,7 +18,7 @@ jobs:
       contents: read
     uses: RegioHelden/github-reusable-workflows/.github/workflows/python-ruff.yaml@v2.2.3
     with:
-      ruff-version: "0.11.5"
+      ruff-version: "0.12.3"
       python-version: "3.12"
 
   test:
