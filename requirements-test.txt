@@ -1,6 +1,6 @@
 -r requirements-ci.txt
 confluent-kafka[avro, schemaregistry]==2.11.0
-django==5.2.6
+django==5.2.7
 django-temporalio==1.4.0
 ruff==0.12.3
 setuptools==80.9.0  # without it PyCharm fails to index packages inside the Docker container
