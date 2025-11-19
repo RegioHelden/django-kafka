@@ -5,6 +5,7 @@ import time
 from multiprocessing import Event, Process
 
 from django_kafka import DjangoKafkaError, kafka
+from django_kafka.registry import ConsumersRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class KafkaConsumeRunner:
         try:
             # spawn one process per consumer
             for key in self.consumers:
-                worker = ConsumerWorker(key, self.stop_event)
+                worker = ConsumerWorker(kafka.consumers, key, self.stop_event)
                 process = Process(target=worker.start, name=f"consumer-{key}")
                 process.start()
                 self.processes.append(process)
@@ -76,9 +77,12 @@ class KafkaConsumeRunner:
 
 
 class ConsumerWorker:
-    def __init__(self, consumer_key: str, stop_event: Event):
+    def __init__(
+        self, consumers: ConsumersRegistry, consumer_key: str, stop_event: Event
+    ):
         self.consumer_key = consumer_key
         self.stop_event = stop_event
+        self.consumers = consumers
 
     def start(self):
         # Only parent handles Ctrl+C (SIGINT)
@@ -88,7 +92,7 @@ class ConsumerWorker:
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         try:
-            kafka.consumers[self.consumer_key]().start(self.stop_event)
+            self.consumers[self.consumer_key]().start(self.stop_event)
         except Exception:
             logger.exception("Consumer %s crashed", self.consumer_key)
             raise
