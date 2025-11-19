@@ -25,8 +25,7 @@ class Command(BaseCommand):
             default=None,
             nargs="?",
             help=(
-                "Python path to the connector class(es). "
-                "Processes all if not provided.",
+                "Python path to the connector class(es). Processes all if not provided."
             ),
         )
         parser.add_argument(
@@ -53,16 +52,18 @@ class Command(BaseCommand):
             default=False,
             help=(
                 "Check status of connectors. Currently RUNNING status is considered "
-                "as success.",
+                "as success."
             ),
         )
         parser.add_argument(
             "--ignore-failures",
             action="store_true",
             default=False,
-            help="The command wont fail if failures were detected. "
-            "By default if any failures were detected the "
-            "command exist with error status.",
+            help=(
+                "The command wont fail if failures were detected. "
+                "By default if any failures were detected the "
+                "command exist with error status."
+            ),
         )
 
     def __init__(self, *args, **kwargs):
