@@ -1,5 +1,50 @@
 # Changelog
 
+## [v0.15.0](https://github.com/RegioHelden/django-kafka/tree/v0.15.0) (2025-12-11)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.14.0...v0.15.0)
+
+**Implemented enhancements:**
+
+- feat: add more fields for the WaitingMessage admin list display, refs \#184 [\#185](https://github.com/RegioHelden/django-kafka/pull/185) (@stefan-cardnell-rh)
+- Force ruff version in VSCode, add modulesync managed linting workflow, update VSCode ruff integration to 2025.30.0 and uv to 0.9.13 [\#183](https://github.com/RegioHelden/django-kafka/pull/183) (@regiohelden-dev)
+- Update github-reusable-workflows to 2.7.0 [\#182](https://github.com/RegioHelden/django-kafka/pull/182) (@renovate[bot])
+- Update github-reusable-workflows to 2.7.0 and uv to 0.9.11 [\#181](https://github.com/RegioHelden/django-kafka/pull/181) (@regiohelden-dev)
+- Update actions/checkout action to v6 [\#180](https://github.com/RegioHelden/django-kafka/pull/180) (@renovate[bot])
+- Update uv to 0.9.10 [\#178](https://github.com/RegioHelden/django-kafka/pull/178) (@regiohelden-dev)
+- Update uv to 0.9.9 [\#175](https://github.com/RegioHelden/django-kafka/pull/175) (@regiohelden-dev)
+- Update uv to 0.9.7 [\#173](https://github.com/RegioHelden/django-kafka/pull/173) (@regiohelden-dev)
+- Update uv to 0.9.6 [\#172](https://github.com/RegioHelden/django-kafka/pull/172) (@regiohelden-dev)
+- Update RegioHelden/github-reusable-workflows to 2.6.0 [\#171](https://github.com/RegioHelden/django-kafka/pull/171) (@regiohelden-dev)
+- Update RegioHelden/github-reusable-workflows to 2.6.0 [\#170](https://github.com/RegioHelden/django-kafka/pull/170) (@renovate[bot])
+- Update actions/download-artifact to v5 and uv to 0.9.5 [\#169](https://github.com/RegioHelden/django-kafka/pull/169) (@regiohelden-dev)
+- Update github-reusable-workflows to 2.5.0 [\#168](https://github.com/RegioHelden/django-kafka/pull/168) (@regiohelden-dev)
+- chore\(deps\): update regiohelden/github-reusable-workflows action to v2.5.0 [\#167](https://github.com/RegioHelden/django-kafka/pull/167) (@renovate[bot])
+- Update ruff-vscode to 2025.28.0 and uv to 0.9.2 [\#166](https://github.com/RegioHelden/django-kafka/pull/166) (@regiohelden-dev)
+- Update setup-uv action to v7 [\#165](https://github.com/RegioHelden/django-kafka/pull/165) (@regiohelden-dev)
+- chore\(deps\): update astral-sh/setup-uv action to v7 [\#164](https://github.com/RegioHelden/django-kafka/pull/164) (@renovate[bot])
+- chore\(deps\): bump django from 5.2.6 to 5.2.7 [\#163](https://github.com/RegioHelden/django-kafka/pull/163) (@dependabot[bot])
+- chore\(deps\): update postgres docker tag to v18 [\#162](https://github.com/RegioHelden/django-kafka/pull/162) (@renovate[bot])
+- Update uv to 0.8.22 [\#161](https://github.com/RegioHelden/django-kafka/pull/161) (@regiohelden-dev)
+- Fix renovate json config [\#160](https://github.com/RegioHelden/django-kafka/pull/160) (@regiohelden-dev)
+- Update uv to 0.8.20, fix renovate config for modulesync managed workflow files [\#158](https://github.com/RegioHelden/django-kafka/pull/158) (@regiohelden-dev)
+- chore\(deps\): update astral-sh/setup-uv action to v6 [\#157](https://github.com/RegioHelden/django-kafka/pull/157) (@renovate[bot])
+- chore\(deps\): update actions/setup-python action to v6 [\#156](https://github.com/RegioHelden/django-kafka/pull/156) (@renovate[bot])
+- chore\(deps\): update actions/checkout action to v5 - autoclosed [\#155](https://github.com/RegioHelden/django-kafka/pull/155) (@renovate[bot])
+- chore\(deps\): update regiohelden/github-reusable-workflows action to v2.4.0 [\#154](https://github.com/RegioHelden/django-kafka/pull/154) (@renovate[bot])
+- chore\(deps\): update dependency python to v3.13.7 [\#153](https://github.com/RegioHelden/django-kafka/pull/153) (@renovate[bot])
+- chore\(deps\): pin dependency python to 3.12.11 [\#151](https://github.com/RegioHelden/django-kafka/pull/151) (@renovate[bot])
+- Update uv to 0.8.18 [\#150](https://github.com/RegioHelden/django-kafka/pull/150) (@regiohelden-dev)
+- Use renovate to keep custom workflow.yaml up to date [\#148](https://github.com/RegioHelden/django-kafka/pull/148) (@regiohelden-dev)
+- Update vscode-ruff to 2025.26.0 [\#147](https://github.com/RegioHelden/django-kafka/pull/147) (@regiohelden-dev)
+- Update uv to 0.8.17 [\#146](https://github.com/RegioHelden/django-kafka/pull/146) (@regiohelden-dev)
+- chore\(deps\): bump django from 5.2.4 to 5.2.6 [\#145](https://github.com/RegioHelden/django-kafka/pull/145) (@dependabot[bot])
+
+**Fixed bugs:**
+
+- Make management command help texts work again [\#179](https://github.com/RegioHelden/django-kafka/pull/179) (@lociii)
+- Update dev env Django to 5.2.8 [\#176](https://github.com/RegioHelden/django-kafka/pull/176) (@dependabot[bot])
+
 ## [v0.14.0](https://github.com/RegioHelden/django-kafka/tree/v0.14.0) (2025-09-09)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.13.0...v0.14.0)
