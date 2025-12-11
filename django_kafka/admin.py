@@ -11,4 +11,22 @@ class KeyOffsetTrackerAdmin(admin.ModelAdmin):
 
 @admin.register(WaitingMessage)
 class WaitingMessageAdmin(admin.ModelAdmin):
-    search_fields = ("topic", "key")
+    list_display = (
+        "topic",
+        "partition",
+        "offset",
+        "relation_model_key",
+        "relation_id_field",
+        "relation_id_value",
+        "status",
+    )
+    search_fields = (
+        "topic",
+        "partition",
+        "offset",
+        "relation_model_key",
+        "relation_id_field",
+        "relation_id_value",
+        "key",
+        "status",
+    )
