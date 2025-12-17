@@ -1,11 +1,12 @@
 # Changelog
 
-## [v0.15.0](https://github.com/RegioHelden/django-kafka/tree/v0.15.0) (2025-12-16)
+## [v0.15.0](https://github.com/RegioHelden/django-kafka/tree/v0.15.0) (2025-12-17)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.14.0...v0.15.0)
 
 **Implemented enhancements:**
 
+- Update Django dev dependency to 5.2.9 [\#189](https://github.com/RegioHelden/django-kafka/pull/189) (@dependabot[bot])
 - Update ruff to 0.14.9, ruff VSCode to 2025.32.0, github-reusable-workflows to 2.8.0, download-artifact to 7, uv to 0.9.17 [\#187](https://github.com/RegioHelden/django-kafka/pull/187) (@regiohelden-dev)
 - feat: add more fields for the WaitingMessage admin list display, refs \#184 [\#185](https://github.com/RegioHelden/django-kafka/pull/185) (@stefan-cardnell-rh)
 - Force ruff version in VSCode, add modulesync managed linting workflow, update VSCode ruff integration to 2025.30.0 and uv to 0.9.13 [\#183](https://github.com/RegioHelden/django-kafka/pull/183) (@regiohelden-dev)
