@@ -1,12 +1,19 @@
 # Changelog
 
-## [v0.15.1](https://github.com/RegioHelden/django-kafka/tree/v0.15.0) (2025-12-17)
+## [v0.15.2](https://github.com/RegioHelden/django-kafka/tree/v0.15.2) (2025-12-22)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.15.1...v0.15.2)
+
+**Fixed bugs:**
+
+- fix: kafka\_consume is not working on mac/windows nor python 3.14 due to unsupported process start method, refs \#192 [\#193](https://github.com/RegioHelden/django-kafka/pull/193) (@stefan-cardnell-rh)
+
+## [v0.15.1](https://github.com/RegioHelden/django-kafka/tree/v0.15.1) (2025-12-17)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.14.0...v0.15.1)
 
 **Implemented enhancements:**
 
-- Re-release v0.15.0 as v0.15.1 due to irrecoverable release publishing failure (@stefan-cardnell-rh)
 - Update Django dev dependency to 5.2.9 [\#189](https://github.com/RegioHelden/django-kafka/pull/189) (@dependabot[bot])
 - Update ruff to 0.14.9, ruff VSCode to 2025.32.0, github-reusable-workflows to 2.8.0, download-artifact to 7, uv to 0.9.17 [\#187](https://github.com/RegioHelden/django-kafka/pull/187) (@regiohelden-dev)
 - feat: add more fields for the WaitingMessage admin list display, refs \#184 [\#185](https://github.com/RegioHelden/django-kafka/pull/185) (@stefan-cardnell-rh)
