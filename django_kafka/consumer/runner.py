@@ -4,7 +4,12 @@ import signal
 import time
 from multiprocessing import Event, Process
 
-from django_kafka import DjangoKafkaError, kafka
+import django
+from django import db
+from django.apps import apps
+
+from django_kafka import kafka
+from django_kafka.exceptions import DjangoKafkaError
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +23,8 @@ class KafkaConsumeRunner:
     def start(self):
         signal.signal(signal.SIGINT, self._soft_shutdown)  # Ctrl+C or kill -SIGINT
         signal.signal(signal.SIGTERM, self._soft_shutdown)  # kill <pid>
+
+        db.connections.close_all()  # close before spawning new processes
 
         try:
             # spawn one process per consumer
@@ -76,6 +83,10 @@ class KafkaConsumeRunner:
 
 
 class ConsumerWorker:
+    """
+    Consumer worker started by subprocesses, so all internal state must be pickleable.
+    """
+
     def __init__(self, consumer_key: str, stop_event: Event):
         self.consumer_key = consumer_key
         self.stop_event = stop_event
@@ -86,6 +97,9 @@ class ConsumerWorker:
         # Ensure SIGTERM in the child uses the default action (terminate)
         # to avoids inheriting the parent's _shutdown handler
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
+        if not apps.ready:
+            django.setup()  # for spawn or forkserver process start methods
 
         try:
             kafka.consumers[self.consumer_key]().start(self.stop_event)
