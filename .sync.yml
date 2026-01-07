@@ -5,7 +5,7 @@
   module_keywords: ["django", "kafka", "confluent"]
   dependencies:
     [
-      "django>=4.2,<6.0",
+      "django>=4.2,<6.1",
       "confluent-kafka[avro, schemaregistry]>=2.9.0",
       "django-temporalio>=1.4.0",
     ]
