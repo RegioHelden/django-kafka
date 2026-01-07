@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.0.0](https://github.com/RegioHelden/django-kafka/tree/v1.0.0) (2026-01-07)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.15.2...v1.0.0)
+
+**Breaking changes:**
+
+- Add support for Django 6.0 release, add support for Python 3.14, remove support for EOL Django 5.1 [\#195](https://github.com/RegioHelden/django-kafka/pull/195) (@lociii)
+
+**Implemented enhancements:**
+
+- Update ruff to 0.14.10, update uv to 0.9.22, allow installation on Django 6.0 [\#196](https://github.com/RegioHelden/django-kafka/pull/196) (@regiohelden-dev)
+
 ## [v0.15.2](https://github.com/RegioHelden/django-kafka/tree/v0.15.2) (2025-12-22)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.15.1...v0.15.2)
