@@ -30,6 +30,7 @@ class KafkaConnectSkipModel(models.Model):
             "\nGets reset to False on .save() method call, unless explicitly set.",
         ),
         default=False,
+        editable=False,
     )
     objects = KafkaConnectSkipQueryset.as_manager()
 
