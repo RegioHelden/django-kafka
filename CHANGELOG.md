@@ -1,5 +1,19 @@
 # Changelog
 
+## [v1.0.1](https://github.com/RegioHelden/django-kafka/tree/v1.0.1) (2026-01-16)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.0.0...v1.0.1)
+
+**Implemented enhancements:**
+
+- Use ty instead of pylance as Python language server in VSCode [\#200](https://github.com/RegioHelden/django-kafka/pull/200) (@regiohelden-dev)
+- Update ruff to 0.14.13 and uv to 0.9.26 [\#199](https://github.com/RegioHelden/django-kafka/pull/199) (@regiohelden-dev)
+- Update ruff to 0.14.11 and ruff VSCode to 2026.34.0 [\#198](https://github.com/RegioHelden/django-kafka/pull/198) (@regiohelden-dev)
+
+**Fixed bugs:**
+
+- fix: make kafka\_skip uneditable in admin by default, refs \#201 [\#202](https://github.com/RegioHelden/django-kafka/pull/202) (@stefan-cardnell-rh)
+
 ## [v1.0.0](https://github.com/RegioHelden/django-kafka/tree/v1.0.0) (2026-01-07)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v0.15.2...v1.0.0)
