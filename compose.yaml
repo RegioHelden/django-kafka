@@ -20,17 +20,17 @@ services:
       - postgres
 
   postgres:
-    image: postgres:17-alpine
+    image: docker.io/postgres:18-alpine
+    restart: unless-stopped
     shm_size: 256m
     user: postgres
     command: -c 'fsync=off' -c 'effective_io_concurrency=10' -c 'max_connections=200' -c 'wal_level=logical'  # yamllint disable-line rule:line-length
+    volumes:
+      - db_postgres_data:/var/lib/postgresql/
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
 volumes:
-  db_data: {}
+  db_postgres_data: {}
