@@ -65,9 +65,9 @@ TEMPLATES = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
+        "NAME": "app",
+        "USER": "app",
+        "PASSWORD": "app",
         "HOST": "127.0.0.1" if os.environ.get("GITHUB_WORKFLOW", None) else "postgres",
         "PORT": "5432",
     },
