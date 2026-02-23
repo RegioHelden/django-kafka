@@ -20,6 +20,7 @@ class WaitingMessageAdmin(admin.ModelAdmin):
         "relation_id_value",
         "status",
     )
+    list_filter = ("status",)
     search_fields = (
         "topic",
         "partition",
