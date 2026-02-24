@@ -41,19 +41,6 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
 
         self.assertEqual(defaults, {"name": 1})
 
-    def test_get_defaults__adds_kafka_skip(self):
-        topic_consumer = self._get_model_topic_consumer()
-
-        class KafkaConnectSkip(KafkaConnectSkipModel):
-            name = models.CharField()
-
-        defaults = topic_consumer.get_defaults(
-            model=KafkaConnectSkip,
-            value={"name": 1},
-        )
-
-        self.assertEqual(defaults, {"name": 1, "kafka_skip": True})
-
     def test_transform(self):
         """test custom transform methods are used during transformation"""
         topic_consumer = self._get_model_topic_consumer()

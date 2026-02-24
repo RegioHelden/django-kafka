@@ -5,7 +5,6 @@ from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 
-from django_kafka.connect.models import KafkaConnectSkipModel
 from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.topic import TopicConsumer
 
@@ -39,16 +38,11 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         """
         Returns instance update_or_create defaults from the message value.
         """
-        defaults = {
+        return {
             field_name: field_value
             for field_name, field_value in value.items()
             if self.model_has_field(model, field_name)
         }
-
-        if issubclass(model, KafkaConnectSkipModel):
-            defaults["kafka_skip"] = True
-
-        return defaults
 
     @abstractmethod
     def is_deletion(self, model, key, value) -> bool:

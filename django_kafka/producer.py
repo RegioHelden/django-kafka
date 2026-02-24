@@ -44,8 +44,7 @@ class Producer:
         )
 
     def produce(self, name, *args, **kwargs):
-        if not Suppression.active(name):
-            self._producer.produce(name, *args, **kwargs)
+        self._producer.produce(name, *args, **kwargs)
 
     def __getattr__(self, name):
         """
@@ -65,8 +64,12 @@ class Suppression(ContextDecorator):
     _var = ContextVar(f"{__name__}.suppression")
 
     @classmethod
-    def active(cls, topic: str):
-        """returns if suppression is enabled for the given topic"""
+    def active(cls, topic: str | None = None):
+        """returns if suppression is enabled
+
+        :param topic: the topic name to check for, if unsupplied then checks if global
+        producer suppression is enabled
+        """
         try:
             topics = cls._var.get()
         except LookupError:
@@ -75,7 +78,9 @@ class Suppression(ContextDecorator):
 
         # topics will be None when suppress() is initialized without topics provided
         if topics is None:
-            return True  # all topics
+            return True  # true since it was enabled globally
+        if topic is None:
+            return False  # false since it wasn't enabled globally
 
         return topic in topics
 
