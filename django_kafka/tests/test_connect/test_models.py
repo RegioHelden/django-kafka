@@ -215,3 +215,11 @@ class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
 
         mock_filter.assert_called_once_with(kafka_skip=False)  # filters first
         mock_filter.return_value.update.assert_called_once_with(kafka_skip=True)
+
+    def test_queryset_bulk_create_kafka_skip_true_on_suppression(self):
+        instance = self.model(kafka_skip=False)
+
+        with suppress():
+            self.model.objects.bulk_create([instance])
+
+        self.assertTrue(instance.kafka_skip)
