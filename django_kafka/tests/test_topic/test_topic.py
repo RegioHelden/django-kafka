@@ -1,10 +1,13 @@
+from unittest import mock
 from unittest.mock import call, patch
 
 from confluent_kafka.serialization import MessageField
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from django_kafka import producer
 from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.producer import Suppression, suppress, unsuppress
+from django_kafka.serialization import NoOpSerializer
 from django_kafka.topic import TopicConsumer, TopicProducer
 
 
@@ -282,3 +285,110 @@ class TopicConsumerTestCase(SimpleTestCase):
                     field,
                     headers=headers,
                 )
+
+
+@mock.patch("django_kafka.producer.Producer.produce")
+class TopicProducerSuppressTestCase(TestCase):
+    class TestTopicA(TopicProducer):
+        key_serializer = NoOpSerializer
+        value_serializer = NoOpSerializer
+
+        name = "topicA"
+
+    class TestTopicB(TopicProducer):
+        key_serializer = NoOpSerializer
+        value_serializer = NoOpSerializer
+
+        name = "topicB"
+
+    class TestTopicC(TopicProducer):
+        key_serializer = NoOpSerializer
+        value_serializer = NoOpSerializer
+
+        name = "topicC"
+
+    def test_suppression_active(self, mock_produce):
+        # suppress should not be active if it hasn't been called
+        self.assertFalse(Suppression.active("topicA"))
+
+    def test_suppress_all(self, mock_produce):
+        with suppress():
+            self.TestTopicA().produce(value="", key="")
+
+        mock_produce.produce.assert_not_called()
+
+    def test_suppress_topic_list(self, mock_produce):
+        with suppress(["topicA"]):
+            self.TestTopicA().produce(value="", key="")
+            self.TestTopicB().produce(value="", key="")
+
+        mock_produce.assert_called_once()
+        self.assertEqual(mock_produce.call_args.args[0], "topicB")
+
+    def test_suppress_nested_usage(self, mock_produce):
+        """tests that message suppression lists are combined with later contexts"""
+        with suppress(["topicA"]), suppress(["topicB"]):
+            self.TestTopicA().produce(value="", key="")
+            self.TestTopicB().produce(value="", key="")
+            self.TestTopicC().produce(value="", key="")
+
+        mock_produce.assert_called_once()
+        self.assertEqual(mock_produce.call_args.args[0], "topicC")
+
+    def test_suppress_nested_usage_all(self, mock_produce):
+        """test that global message suppression is maintained by later contexts"""
+        with suppress(), suppress(["topicA"]):
+            self.TestTopicA().produce(value="", key="")
+
+        mock_produce.assert_not_called()
+
+    def test_suppress_usable_as_decorator(self, mock_produce):
+        @suppress(["topicA"])
+        def _produce_args():
+            self.TestTopicA().produce(value="", key="")
+
+        @suppress()
+        def _produce_empty_args():
+            self.TestTopicA().produce(value="", key="")
+
+        @suppress
+        def _produce_no_args():
+            self.TestTopicA().produce(value="", key="")
+
+        _produce_args()
+        _produce_empty_args()
+        _produce_no_args()
+
+        mock_produce.return_value.produce.assert_not_called()
+
+    def test_unsuppress(self, mock_produce):
+        with suppress(["topicA"]), unsuppress():
+            self.TestTopicA().produce(value="", key="")
+
+        self.assertEqual(mock_produce.call_args.args[0], "topicA")
+
+    def test_unsuppress__decorator(self, mock_produce):
+        @suppress(["topicA"])
+        @unsuppress()
+        def _produce_empty_args():
+            self.TestTopicA().produce(value="", key="")
+
+        @suppress(["topicA"])
+        @unsuppress
+        def _produce_no_args():
+            self.TestTopicA().produce(value="", key="")
+
+        _produce_empty_args()
+        _produce_no_args()
+
+        self.assertEqual(mock_produce.call_count, 2)
+        self.assertEqual(mock_produce.call_args_list[0].args[0], "topicA")
+        self.assertEqual(mock_produce.call_args_list[1].args[0], "topicA")
+
+    def test_suppress_resets(self, mock_produce):
+        with suppress(["topicA"]):
+            self.TestTopicA().produce(value="", key="")
+        self.TestTopicA().produce(value="", key="")
+
+        mock_produce.assert_called_once()
+        self.assertEqual(mock_produce.call_args.args[0], "topicA")
