@@ -5,6 +5,13 @@ from django_kafka.producer import Suppression
 
 
 class KafkaConnectSkipQueryset(models.QuerySet):
+    def bulk_create(self, objs, *args, **kwargs):
+        if Suppression.active():
+            for obj in objs:
+                obj.kafka_skip = True
+
+        return super().bulk_create(objs, *args, **kwargs)
+
     def update(self, **kwargs) -> int:
         if Suppression.active():
             kwargs["kafka_skip"] = True
