@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.1.1](https://github.com/RegioHelden/django-kafka/tree/v1.1.1) (2026-02-25)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.1.0...v1.1.1)
+
+**Fixed bugs:**
+
+- fix: set kafka\_skip in bulk\_create if producer suppression active, refs \#19 [\#230](https://github.com/RegioHelden/django-kafka/pull/230) (@stefan-cardnell-rh)
+
 ## [v1.1.0](https://github.com/RegioHelden/django-kafka/tree/v1.1.0) (2026-02-25)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.0.1...v1.1.0)
