@@ -5,6 +5,7 @@ from django.test import SimpleTestCase, override_settings
 from django_kafka import DjangoKafka
 from django_kafka.conf import SETTINGS_KEY
 from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.models.model_sync.registry import ModelSyncRegistry, model_sync_registry
 from django_kafka.producer import Producer
 from django_kafka.registry import ConsumersRegistry
 
@@ -15,6 +16,11 @@ class DjangoKafkaTestCase(SimpleTestCase):
 
         # registry is there (registry itself is tested in a separate testcase)
         self.assertIsInstance(kafka.consumers, ConsumersRegistry)
+
+    def test_model_syncs_registry(self):
+        kafka = DjangoKafka()
+        self.assertIsInstance(kafka.model_syncs, ModelSyncRegistry)
+        self.assertIs(kafka.model_syncs, model_sync_registry)
 
     def test_producer(self):
         kafka = DjangoKafka()

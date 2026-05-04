@@ -64,3 +64,8 @@ docs/_build
 
 # database
 db.sqlite3
+
+# AI
+.agents/
+.claude/
+skills-lock.json

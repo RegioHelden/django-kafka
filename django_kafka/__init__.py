@@ -33,8 +33,10 @@ def autodiscover():
     autodiscover_modules(
         "consumers",
         "connectors",
+        "model_syncs",
         "kafka.consumers",
         "kafka.connectors",
+        "kafka.model_syncs",
     )
 
 
@@ -42,6 +44,12 @@ class DjangoKafka:
     connectors = ConnectorsRegistry()
     consumers = ConsumersRegistry()
     retry = RetrySettings
+
+    @cached_property
+    def model_syncs(self):
+        from django_kafka.models.model_sync.registry import model_sync_registry  # noqa: PLC0415
+
+        return model_sync_registry
 
     @cached_property
     def producer(self) -> Producer:
