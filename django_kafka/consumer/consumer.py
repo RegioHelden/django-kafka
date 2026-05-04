@@ -14,13 +14,13 @@ from django_kafka.conf import settings
 from django_kafka.exceptions import DjangoKafkaError
 
 from .managers import PauseManager, RetryManager
+from .topics import Topics
 
 if TYPE_CHECKING:
     from multiprocessing import Event
 
     from confluent_kafka import TopicPartition, cimpl
 
-    from django_kafka.consumer import Topics
     from django_kafka.retry.settings import RetrySettings
     from django_kafka.topic import TopicConsumer
 
@@ -216,7 +216,8 @@ class Consumer:
         if msg:
             topic = self.get_topic(msg)
             error = (
-                f"{error} on '{topic.__class__.__module__}.{topic.__class__.__name__}'"
+                f"{error} on '{topic.__class__.__module__}.{topic.__class__.__name__}' "
+                f"(topic={msg.topic()} partition={msg.partition()} offset={msg.offset()})"
             )
 
             if msg_error := msg.error():
@@ -291,6 +292,12 @@ class Consumer:
 
     def start(self, stop_event: Event | None = None):
         logger.info("Starting consumer %s", self.__class__)
+        if not self.topics.names:
+            logger.warning(
+                "Consumer %s has no topics, skipping",
+                self.__class__,
+            )
+            return
         try:
             self.subscribe()
             while stop_event is None or not stop_event.is_set():

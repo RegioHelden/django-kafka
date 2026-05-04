@@ -43,6 +43,18 @@ class Connector(ABC):
     def config(self) -> dict:
         """Configurations for the connector."""
 
+    @property
+    def final_config(self) -> dict:
+        """Returns config merged with model sync source configurations."""
+
+        from django_kafka.models.model_sync.registry import model_sync_registry
+
+        config = {**self.config}
+        for sync_instance in model_sync_registry.get_for_connector(self):
+            if sync_instance.source is not None:
+                sync_instance.source.setup(config)
+        return config
+
     def __init__(self):
         if not settings.CONNECT_HOST:
             raise DjangoKafkaError("Kafka `CONNECT_HOST` is not configured.")
@@ -66,7 +78,7 @@ class Connector(ABC):
         return True
 
     def submit(self) -> dict:
-        response = self.client.update_or_create(self.name, self.config)
+        response = self.client.update_or_create(self.name, self.final_config)
 
         if not response.ok:
             raise DjangoKafkaError(response.text, context=response)
@@ -74,7 +86,7 @@ class Connector(ABC):
         return response.json()
 
     def is_valid(self, raise_exception=False) -> bool:
-        response = self.client.validate(self.config)
+        response = self.client.validate(self.final_config)
 
         if raise_exception and not response.ok:
             raise DjangoKafkaError(response.text, context=response)

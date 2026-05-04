@@ -44,13 +44,23 @@ DEFAULTS = {
     # value to every request method call
     "CONNECT_REQUESTS_TIMEOUT": 30,
     "CONNECTOR_NAME_PREFIX": "",
-    # relation resolver settings
+    # e.g. {"HOST": "...", "PORT": "...", "NAME": "...", "USER": "...", "PASSWORD": "..."}
+    "CONNECT_DATABASE": None,
+    # Relations resolver
     # ruff: noqa: E501
     "TEMPORAL_TASK_QUEUE": "django-kafka",
     "RELATION_RESOLVER": "django_kafka.relations_resolver.resolver.RelationResolver",
     "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
     "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
     "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
+    # Model sync
+    "MODEL_SYNC_SOURCE_CONNECTOR": None,  # e.g. "myapp.connectors.MyConnector"
+    "MODEL_SYNC_TOPIC_PREFIX": None,  # e.g. "myapp" → topic: "myapp.public.mytable"
+    "MODEL_SYNC_DB_SCHEMA": "public",  # PostgreSQL schema name used in topic names and table lists
+    "MODEL_SYNC_CONSUMER": "django_kafka.models.model_sync.sync.ModelSyncSinkConsumer",
+    "MODEL_SYNC_CONSUMER_GROUP": "django-kafka.model-sync",
+    "MODEL_SYNC_ENRICHER_CONSUMER": "django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer",
+    "MODEL_SYNC_ENRICHER_GROUP": "django-kafka.model-sync-enricher",
 }
 
 
