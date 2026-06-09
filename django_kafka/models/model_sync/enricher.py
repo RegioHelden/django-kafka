@@ -23,14 +23,14 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
 
     transform_method_prefix = "enrich"
 
-    def __init__(self, sync_cls: type["ModelSync"]):
-        self.sync_cls = sync_cls
-        self.reproduce_model = sync_cls.model
-        super().__init__(transforms=sync_cls.enrich_transforms)
+    def __init__(self, sync: "ModelSync"):
+        self.sync = sync
+        self.reproduce_model = sync.model
+        super().__init__(transforms=sync.enrich_transforms)
 
     @property
     def name(self) -> str:
-        return self.sync_cls.get_enriched_topic()
+        return self.sync.get_enriched_topic()
 
     def _extended_schemas(
         self,
@@ -49,7 +49,7 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         value_obj = AvroSchema.from_json(value_schema) if value_schema else None
 
         new_key_fields, new_value_fields = self.update_schema(
-            self.sync_cls,
+            self.sync,
             key_obj.fields if key_obj else [],
             value_obj.fields if value_obj else [],
         )
@@ -70,7 +70,7 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         key_schema: str | None = None,
         value_schema: str | None = None,
     ) -> None:
-        msg_key, msg_value = self.apply_transforms(self.sync_cls, msg_key, msg_value)
+        msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
 
         # Forward writer schemas extended with our transforms' deltas so the
         # enriched topic uses the correct schema on both sides. Falls back
@@ -95,9 +95,9 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         )
 
     @classmethod
-    def for_sync(cls, sync_cls: type["ModelSync"]) -> ReproduceTopic:
+    def for_sync(cls, sync: "ModelSync") -> ReproduceTopic:
         """
-        Build the ReproduceTopic for `sync_cls` and register it with the
+        Build the ReproduceTopic for `sync` and register it with the
         enricher Consumer.
 
         Called by `ModelSyncRegistry._register_enricher` whenever a ModelSync
@@ -105,10 +105,10 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         the source topic, runs the enricher's `reproduce`, and produces to the
         enriched topic.
         """
-        instance = cls(sync_cls)
+        instance = cls(sync)
 
         class _ReproduceTopic(ReproduceTopic):
-            name = sync_cls.source_topic()
+            name = sync.source_topic()
             reproducer = instance
 
             def consume(self, msg):

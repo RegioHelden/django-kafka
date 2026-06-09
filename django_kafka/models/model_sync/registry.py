@@ -80,7 +80,7 @@ class ModelSyncRegistry(Registry["ModelSync"]):
         )
         self._ensure_consumer_registered(consumer_path)
         self._topics[consumer_path].append(
-            ModelSyncEnricher.for_sync(model_sync_cls),
+            ModelSyncEnricher.for_sync(model_sync_cls()),
         )
 
     def get_for_connector(

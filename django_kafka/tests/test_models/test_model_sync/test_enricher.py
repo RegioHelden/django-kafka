@@ -18,21 +18,21 @@ class ModelSyncEnricherForSyncTestCase(TestCase):
     def test_returns_reproduce_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
-        topic = ModelSyncEnricher.for_sync(sync_cls)
+        topic = ModelSyncEnricher.for_sync(sync_cls())
         self.assertIsInstance(topic, ReproduceTopic)
 
     def test_reproduce_topic_name_is_source_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
         with mock.patch("django_kafka.conf.settings.MODEL_SYNC_TOPIC_PREFIX", "app"):
-            topic = ModelSyncEnricher.for_sync(sync_cls)
+            topic = ModelSyncEnricher.for_sync(sync_cls())
             self.assertEqual(topic.name, sync_cls.source_topic())
 
     def test_enricher_name_is_enriched_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
         with mock.patch("django_kafka.conf.settings.MODEL_SYNC_TOPIC_PREFIX", "app"):
-            topic = ModelSyncEnricher.for_sync(sync_cls)
+            topic = ModelSyncEnricher.for_sync(sync_cls())
             self.assertEqual(topic.reproducer.name, sync_cls.get_enriched_topic())
 
 
@@ -40,7 +40,7 @@ class ModelSyncEnricherSchemaTestCase(TestCase):
     def test_extended_schemas_adds_enrich_fields_to_value(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
-        enricher = ModelSyncEnricher(sync_cls)
+        enricher = ModelSyncEnricher(sync_cls())
 
         source_value = AvroSchema.from_model(SimpleModel, name="Value").to_json()
         extended_value = enricher._extended_schemas(None, source_value)[1]
@@ -52,7 +52,7 @@ class ModelSyncEnricherSchemaTestCase(TestCase):
     def test_extended_schemas_passthrough_without_transforms(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync(registry)
-        enricher = ModelSyncEnricher(sync_cls)
+        enricher = ModelSyncEnricher(sync_cls())
 
         source_value = '{"type":"record","name":"Value","fields":[]}'
         extended = enricher._extended_schemas(None, source_value)[1]
@@ -63,7 +63,7 @@ class ModelSyncEnricherReproduceTestCase(TestCase):
     def _make_enricher(self, enrich_fn=None):
         registry = ModelSyncRegistry()
         attrs = {"enrich": staticmethod(enrich_fn)} if enrich_fn else {}
-        return ModelSyncEnricher(make_sync_with_enrich(registry, **attrs))
+        return ModelSyncEnricher(make_sync_with_enrich(registry, **attrs)())
 
     def test_upsert_merges_value_and_enrich_result(self):
         def enrich(key, value) -> _ExtraFields:

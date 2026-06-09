@@ -402,7 +402,7 @@ class TopicTransformsMixin:
 
     def apply_transforms(
         self,
-        sync: "type[ModelSync]",
+        sync: "ModelSync",
         msg_key: dict | None,
         msg_value: dict | None,
     ) -> tuple[dict | None, dict | None]:
@@ -419,7 +419,7 @@ class TopicTransformsMixin:
 
     def update_schema(
         self,
-        sync: "type[ModelSync]",
+        sync: "ModelSync",
         key_fields: list[dict],
         value_fields: list[dict],
     ) -> tuple[list[dict], list[dict]]:
