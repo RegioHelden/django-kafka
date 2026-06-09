@@ -18,21 +18,21 @@ class ModelSyncEnricherForSyncTestCase(TestCase):
     def test_returns_reproduce_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
-        topic = ModelSyncEnricher.for_sync(sync_cls())
+        topic = ModelSyncEnricher.get_reproduce_topic(sync_cls())
         self.assertIsInstance(topic, ReproduceTopic)
 
     def test_reproduce_topic_name_is_source_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
         with mock.patch("django_kafka.conf.settings.MODEL_SYNC_TOPIC_PREFIX", "app"):
-            topic = ModelSyncEnricher.for_sync(sync_cls())
+            topic = ModelSyncEnricher.get_reproduce_topic(sync_cls())
             self.assertEqual(topic.name, sync_cls.source_topic())
 
     def test_enricher_name_is_enriched_topic(self):
         registry = ModelSyncRegistry()
         sync_cls = make_sync_with_enrich(registry)
         with mock.patch("django_kafka.conf.settings.MODEL_SYNC_TOPIC_PREFIX", "app"):
-            topic = ModelSyncEnricher.for_sync(sync_cls())
+            topic = ModelSyncEnricher.get_reproduce_topic(sync_cls())
             self.assertEqual(topic.reproducer.name, sync_cls.get_enriched_topic())
 
 
