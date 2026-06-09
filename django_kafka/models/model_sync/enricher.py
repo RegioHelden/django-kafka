@@ -68,7 +68,10 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         key_schema: str | None = None,
         value_schema: str | None = None,
     ) -> None:
-        msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
+        try:
+            msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
+        except self.sync.model.DoesNotExist:
+            return
 
         # Forward writer schemas extended with our transforms' deltas so the
         # enriched topic uses the correct schema on both sides. Falls back

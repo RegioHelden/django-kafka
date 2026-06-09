@@ -89,6 +89,15 @@ class ModelSyncEnricherReproduceTestCase(TestCase):
             key_serializer_kwargs={},
         )
 
+    def test_skips_reproduce_when_instance_deleted(self):
+        def enrich(key, value) -> _ExtraFields:
+            raise SimpleModel.DoesNotExist
+
+        enricher = self._make_enricher(enrich_fn=enrich)
+        with mock.patch.object(enricher, "produce") as mock_produce:
+            enricher.reproduce({"id": 1}, {"name": "test"}, is_deletion=False)
+        mock_produce.assert_not_called()
+
     def test_schemas_passed_to_produce(self):
         enricher = self._make_enricher()
         with mock.patch.object(enricher, "produce") as mock_produce:
