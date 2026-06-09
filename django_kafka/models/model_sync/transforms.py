@@ -81,7 +81,7 @@ class FieldTransform(Transform, ABC):
       - `transform_value(sync, msg_key, msg_value, part)`:
         compute the new value for the field. `part` indicates which side
         will receive the result.
-      - `output_avro_type(sync, source_field)`: Avro type of the
+      - `output_avro_type(sync, schema_field)`: Avro type of the
         produced field. Same type used for both sides when `apply_to=BOTH`.
     """
 
@@ -103,19 +103,19 @@ class FieldTransform(Transform, ABC):
     def output_avro_type(
         self,
         sync: "ModelSync",
-        source_field: dict | None,
+        schema_field: dict | None,
     ) -> Any:
         """
         Avro type of the produced field.
         Default: keep the source field's type.
         Subclasses override when the produced type differs from source.
         """
-        if source_field is None:
+        if schema_field is None:
             raise ValueError(
                 f"{type(self).__name__}.output_avro_type cannot fall back to "
                 f"the source field type because '{self.source}' is not in the schema.",
             )
-        return source_field["type"]
+        return schema_field["type"]
 
     def apply(self, sync, msg_key, msg_value):
         # Compute new values from the *original* key+value so each side's
@@ -153,7 +153,7 @@ class FieldTransform(Transform, ABC):
 
     def _update_part_schema(self, sync, fields):
         target = self.target or self.source
-        source_field = next(
+        schema_field = next(
             (f for f in fields if f["name"] == self.source),
             None,
         )
@@ -166,7 +166,7 @@ class FieldTransform(Transform, ABC):
         result.append(
             {
                 "name": target,
-                "type": self.output_avro_type(sync, source_field),
+                "type": self.output_avro_type(sync, schema_field),
             },
         )
         return result
@@ -193,7 +193,7 @@ class StaticValueTransform(FieldTransform):
     def transform_value(self, sync, msg_key, msg_value, part):
         return self.value
 
-    def output_avro_type(self, sync, source_field):
+    def output_avro_type(self, sync, schema_field):
         return python_type_to_avro(type(self.value))
 
 
@@ -216,9 +216,9 @@ class DateFromEpochTransform(FieldTransform):
             return None
         return self.epoch_date + datetime.timedelta(days=days)
 
-    def output_avro_type(self, sync, source_field):
+    def output_avro_type(self, sync, schema_field):
         # The wire type stays int — only the Python representation changes.
-        return source_field["type"] if source_field else "int"
+        return schema_field["type"] if schema_field else "int"
 
 
 @dataclass
@@ -238,8 +238,8 @@ class DateTimeFromEpochMillisTransform(FieldTransform):
             tz=datetime.UTC,
         )
 
-    def output_avro_type(self, sync, source_field):
-        return source_field["type"] if source_field else "long"
+    def output_avro_type(self, sync, schema_field):
+        return schema_field["type"] if schema_field else "long"
 
 
 @dataclass
@@ -268,7 +268,7 @@ class SyncMethodTransform(FieldTransform):
     def transform_value(self, sync, msg_key, msg_value, part):
         return self._resolve_method(sync)(msg_key, msg_value)
 
-    def output_avro_type(self, sync, source_field):
+    def output_avro_type(self, sync, schema_field):
         method = self._resolve_method(sync)
         return_type = get_type_hints(method).get("return")
         if return_type is None:
