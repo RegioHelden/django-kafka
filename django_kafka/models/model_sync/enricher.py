@@ -59,7 +59,11 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         )
 
     def reproduce(
-        self, msg_key: Any, msg_value: Any, is_deletion: bool, msg: Any = None,
+        self,
+        msg_key: Any,
+        msg_value: Any,
+        is_deletion: bool,
+        msg: Any = None,
     ) -> None:
         try:
             msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
@@ -72,7 +76,8 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         key_schema = get_writer_schema(msg.key()) if msg and msg.key() else None
         value_schema = get_writer_schema(msg.value()) if msg and msg.value() else None
         new_key_schema, new_value_schema = self._extended_schemas(
-            key_schema, value_schema,
+            key_schema,
+            value_schema,
         )
         key_kwargs = {"schema_str": new_key_schema} if new_key_schema else {}
 

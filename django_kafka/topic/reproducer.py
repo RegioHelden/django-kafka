@@ -86,7 +86,11 @@ class TopicReproducer:
         return _ReproduceTopic()
 
     def reproduce(
-        self, key: Any, value: Any, is_deletion: bool, msg: Any = None,
+        self,
+        key: Any,
+        value: Any,
+        is_deletion: bool,
+        msg: Any = None,
     ) -> None:
         """receives the consumed message data and reproduces it as needed
 

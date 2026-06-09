@@ -149,12 +149,9 @@ class DbzJdbcSink(ConnectorSink):
         rm = "MsRmKafkaSkip"
         add = "MsAddKafkaSkip"
         cast = "MsCastKafkaSkip"
-        existing = config.get("transforms")
-        new_transforms = f"{rm},{add},{cast}"
-        if existing:
-            config["transforms"] = f"{existing},{new_transforms}"
-        else:
-            config["transforms"] = new_transforms
+        existing = config.get("transforms", "")
+        transforms = [t for t in existing.split(",") if t] if existing else []
+        config["transforms"] = ",".join([*transforms, rm, add, cast])
         config[f"transforms.{rm}.type"] = (
             "org.apache.kafka.connect.transforms.ReplaceField$Value"
         )
