@@ -122,12 +122,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         # lookup). Pass an empty dict for msg_key so consume_<field> methods
         # accepting both args don't break.
         for transform_step in self.transforms or ():
-            msg_value = transform_step.apply(
-                self.model_sync,
-                {},
-                msg_value,
-                "consume",
-            )[1]
+            msg_value = transform_step.apply(self.model_sync, {}, msg_value)[1]
         return self._field_filter(msg_value)
 
     @cached_property
@@ -141,9 +136,9 @@ class PythonSinkTopicBase(ModelTopicConsumer):
             return lambda message: message
         produces: set[str] = set()
         for transform_step in self.model_sync.enrich_transforms:
-            produces |= transform_step.produces(self.model_sync, "enrich")
+            produces |= transform_step.produces(self.model_sync)
         for transform_step in self.transforms or ():
-            produces |= transform_step.produces(self.model_sync, "consume")
+            produces |= transform_step.produces(self.model_sync)
         if isinstance(fields, IncludeFields):
             allowed = set(fields) | produces
             return lambda message: {

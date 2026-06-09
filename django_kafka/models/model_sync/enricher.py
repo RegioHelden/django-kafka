@@ -21,8 +21,6 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
     not a freshly-registered one.
     """
 
-    transform_method_prefix = "enrich"
-
     def __init__(self, sync: "ModelSync"):
         self.sync = sync
         self.reproduce_model = sync.model

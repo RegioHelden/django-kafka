@@ -40,7 +40,6 @@ class Transform(ABC):
         sync: "ModelSync",
         msg_key: dict,
         msg_value: dict,
-        prefix: str,
     ) -> tuple[dict, dict]:
         """Return new `(msg_key, msg_value)`."""
 
@@ -50,11 +49,10 @@ class Transform(ABC):
         sync: "ModelSync",
         key_fields: list[dict],
         value_fields: list[dict],
-        prefix: str,
     ) -> tuple[list[dict], list[dict]]:
         """Return updated `(key_fields, value_fields)`."""
 
-    def produces(self, sync: "ModelSync", prefix: str) -> set[str]:
+    def produces(self, sync: "ModelSync") -> set[str]:
         """
         Field names this transform writes into the message.
 
@@ -80,10 +78,10 @@ class FieldTransform(Transform, ABC):
         alongside target.
 
     Subclasses implement:
-      - `transform_value(sync, msg_key, msg_value, part, prefix)`:
+      - `transform_value(sync, msg_key, msg_value, part)`:
         compute the new value for the field. `part` indicates which side
         will receive the result.
-      - `output_avro_type(sync, source_field, prefix)`: Avro type of the
+      - `output_avro_type(sync, source_field)`: Avro type of the
         produced field. Same type used for both sides when `apply_to=BOTH`.
     """
 
@@ -99,7 +97,6 @@ class FieldTransform(Transform, ABC):
         msg_key: dict,
         msg_value: dict,
         part: MessagePart,
-        prefix: str,
     ) -> Any:
         """Compute the new value for `source`."""
 
@@ -107,7 +104,6 @@ class FieldTransform(Transform, ABC):
         self,
         sync: "ModelSync",
         source_field: dict | None,
-        prefix: str,
     ) -> Any:
         """
         Avro type of the produced field.
@@ -121,30 +117,18 @@ class FieldTransform(Transform, ABC):
             )
         return source_field["type"]
 
-    def apply(self, sync, msg_key, msg_value, prefix):
+    def apply(self, sync, msg_key, msg_value):
         # Compute new values from the *original* key+value so each side's
         # `transform_value` sees the same input regardless of order.
         new_key = msg_key
         new_value = msg_value
         if self.apply_to & MessagePart.KEY:
-            new_key = self._apply_to_part(
-                sync,
-                msg_key,
-                msg_value,
-                MessagePart.KEY,
-                prefix,
-            )
+            new_key = self._apply_to_part(sync, msg_key, msg_value, MessagePart.KEY)
         if self.apply_to & MessagePart.VALUE:
-            new_value = self._apply_to_part(
-                sync,
-                msg_key,
-                msg_value,
-                MessagePart.VALUE,
-                prefix,
-            )
+            new_value = self._apply_to_part(sync, msg_key, msg_value, MessagePart.VALUE)
         return new_key, new_value
 
-    def _apply_to_part(self, sync, msg_key, msg_value, part, prefix):
+    def _apply_to_part(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         result = dict(message)
         if self.replace:
@@ -154,21 +138,20 @@ class FieldTransform(Transform, ABC):
             msg_key,
             msg_value,
             part,
-            prefix,
         )
         return result
 
-    def update_schema(self, sync, key_fields, value_fields, prefix):
+    def update_schema(self, sync, key_fields, value_fields):
         if self.apply_to & MessagePart.KEY:
-            key_fields = self._update_part_schema(sync, key_fields, prefix)
+            key_fields = self._update_part_schema(sync, key_fields)
         if self.apply_to & MessagePart.VALUE:
-            value_fields = self._update_part_schema(sync, value_fields, prefix)
+            value_fields = self._update_part_schema(sync, value_fields)
         return key_fields, value_fields
 
-    def produces(self, sync, prefix):
+    def produces(self, sync):
         return {self.target or self.source}
 
-    def _update_part_schema(self, sync, fields, prefix):
+    def _update_part_schema(self, sync, fields):
         target = self.target or self.source
         source_field = next(
             (f for f in fields if f["name"] == self.source),
@@ -183,7 +166,7 @@ class FieldTransform(Transform, ABC):
         result.append(
             {
                 "name": target,
-                "type": self.output_avro_type(sync, source_field, prefix),
+                "type": self.output_avro_type(sync, source_field),
             },
         )
         return result
@@ -195,7 +178,7 @@ class CoalesceTransform(FieldTransform):
 
     default: Any = None
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
+    def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         v = message.get(self.source)
         return v if v is not None else self.default
@@ -207,10 +190,10 @@ class StaticValueTransform(FieldTransform):
 
     value: Any = None
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
+    def transform_value(self, sync, msg_key, msg_value, part):
         return self.value
 
-    def output_avro_type(self, sync, source_field, prefix):
+    def output_avro_type(self, sync, source_field):
         return python_type_to_avro(type(self.value))
 
 
@@ -226,14 +209,14 @@ class DateFromEpochTransform(FieldTransform):
 
     epoch_date = datetime.date(1970, 1, 1)
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
+    def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         days = message.get(self.source)
         if days is None or days == "":
             return None
         return self.epoch_date + datetime.timedelta(days=days)
 
-    def output_avro_type(self, sync, source_field, prefix):
+    def output_avro_type(self, sync, source_field):
         # The wire type stays int — only the Python representation changes.
         return source_field["type"] if source_field else "int"
 
@@ -245,7 +228,7 @@ class DateTimeFromEpochMillisTransform(FieldTransform):
     timezone-aware `datetime.datetime`.
     """
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
+    def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         millis = message.get(self.source)
         if millis is None or millis == "":
@@ -255,7 +238,7 @@ class DateTimeFromEpochMillisTransform(FieldTransform):
             tz=datetime.UTC,
         )
 
-    def output_avro_type(self, sync, source_field, prefix):
+    def output_avro_type(self, sync, source_field):
         return source_field["type"] if source_field else "long"
 
 
@@ -265,8 +248,10 @@ class SyncMethodTransform(FieldTransform):
     Delegate to a method on the ModelSync.
 
     If `method` is set, calls `getattr(sync, method)(msg_key, msg_value)`.
-    Otherwise falls back to `getattr(sync, f"{prefix}_{source}")(msg_key, msg_value)`
-    where `prefix` is `enrich` for outgoing transforms or `consume` for incoming.
+    Otherwise falls back to `getattr(sync, f"{prefix}_{source}")(msg_key, msg_value)`.
+
+    Use `EnrichMethodTransform` or `ConsumeMethodTransform` for auto-naming
+    without an explicit `method`.
 
     The user method receives `(msg_key, msg_value)` and returns the new field
     value. Same value used for both sides when `apply_to=BOTH`.
@@ -275,15 +260,16 @@ class SyncMethodTransform(FieldTransform):
     """
 
     method: str | None = None
+    prefix: str = ""
 
-    def _resolve_method(self, sync, prefix) -> Callable[[dict, dict], Any]:
-        return getattr(sync, self.method or f"{prefix}_{self.source}")
+    def _resolve_method(self, sync) -> Callable[[dict, dict], Any]:
+        return getattr(sync, self.method or f"{self.prefix}_{self.source}")
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
-        return self._resolve_method(sync, prefix)(msg_key, msg_value)
+    def transform_value(self, sync, msg_key, msg_value, part):
+        return self._resolve_method(sync)(msg_key, msg_value)
 
-    def output_avro_type(self, sync, source_field, prefix):
-        method = self._resolve_method(sync, prefix)
+    def output_avro_type(self, sync, source_field):
+        method = self._resolve_method(sync)
         return_type = get_type_hints(method).get("return")
         if return_type is None:
             raise TypeError(
@@ -291,6 +277,20 @@ class SyncMethodTransform(FieldTransform):
                 f"return type annotation for schema derivation.",
             )
         return python_type_to_avro(return_type)
+
+
+@dataclass
+class EnrichMethodTransform(SyncMethodTransform):
+    """Calls `enrich_<source>` on the ModelSync (or explicit `method`)."""
+
+    prefix: str = "enrich"
+
+
+@dataclass
+class ConsumeMethodTransform(SyncMethodTransform):
+    """Calls `consume_<source>` on the ModelSync (or explicit `method`)."""
+
+    prefix: str = "consume"
 
 
 @dataclass
@@ -305,7 +305,7 @@ class RelationTransform(FieldTransform):
     model: type[Model] | None = None
     id_field: str = ""
 
-    def transform_value(self, sync, msg_key, msg_value, part, prefix):
+    def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         return self.model.objects.get(**{self.id_field: message[self.source]})
 
@@ -336,12 +336,11 @@ class EnricherTransform(Transform):
         sync: "ModelSync",
         msg_key: dict,
         msg_value: dict,
-        prefix: str,
     ) -> dict:
         """Return new fields to merge into the message."""
         return self._resolve_method(sync)(msg_key, msg_value)
 
-    def output_type(self, sync: "ModelSync", prefix: str) -> type:
+    def output_type(self, sync: "ModelSync") -> type:
         """Return a typed class describing the fields added by `enrich`."""
         method = self._resolve_method(sync)
         return_type = get_type_hints(method).get("return")
@@ -355,24 +354,24 @@ class EnricherTransform(Transform):
     def _resolve_method(self, sync) -> Callable[[dict, dict], dict]:
         return getattr(sync, self.method)
 
-    def apply(self, sync, msg_key, msg_value, prefix):
-        extras = self.enrich(sync, msg_key, msg_value, prefix)
+    def apply(self, sync, msg_key, msg_value):
+        extras = self.enrich(sync, msg_key, msg_value)
         if self.apply_to & MessagePart.KEY:
             msg_key = {**msg_key, **extras}
         if self.apply_to & MessagePart.VALUE:
             msg_value = {**msg_value, **extras}
         return msg_key, msg_value
 
-    def update_schema(self, sync, key_fields, value_fields, prefix):
-        added = AvroSchema.from_type(self.output_type(sync, prefix)).fields
+    def update_schema(self, sync, key_fields, value_fields):
+        added = AvroSchema.from_type(self.output_type(sync)).fields
         if self.apply_to & MessagePart.KEY:
             key_fields = self._merge_fields(key_fields, added)
         if self.apply_to & MessagePart.VALUE:
             value_fields = self._merge_fields(value_fields, added)
         return key_fields, value_fields
 
-    def produces(self, sync, prefix):
-        return set(get_type_hints(self.output_type(sync, prefix)).keys())
+    def produces(self, sync):
+        return set(get_type_hints(self.output_type(sync)).keys())
 
     @staticmethod
     def _merge_fields(existing: list[dict], added: list[dict]) -> list[dict]:
@@ -383,13 +382,7 @@ class EnricherTransform(Transform):
 class TopicTransformsMixin:
     """
     Resolves and applies a list of Transforms against a ModelSync.
-
-    Used by `ModelSyncEnricher`. Subclasses set `transform_method_prefix`
-    ("enrich" or "consume") to drive method name resolution for
-    SyncMethodTransform fallbacks.
     """
-
-    transform_method_prefix: str
 
     def __init__(
         self,
@@ -407,14 +400,8 @@ class TopicTransformsMixin:
         msg_value: dict | None,
     ) -> tuple[dict | None, dict | None]:
         """Apply transforms in declared order, returning the final pair."""
-        prefix = self.transform_method_prefix
         for transform in self.transforms:
-            msg_key, msg_value = transform.apply(
-                sync,
-                msg_key or {},
-                msg_value or {},
-                prefix,
-            )
+            msg_key, msg_value = transform.apply(sync, msg_key or {}, msg_value or {})
         return msg_key, msg_value
 
     def update_schema(
@@ -424,12 +411,10 @@ class TopicTransformsMixin:
         value_fields: list[dict],
     ) -> tuple[list[dict], list[dict]]:
         """Walk transforms to derive the post-transform Avro schemas."""
-        prefix = self.transform_method_prefix
         for transform in self.transforms:
             key_fields, value_fields = transform.update_schema(
                 sync,
                 key_fields,
                 value_fields,
-                prefix,
             )
         return key_fields, value_fields
