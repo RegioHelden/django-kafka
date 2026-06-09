@@ -36,7 +36,7 @@ class ReproduceTopic(AvroTopicConsumer, ABC):
         value = self.deserialize(msg.value(), MessageField.VALUE, msg.headers())
 
         if not self._skip_reproduce(value):
-            self.reproducer.reproduce(key, value, self._is_deletion(value))
+            self.reproducer.reproduce(key, value, self._is_deletion(value), msg)
 
 
 class TopicReproducer:
@@ -85,7 +85,9 @@ class TopicReproducer:
 
         return _ReproduceTopic()
 
-    def reproduce(self, key: Any, value: Any, is_deletion: bool) -> None:
+    def reproduce(
+        self, key: Any, value: Any, is_deletion: bool, msg: Any = None,
+    ) -> None:
         """receives the consumed message data and reproduces it as needed
 
         calls `_reproduce_upsert` or `_reproduce_deletion`, which must be implemented

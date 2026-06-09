@@ -100,17 +100,20 @@ class ModelSyncEnricherReproduceTestCase(TestCase):
 
     def test_schemas_passed_to_produce(self):
         enricher = self._make_enricher()
-        with mock.patch.object(enricher, "produce") as mock_produce:
-            enricher.reproduce(
-                {"id": 1},
-                {"name": "test"},
-                is_deletion=False,
-                key_schema='{"type":"record","name":"Key","fields":[]}',
-                value_schema='{"type":"record","name":"Value","fields":[]}',
-            )
+        key_schema_str = '{"type":"record","name":"Key","fields":[]}'
+        value_schema_str = '{"type":"record","name":"Value","fields":[]}'
+        msg = mock.MagicMock()
+        msg.key.return_value = mock.MagicMock()
+        msg.value.return_value = mock.MagicMock()
+        with (
+            mock.patch.object(enricher, "produce") as mock_produce,
+            mock.patch(
+                "django_kafka.models.model_sync.enricher.get_writer_schema",
+                side_effect=[key_schema_str, value_schema_str],
+            ),
+        ):
+            enricher.reproduce({"id": 1}, {"name": "test"}, is_deletion=False, msg=msg)
         call_kwargs = mock_produce.call_args.kwargs
-        # both schemas are rebuilt by walking the transforms; assert the
-        # essentials rather than a byte-equal match
         key_schema = json.loads(call_kwargs["key_serializer_kwargs"]["schema_str"])
         value_schema = json.loads(call_kwargs["value_serializer_kwargs"]["schema_str"])
         self.assertEqual(key_schema["name"], "Key")

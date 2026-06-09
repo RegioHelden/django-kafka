@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from confluent_kafka.serialization import MessageField
-
 from django_kafka.conf import settings
 from django_kafka.consumer import Consumer, Topics
 from django_kafka.models.model_sync.transforms import TopicTransformsMixin
@@ -61,12 +59,7 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         )
 
     def reproduce(
-        self,
-        msg_key: Any,
-        msg_value: Any,
-        is_deletion: bool,
-        key_schema: str | None = None,
-        value_schema: str | None = None,
+        self, msg_key: Any, msg_value: Any, is_deletion: bool, msg: Any = None,
     ) -> None:
         try:
             msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
@@ -76,9 +69,10 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         # Forward writer schemas extended with our transforms' deltas so the
         # enriched topic uses the correct schema on both sides. Falls back
         # to producer defaults for keyless or non-Avro-encoded messages.
+        key_schema = get_writer_schema(msg.key()) if msg and msg.key() else None
+        value_schema = get_writer_schema(msg.value()) if msg and msg.value() else None
         new_key_schema, new_value_schema = self._extended_schemas(
-            key_schema,
-            value_schema,
+            key_schema, value_schema,
         )
         key_kwargs = {"schema_str": new_key_schema} if new_key_schema else {}
 
@@ -110,30 +104,6 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         class _ReproduceTopic(ReproduceTopic):
             name = sync.source_topic()
             reproducer = enricher
-
-            def consume(self, msg):
-                msg_key = self.deserialize(
-                    msg.key(),
-                    MessageField.KEY,
-                    msg.headers(),
-                )
-                msg_value = self.deserialize(
-                    msg.value(),
-                    MessageField.VALUE,
-                    msg.headers(),
-                )
-                if not self._skip_reproduce(msg_value):
-                    self.reproducer.reproduce(
-                        msg_key,
-                        msg_value,
-                        self._is_deletion(msg_value),
-                        key_schema=(
-                            get_writer_schema(msg.key()) if msg.key() else None
-                        ),
-                        value_schema=(
-                            get_writer_schema(msg.value()) if msg.value() else None
-                        ),
-                    )
 
         return _ReproduceTopic()
 
