@@ -98,7 +98,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         return False
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
-        rewrites = {r.value_field: r.lookup for r in (self.relations or ()) if r.lookup}
+        rewrites = {r.value_field: r.lookup for r in self.relations if r.lookup}
         return {rewrites.get(field, field): val for field, val in key.items()}
 
     def get_relations(self, msg):
@@ -106,7 +106,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         msg_value = self.deserialize(msg.value(), MessageField.VALUE, msg.headers())
         if self.is_deletion(self.model, msg_key, msg_value):
             return
-        for relation in self.relations or ():
+        for relation in self.relations:
             yield ModelRelation(
                 relation.model,
                 id_field=relation.id_field,
@@ -121,7 +121,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         # ModelTopicConsumer hands us only the value (key was used for the
         # lookup). Pass an empty dict for msg_key so consume_<field> methods
         # accepting both args don't break.
-        for transform_step in self.transforms or ():
+        for transform_step in self.transforms:
             msg_value = transform_step.apply(self.model_sync, {}, msg_value)[1]
         return self._field_filter(msg_value)
 
@@ -137,7 +137,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         produces: set[str] = set()
         for transform_step in self.model_sync.enrich_transforms:
             produces |= transform_step.produces(self.model_sync)
-        for transform_step in self.transforms or ():
+        for transform_step in self.transforms:
             produces |= transform_step.produces(self.model_sync)
         if isinstance(fields, IncludeFields):
             allowed = set(fields) | produces
