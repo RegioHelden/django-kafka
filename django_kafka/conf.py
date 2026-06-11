@@ -57,8 +57,7 @@ DEFAULTS = {
     "MODEL_SYNC_SOURCE_CONNECTOR": None,  # e.g. "myapp.connectors.MyConnector"
     "MODEL_SYNC_TOPIC_PREFIX": None,  # e.g. "myapp" → topic: "myapp.public.mytable"
     "MODEL_SYNC_DB_SCHEMA": "public",  # PostgreSQL schema name used in topic names and table lists
-    "MODEL_SYNC_CONSUMER": "django_kafka.models.model_sync.sync.ModelSyncSinkConsumer",
-    "MODEL_SYNC_CONSUMER_GROUP": "django-kafka.model-sync",
+    "MODEL_SYNC_CONSUMER": None,  # required when any ModelSync uses PythonSink without an explicit `consumer` arg
     "MODEL_SYNC_ENRICHER_CONSUMER": "django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer",
     "MODEL_SYNC_ENRICHER_GROUP": "django-kafka.model-sync-enricher",
 }

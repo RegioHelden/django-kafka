@@ -434,7 +434,7 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink()
 ```
 
-`PythonAvroSink` runs as a topic on the `MODEL_SYNC_CONSUMER`. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
 Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance.
 
@@ -553,8 +553,7 @@ DJANGO_KAFKA = {
     "MODEL_SYNC_SOURCE_CONNECTOR": None,
     "MODEL_SYNC_TOPIC_PREFIX": None,
     "MODEL_SYNC_DB_SCHEMA": "public",
-    "MODEL_SYNC_CONSUMER": "django_kafka.models.model_sync.sync.ModelSyncSinkConsumer",
-    "MODEL_SYNC_CONSUMER_GROUP": "django-kafka.model-sync",
+    "MODEL_SYNC_CONSUMER": None,  # required if any PythonSink omits an explicit `consumer` arg
     "MODEL_SYNC_ENRICHER_CONSUMER": "django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer",
     "MODEL_SYNC_ENRICHER_GROUP": "django-kafka.model-sync-enricher",
 }
@@ -707,14 +706,9 @@ default: `"public"`
 PostgreSQL schema name used when building Debezium `table.include.list` entries and the auto-generated topic names.
 
 #### `MODEL_SYNC_CONSUMER`
-default: `django_kafka.models.model_sync.sync.ModelSyncSinkConsumer`
+default: `None`
 
-Dotted path to the `Consumer` that runs `PythonSink` topics. Override to plug `PythonSink`-driven syncs into a project-specific consumer (custom retry settings, group id, etc.).
-
-#### `MODEL_SYNC_CONSUMER_GROUP`
-default: `"django-kafka.model-sync"`
-
-`group.id` used by the default `MODEL_SYNC_CONSUMER`.
+Dotted path to the `Consumer` that runs `PythonSink` topics. Required if any `ModelSync`'s `PythonSink` doesn't pass an explicit `consumer=` — registration raises otherwise. Define a project consumer (custom group id, retry settings, etc.) and point this setting at it.
 
 #### `MODEL_SYNC_ENRICHER_CONSUMER`
 default: `django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer`

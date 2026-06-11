@@ -19,6 +19,10 @@ from .factories import (
 )
 
 
+@mock.patch(
+    "django_kafka.conf.settings.MODEL_SYNC_CONSUMER",
+    "django_kafka.consumer.Consumer",
+)
 class PythonSinkMakeTopicTestCase(TestCase):
     def _make_sync(self, **attrs):
         registry = ModelSyncRegistry()
@@ -129,6 +133,14 @@ class PythonSinkConsumerPathTestCase(TestCase):
             "myapp.consumers.Default",
         ):
             self.assertEqual(sink.consumer_path, "myapp.consumers.Default")
+
+    def test_consumer_path_raises_when_unconfigured(self):
+        sink = PythonAvroSink()
+        with (
+            mock.patch("django_kafka.conf.settings.MODEL_SYNC_CONSUMER", None),
+            self.assertRaises(ValueError),
+        ):
+            sink.consumer_path  # noqa: B018
 
     def test_topic_consumer_class_default(self):
         self.assertEqual(

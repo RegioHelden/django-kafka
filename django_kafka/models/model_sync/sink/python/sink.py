@@ -27,7 +27,8 @@ class PythonSink(Sink):
         `PythonAvroTopicConsumer`. Users with custom deserialization
         provide their own combined class.
     consumer: dotted path to the Consumer class this sink belongs to.
-        Falls back to MODEL_SYNC_CONSUMER setting.
+        Falls back to MODEL_SYNC_CONSUMER setting. Required — one of the
+        two must be set, otherwise registration raises.
     relations: Relation declarations for FK resolution. Auto-detected
         from the model's non-nullable, non-blank FK fields. An explicit
         entry with `fk` set replaces the auto-detected entry for that
@@ -79,8 +80,14 @@ class PythonSink(Sink):
                 )
 
     @property
-    def consumer_path(self) -> str | None:
-        return self.consumer or getattr(settings, "MODEL_SYNC_CONSUMER", None)
+    def consumer_path(self) -> str:
+        path = self.consumer or getattr(settings, "MODEL_SYNC_CONSUMER", None)
+        if not path:
+            raise ValueError(
+                "PythonSink requires a consumer: pass `consumer=` to the sink "
+                "or set MODEL_SYNC_CONSUMER in DJANGO_KAFKA settings.",
+            )
+        return path
 
     def make_topic(self) -> PythonSinkTopicBase:
         sync = self.instance

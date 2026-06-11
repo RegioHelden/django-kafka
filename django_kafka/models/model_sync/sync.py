@@ -4,7 +4,6 @@ from django.db.models import Model
 
 from django_kafka.conf import settings
 from django_kafka.connect.models import KafkaConnectSkipModel
-from django_kafka.consumer import Consumer, Topics
 from django_kafka.models.model_sync.fields import ExcludeFields, IncludeFields
 from django_kafka.models.model_sync.registry import model_sync_registry
 from django_kafka.models.model_sync.sink import ConnectorSink
@@ -32,7 +31,8 @@ class ModelSync:
     wires up:
         - source ModelSyncs into the configured Kafka Connect source connector,
         - ConnectorSink ModelSyncs as standalone Kafka Connect sink connectors,
-        - PythonSink ModelSyncs as topics on `MODEL_SYNC_CONSUMER`,
+        - PythonSink ModelSyncs as topics on the consumer configured via
+          `PythonSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting,
         - syncs with `enrich_transforms` as ReproduceTopics on the enricher
           consumer.
 
@@ -130,20 +130,3 @@ class ModelSync:
         prefix = settings.MODEL_SYNC_TOPIC_PREFIX
         db_table = f"{settings.MODEL_SYNC_DB_SCHEMA}.{cls.model._meta.db_table}"
         return f"{prefix}.{db_table}" if prefix else db_table
-
-
-class ModelSyncSinkConsumer(Consumer):
-    """
-    Default Consumer that runs the sink topics for ModelSyncs with PythonSink.
-
-    Topics are auto-discovered from the model_sync registry via the
-    owner-aware `Topics` descriptor. Used unless the project sets
-    `MODEL_SYNC_CONSUMER` to its own consumer.
-    """
-
-    topics = Topics()
-    config: ClassVar = {
-        "group.id": settings.MODEL_SYNC_CONSUMER_GROUP,
-        "auto.offset.reset": "earliest",
-        "enable.auto.offset.store": False,
-    }
