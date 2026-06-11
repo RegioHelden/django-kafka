@@ -121,7 +121,7 @@ DJANGO_KAFKA = {
 
 ### `ModelTopicConsumer`:
 
-`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model, the topic to consume from and define a few abstract methods.
+`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model and the topic to consume from, and implement `get_lookup_kwargs`.
 
 ```py
 from django_kafka.topic.model import ModelTopicConsumer
@@ -132,14 +132,20 @@ class MyModelConsumer(ModelTopicConsumer):
     name = "topic"
     model = MyModel
 
-    def is_deletion(self, model, key, value) -> bool:
-        """returns if the message represents a deletion"""
-        return value.pop('__deleted', False)
-    
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
         return {"id": key}
 ```
+
+Deletions are auto-detected from null tombstone messages. If your source signals deletion via a value field, set `deletion_key`:
+
+```py
+class MyModelConsumer(ModelTopicConsumer):
+    ...
+    deletion_key = "__deleted"  # treat messages with this field truthy as deletions
+```
+
+Override `is_deletion` for non-standard schemes.
 
 Model instances will have their attributes synced from the message value. 
 
@@ -158,7 +164,7 @@ class MyModelConsumer(ModelTopicConsumer):
 
 ### `DbzModelTopicConsumer`:
 
-`DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer` and  defines default implementations for `is_deletion` and `get_lookup_kwargs` methods.
+`DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer`, sets `deletion_key = "__deleted"`, and defines a default `get_lookup_kwargs` that looks up by pk.
 
 In Debezium it is possible to [reroute records](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html) from multiple sources to the same topic. In doing so Debezium [inserts a table identifier](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html#_ensure_unique_key) to the key to ensure uniqueness. When this key is inserted, you **must instead** define a `reroute_model_map` to map the table identifier to the model class to be created.
 
@@ -178,7 +184,7 @@ class MyModelConsumer(DbzModelTopicConsumer):
 A few notes:
 
 1. The connector must be using the [event flattening SMT](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html) to simplify the message structure.
-2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field.
+2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field (via `deletion_key`).
 3. The message key is assumed to contain the model PK as a field, [which is the default behaviour](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-message-key-columns) for Debezium source connectors. If you need more complicated lookup behaviour, override `get_lookup_kwargs`.
 
 ### `TopicReproducer`:
@@ -428,7 +434,7 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink()
 ```
 
-`PythonAvroSink` runs as a topic on the `MODEL_SYNC_CONSUMER`. FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+`PythonAvroSink` runs as a topic on the `MODEL_SYNC_CONSUMER`. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
 Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance.
 

@@ -71,6 +71,7 @@ class PythonSinkTopicBase(ModelTopicConsumer):
     # Override the abstract `name` property on TopicConsumer so the
     # combined class is concrete; `__init__` then sets the real value.
     name: str | None = None
+    deletion_key = "__deleted"
 
     def __init__(
         self,
@@ -86,16 +87,6 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         self.model_sync = sync
         self.relations = relations or []
         self.transforms = transforms or []
-
-    def is_deletion(self, model, key, value) -> bool:
-        if value is None:
-            return True
-        deleted = value.pop("__deleted", None)
-        if isinstance(deleted, bool):
-            return deleted
-        if isinstance(deleted, str):
-            return deleted.lower() == "true"
-        return False
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
         rewrites = {r.value_field: r.lookup for r in self.relations if r.lookup}
