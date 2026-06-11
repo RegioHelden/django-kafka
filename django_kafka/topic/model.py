@@ -14,6 +14,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
     model: type[Model] | None = None  # override get_model for dynamic model lookups
     exclude_fields: list[str] = None  # fields to ignore from message value
+    deletion_key: str | None = None  # value field that flags deletion
 
     def transform(self, model, value) -> dict:
         """
@@ -44,9 +45,25 @@ class ModelTopicConsumer(TopicConsumer, ABC):
             if self.model_has_field(model, field_name)
         }
 
-    @abstractmethod
     def is_deletion(self, model, key, value) -> bool:
-        """returns if the message represents a deletion"""
+        """
+        Returns whether the message represents a deletion.
+
+        A `None` value is always treated as a tombstone. When `deletion_key`
+        is set, that field in the value is also checked for a truthy boolean
+        or `"true"` string marker. Override for non-standard schemes.
+        """
+        if value is None:
+            return True
+
+        if self.deletion_key:
+            deleted = value.pop(self.deletion_key, None)
+            if isinstance(deleted, bool):
+                return deleted
+            if isinstance(deleted, str):
+                return deleted.lower() == "true"
+
+        return False
 
     @abstractmethod
     def get_lookup_kwargs(self, model, key, value) -> dict:

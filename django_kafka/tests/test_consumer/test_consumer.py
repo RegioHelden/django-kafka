@@ -50,8 +50,11 @@ class ConsumerTestCase(TestCase):
         },
     )
     def test_run(self, mock_consumer_client, mock_process_message):
+        topic_consumer = MagicMock()
+        topic_consumer.name = "test.topic"
+
         class SomeConsumer(Consumer):
-            topics = MagicMock()
+            topics = Topics(topic_consumer)
             log_error = Mock()
 
         consumer = SomeConsumer()
@@ -140,8 +143,12 @@ class ConsumerTestCase(TestCase):
     @patch("django_kafka.consumer.Consumer.commit_offset")
     @patch("django_kafka.consumer.consumer.ConfluentConsumer")
     def test_process_message_success(self, mock_consumer_client, mock_commit_offset):
+        topic_consumer = MagicMock()
+        topic_consumer.name = "topic"
+        topic_consumer.matches = lambda name: name == "topic"
+
         class SomeConsumer(Consumer):
-            topics = MagicMock()
+            topics = Topics(topic_consumer)
 
         msg = message_mock()
         consumer = SomeConsumer()
@@ -151,7 +158,7 @@ class ConsumerTestCase(TestCase):
         # checks msg had error before processing
         msg.error.assert_called_once_with()
         # Topic.consume called
-        consumer.get_topic(msg).consume.assert_called_once_with(msg)
+        topic_consumer.consume.assert_called_once_with(msg)
         # commit_offset triggered
         mock_commit_offset.assert_called_once_with(msg)
 

@@ -30,29 +30,32 @@ class ReproduceTopicTestCase(SimpleTestCase):
     def test_consume_calls_reproducer_on_deletion_when_value_is_none(self):
         key = {"id": 123}
         value = None
+        msg = message_mock()
         self.topic.deserialize = mock.Mock(side_effect=[key, value])
 
-        self.topic.consume(message_mock())
+        self.topic.consume(msg)
 
-        self.topic.reproducer.reproduce.assert_called_once_with(key, value, True)
+        self.topic.reproducer.reproduce.assert_called_once_with(key, value, True, msg)
 
     def test_consume_calls_reproducer_on_deletion_flag_true(self):
         key = {"id": 5}
         value = {"__deleted": "true"}
+        msg = message_mock()
         self.topic.deserialize = mock.Mock(side_effect=[key, value])
 
-        self.topic.consume(message_mock())
+        self.topic.consume(msg)
 
-        self.topic.reproducer.reproduce.assert_called_once_with(key, value, True)
+        self.topic.reproducer.reproduce.assert_called_once_with(key, value, True, msg)
 
     def test_consume_calls_reproducer_on_normal_event(self):
         key = {"id": 77}
         value = {"foo": "bar"}
+        msg = message_mock()
         self.topic.deserialize = mock.Mock(side_effect=[key, value])
 
-        self.topic.consume(message_mock())
+        self.topic.consume(msg)
 
-        self.topic.reproducer.reproduce.assert_called_once_with(key, value, False)
+        self.topic.reproducer.reproduce.assert_called_once_with(key, value, False, msg)
 
 
 class TopicReproducerGetTopicTestCase(SimpleTestCase):

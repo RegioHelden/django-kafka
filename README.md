@@ -121,7 +121,7 @@ DJANGO_KAFKA = {
 
 ### `ModelTopicConsumer`:
 
-`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model, the topic to consume from and define a few abstract methods.
+`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class, set the model and the topic to consume from, and implement `get_lookup_kwargs`.
 
 ```py
 from django_kafka.topic.model import ModelTopicConsumer
@@ -132,14 +132,20 @@ class MyModelConsumer(ModelTopicConsumer):
     name = "topic"
     model = MyModel
 
-    def is_deletion(self, model, key, value) -> bool:
-        """returns if the message represents a deletion"""
-        return value.pop('__deleted', False)
-    
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
         return {"id": key}
 ```
+
+Deletions are auto-detected from null tombstone messages. If your source signals deletion via a value field, set `deletion_key`:
+
+```py
+class MyModelConsumer(ModelTopicConsumer):
+    ...
+    deletion_key = "__deleted"  # treat messages with this field truthy as deletions
+```
+
+Override `is_deletion` for non-standard schemes.
 
 Model instances will have their attributes synced from the message value. 
 
@@ -158,7 +164,7 @@ class MyModelConsumer(ModelTopicConsumer):
 
 ### `DbzModelTopicConsumer`:
 
-`DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer` and  defines default implementations for `is_deletion` and `get_lookup_kwargs` methods.
+`DbzModelTopicConsumer` helps sync model instances from [debezium source connector](https://debezium.io/documentation/reference/stable/architecture.html) topics. It inherits from `ModelTopicConsumer`, sets `deletion_key = "__deleted"`, and defines a default `get_lookup_kwargs` that looks up by pk.
 
 In Debezium it is possible to [reroute records](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html) from multiple sources to the same topic. In doing so Debezium [inserts a table identifier](https://debezium.io/documentation/reference/stable/transformations/topic-routing.html#_ensure_unique_key) to the key to ensure uniqueness. When this key is inserted, you **must instead** define a `reroute_model_map` to map the table identifier to the model class to be created.
 
@@ -178,7 +184,7 @@ class MyModelConsumer(DbzModelTopicConsumer):
 A few notes:
 
 1. The connector must be using the [event flattening SMT](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html) to simplify the message structure.
-2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field.
+2. [Deletions](https://debezium.io/documentation/reference/stable/transformations/event-flattening.html#extract-new-record-state-delete-tombstone-handling-mode) are detected automatically based on a null message value or the presence of a `__deleted` field (via `deletion_key`).
 3. The message key is assumed to contain the model PK as a field, [which is the default behaviour](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-message-key-columns) for Debezium source connectors. If you need more complicated lookup behaviour, override `get_lookup_kwargs`.
 
 ### `TopicReproducer`:
@@ -390,6 +396,120 @@ django-kafka provides `./manage.py kafka_connect` management command to manage y
 
 See `--help`.
 
+## Model Sync:
+
+`ModelSync` is a declarative wrapper that wires a Django model to a Kafka topic in one class. From a single subclass the framework registers:
+
+- a Debezium source connector (via `Source`) that emits CDC events for the model,
+- an optional enricher consumer that augments messages and re-produces them to a public topic,
+- a sink (via `Sink`) that writes incoming messages back into the model — either through a Kafka Connect JDBC sink or a Python consumer.
+
+Source-only, sink-only, and bidirectional configurations are all valid. `ModelSync` subclasses are auto-discovered under `some_django_app/kafka/model_syncs.py` or `some_django_app/model_syncs.py`.
+
+### One-way source:
+
+```python
+from django_kafka.models.model_sync import DbzPostgresSource, ModelSync
+from my_app.models import Order
+
+
+class OrderSync(ModelSync):
+    model = Order
+    topic = "orders"
+    source = DbzPostgresSource(msg_key_fields=["uuid"])
+```
+
+When `fields` is omitted, all model columns are synced (`column.include.list` is set to `<table>.*`). Set `IncludeFields([...])` or `ExcludeFields([...])` to constrain the column set; the value propagates to the source connector and is also enforced on the sink side as the write filter. With no enricher, Debezium reroutes raw CDC events directly to `topic`.
+
+### Sink with relations resolver:
+
+```python
+from django_kafka.models.model_sync import ModelSync, PythonAvroSink
+from my_app.models import Order
+
+
+class OrderSync(ModelSync):
+    model = Order
+    topic = "orders"
+    sink = PythonAvroSink()
+```
+
+`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+
+Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance.
+
+```python
+from django_kafka.models.model_sync import (
+    IncludeFields, ModelSync, PythonAvroSink, Relation,
+)
+from my_app.models import Customer, Order
+
+
+class OrderSync(ModelSync):
+    model = Order
+    topic = "orders"
+    fields = IncludeFields(["customer__uuid", "amount", "status"])
+    sink = PythonAvroSink(
+        relations=[
+            # non-default id_field + renamed value_field after enrich transform
+            Relation(Customer, id_field="uuid",
+                     value_field="customer__uuid", fk="customer"),
+        ],
+    )
+```
+
+### Bidirectional with enrichment:
+
+```python
+from django_kafka.models.model_sync import (
+    DbzPostgresSource, IncludeFields, MessagePart, ModelSync,
+    PythonAvroSink, Relation, SyncMethodTransform,
+)
+from my_app.models import Customer, Order
+
+
+class OrderSync(ModelSync):
+    model = Order
+    topic = "orders"
+    fields = IncludeFields(["customer_id", "amount", "status"])
+    source = DbzPostgresSource(msg_key_fields=["customer_id", "status"])
+    sink = PythonAvroSink(
+        relations=[
+            Relation(Customer, id_field="uuid",
+                     value_field="customer__uuid", fk="customer"),
+        ],
+    )
+
+    enrich_transforms = [
+        SyncMethodTransform(
+            source="customer_id",
+            target="customer__uuid",
+            apply_to=MessagePart.BOTH,
+        ),
+    ]
+
+    @staticmethod
+    def enrich_customer_id(msg_key: dict, msg_value: dict) -> str:
+        return str(Customer.objects.get(id=msg_key["customer_id"]).uuid)
+```
+
+Bidirectional syncs require [`KafkaConnectSkipModel`](#kafkaconnectskipmodel) (for `kafka_skip`-based loop prevention) and an explicit `topic`. With `enrich_transforms` set, the source publishes to the raw Debezium topic; an enricher consumer (`MODEL_SYNC_ENRICHER_CONSUMER`) reads from there, runs the transforms, and produces to the public `topic`. The sink consumes the public `topic` and writes back into the model.
+
+### Transforms:
+
+Transforms form the per-message pipeline between source-shape and sink-shape data. Each transform declares what it reads (`source`) and what it writes (`target`). Available types:
+
+- `FieldTransform` — per-field base; `apply_to=KEY|VALUE|BOTH`, `replace` controls whether `source` is removed.
+- `SyncMethodTransform` — delegates to `enrich_<source>` / `consume_<source>` on the sync.
+- `EnricherTransform` — calls a sync method returning extras to merge; the method's `TypedDict` return annotation drives the Avro schema delta.
+- `RelationTransform` — replaces a field with a related model instance.
+- `CoalesceTransform`, `StaticValueTransform` — defaults and static values.
+- `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` / `datetime`.
+
+The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite live columns.
+
+See [`MODEL_SYNC_*` settings](#model_sync_source_connector) for configuration.
+
 ## Settings:
 
 **Defaults:**
@@ -430,6 +550,12 @@ DJANGO_KAFKA = {
     "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
     "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
     "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
+    "MODEL_SYNC_SOURCE_CONNECTOR": None,
+    "MODEL_SYNC_TOPIC_PREFIX": None,
+    "MODEL_SYNC_DB_SCHEMA": "public",
+    "MODEL_SYNC_CONSUMER": None,  # required if any PythonSink omits an explicit `consumer` arg
+    "MODEL_SYNC_ENRICHER_CONSUMER": "django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer",
+    "MODEL_SYNC_ENRICHER_GROUP": "django-kafka.model-sync-enricher",
 }
 ```
 
@@ -563,6 +689,36 @@ default: `django_kafka.relations_resolver.daemon.temporal.TemporalDaemon`
 default: `timedelta(seconds=5)`
 
 Defines how often check if relations are resolved for messages in waiting queue.
+
+#### `MODEL_SYNC_SOURCE_CONNECTOR`
+default: `None`
+
+Dotted path to the `Connector` that all `ModelSync` source declarations are merged into. Required when any `ModelSync` defines a `source`. See [Model Sync](#model-sync).
+
+#### `MODEL_SYNC_TOPIC_PREFIX`
+default: `None`
+
+Prefix applied to auto-generated topic names. With prefix `"myapp"` and `MODEL_SYNC_DB_SCHEMA="public"`, the default raw topic for a model with table `mytable` is `myapp.public.mytable`. Set explicitly via `ModelSync.topic` to override.
+
+#### `MODEL_SYNC_DB_SCHEMA`
+default: `"public"`
+
+PostgreSQL schema name used when building Debezium `table.include.list` entries and the auto-generated topic names.
+
+#### `MODEL_SYNC_CONSUMER`
+default: `None`
+
+Dotted path to the `Consumer` that runs `PythonSink` topics. Required if any `ModelSync`'s `PythonSink` doesn't pass an explicit `consumer=` — registration raises otherwise. Define a project consumer (custom group id, retry settings, etc.) and point this setting at it.
+
+#### `MODEL_SYNC_ENRICHER_CONSUMER`
+default: `django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer`
+
+Dotted path to the `Consumer` that runs the enricher reproduce-topics for `ModelSync`s with `enrich_transforms`. Reads from the raw Debezium topic, applies the transforms, and produces to the public `topic`.
+
+#### `MODEL_SYNC_ENRICHER_GROUP`
+default: `"django-kafka.model-sync-enricher"`
+
+`group.id` used by the default `MODEL_SYNC_ENRICHER_CONSUMER`.
 
 ## Suppressing producers:
 
