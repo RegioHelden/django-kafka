@@ -50,9 +50,8 @@ class Connector(ABC):
         from django_kafka.models.model_sync.registry import model_sync_registry
 
         config = {**self.config}
-        for sync_instance in model_sync_registry.get_for_connector(self):
-            if sync_instance.source is not None:
-                sync_instance.source.setup(config)
+        for source in model_sync_registry.get_sources_for_connector(self):
+            source.setup(config)
         return config
 
     def __init__(self):

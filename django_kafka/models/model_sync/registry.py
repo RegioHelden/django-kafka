@@ -94,6 +94,14 @@ class ModelSyncRegistry(Registry["ModelSync"]):
         ):
             yield model_sync_cls()
 
+    def get_sources_for_connector(
+        self,
+        connector: "Connector",
+    ) -> Iterator["ConnectorSource"]:
+        for sync_instance in self.get_for_connector(connector):
+            if sync_instance.source is not None:
+                yield sync_instance.source
+
     def get_topics_for_consumer(
         self,
         consumer: "Consumer",
