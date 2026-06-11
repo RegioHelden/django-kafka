@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django_kafka.conf import settings
@@ -9,6 +10,8 @@ from django_kafka.topic.reproducer import ReproduceTopic, TopicReproducer
 
 if TYPE_CHECKING:
     from django_kafka.models.model_sync.sync import ModelSync
+
+logger = logging.getLogger(__name__)
 
 
 class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer):
@@ -68,6 +71,12 @@ class ModelSyncEnricher(TopicTransformsMixin, AvroTopicProducer, TopicReproducer
         try:
             msg_key, msg_value = self.apply_transforms(self.sync, msg_key, msg_value)
         except self.sync.model.DoesNotExist:
+            logger.debug(
+                "Skipping reproduce for %s: %s instance not found "
+                "(deleted before enrich)",
+                type(self.sync).__name__,
+                self.sync.model.__name__,
+            )
             return
 
         # Forward writer schemas extended with our transforms' deltas so the
