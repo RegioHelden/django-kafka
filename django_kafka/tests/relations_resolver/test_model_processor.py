@@ -97,6 +97,30 @@ class ModelMessageProcessorTestCase(TestCase):
         for relation in to_resolve:
             self.assertIn(relation, result)
 
+    @patch("django_kafka.models.WaitingMessage.objects", spec=WaitingMessageQuerySet)
+    async def test_awaiting_relations_for(self, mock_qs):
+        msg = Mock()
+        relation_a, relation_b = Mock(), Mock()
+        wm1 = Mock(**{"relation.return_value": relation_a})
+        wm2 = Mock(**{"relation.return_value": relation_b})
+        qs_distinct = mock_qs.filter.return_value.order_by.return_value.distinct
+        qs_distinct.return_value = AsyncIteratorMock([wm1, wm2])
+
+        result = await self.msg_processor.awaiting_relations_for(msg)
+
+        mock_qs.filter.assert_called_once_with(topic=msg.topic(), key=msg.key())
+        mock_qs.filter.return_value.order_by.assert_called_once_with(
+            "relation_model_key",
+            "relation_id_field",
+            "relation_id_value",
+        )
+        qs_distinct.assert_called_once_with(
+            "relation_model_key",
+            "relation_id_field",
+            "relation_id_value",
+        )
+        self.assertEqual(result, [relation_a, relation_b])
+
     async def test__aget_missing_relation(self):
         existing_relations = [
             AsyncMock(**{"aexists.return_value": True}),
