@@ -23,10 +23,10 @@ class KafkaConnectSkipQueryset(models.QuerySet):
     def delete(self, kafka_skip: bool | None = None):
         if Suppression.active():
             self.filter(kafka_skip=False).update(kafka_skip=True)
-        elif kafka_skip is not None:
-            self.filter(kafka_skip=not kafka_skip).update(kafka_skip=kafka_skip)
-        else:
+        elif kafka_skip is None:
             self.filter(kafka_skip=True).update(kafka_skip=False)
+        else:
+            self.filter(kafka_skip=not kafka_skip).update(kafka_skip=kafka_skip)
 
         return super().delete()
 
@@ -68,7 +68,7 @@ class KafkaConnectSkipModel(models.Model):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key == "kafka_skip":
-            self._reset_kafka_skip = False
+            self._reset_kafka_skip = False  # manually set, so should not be reset
 
     def save(
         self,
