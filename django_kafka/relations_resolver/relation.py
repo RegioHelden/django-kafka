@@ -46,6 +46,15 @@ class Relation(ABC):
     async def aresolve(self):
         await kafka.relations_resolver.processor.aprocess_messages(self)
 
+    def __eq__(self, other):
+        if not isinstance(other, Relation):
+            # NotImplemented (not False) lets Python try other.__eq__(self) first
+            return NotImplemented
+        return self.identifier() == other.identifier()
+
+    def __hash__(self):
+        return hash(self.identifier())
+
 
 class ModelRelation(Relation):
     model: type[Model]

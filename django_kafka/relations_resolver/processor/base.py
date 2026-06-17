@@ -22,6 +22,12 @@ class MessageProcessor(ABC):
     async def aprocess_messages(self, relation: "Relation"): ...
 
     @abstractmethod
+    async def awaiting_relations_for(
+        self,
+        msg: "cimpl.Message",
+    ) -> list["Relation"]: ...
+
+    @abstractmethod
     async def ato_resolve(self) -> AsyncIterator["Relation"]: ...
 
     @abstractmethod

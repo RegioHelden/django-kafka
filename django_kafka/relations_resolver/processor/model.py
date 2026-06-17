@@ -34,6 +34,18 @@ class ModelMessageProcessor(MessageProcessor):
             await sync_to_async(self.model.objects.for_relation)(relation)
         ).aexists()
 
+    async def awaiting_relations_for(self, msg: "cimpl.Message") -> list["Relation"]:
+        """Get relations which are still in the WaitingMessage's for current message"""
+        return [
+            wm.relation()
+            async for wm in self.model.objects.filter(
+                topic=msg.topic(),
+                key=msg.key(),
+            )
+            .order_by("relation_model_key", "relation_id_field", "relation_id_value")
+            .distinct("relation_model_key", "relation_id_field", "relation_id_value")
+        ]
+
     async def aprocess_messages(self, relation: "Relation"):
         async for msg in await sync_to_async(self.model.objects.for_relation)(relation):
             kafka_msg = Message(

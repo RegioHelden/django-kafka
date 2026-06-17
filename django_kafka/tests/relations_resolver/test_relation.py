@@ -2,8 +2,9 @@ from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 from django.test import SimpleTestCase
 
+from django_kafka.models import WaitingMessage
 from django_kafka.relations_resolver.processor.base import MessageProcessor
-from django_kafka.relations_resolver.relation import Relation
+from django_kafka.relations_resolver.relation import ModelRelation, Relation
 
 
 @patch.multiple(
@@ -58,3 +59,20 @@ class RelationTestCase(SimpleTestCase):
         relation = Relation()
         await relation.aresolve()
         mock_msg_processor.aprocess_messages.assert_called_once_with(relation)
+
+
+class ModelRelationHashingTestCase(SimpleTestCase):
+    def test_equal_relations_compare_equal_and_hash_equal(self):
+        a = ModelRelation(WaitingMessage, "id", 1)
+        b = ModelRelation(WaitingMessage, "id", 1)
+        self.assertEqual(a, b)
+        self.assertEqual(hash(a), hash(b))
+
+    def test_differing_id_value_compare_unequal(self):
+        a = ModelRelation(WaitingMessage, "id", 1)
+        b = ModelRelation(WaitingMessage, "id", 2)
+        self.assertNotEqual(a, b)
+
+    def test_compare_against_non_relation_returns_false(self):
+        a = ModelRelation(WaitingMessage, "id", 1)
+        self.assertNotEqual(a, ("django_kafka.waitingmessage", "id", 1))

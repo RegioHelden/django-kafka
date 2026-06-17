@@ -169,6 +169,12 @@ class WaitingMessage(models.Model):
         verbose_name = _("waiting message")
         verbose_name_plural = _("waiting messages")
         ordering = ("offset",)
+        indexes: ClassVar = [
+            models.Index(
+                fields=["topic", "key"],
+                name="%(app_label)s_topic_key_idx",
+            ),
+        ]
 
     def __str__(self):
         return (

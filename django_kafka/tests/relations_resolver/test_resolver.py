@@ -23,6 +23,9 @@ class RelationResolverTestCase(SimpleTestCase):
     )
     async def test_aresolve_relation_missing_wait(self, mock_await_for_relation):
         resolver = RelationResolver()
+        resolver.processor = MagicMock(
+            awaiting_relations_for=AsyncMock(return_value=[]),
+        )
         msg = message_mock()
 
         relation = MagicMock(spec=Relation)
@@ -60,6 +63,28 @@ class RelationResolverTestCase(SimpleTestCase):
         relation.aexists.assert_called_once_with()
         relation.ahas_waiting_messages.assert_called_once_with()
         self.assertEqual(action, RelationResolver.Action.CONTINUE)
+
+    @patch(
+        "django_kafka.relations_resolver.resolver.RelationResolver.await_for_relation",
+        new_callable=AsyncMock,
+    )
+    async def test_aresolve_uses_predecessor_relations(self, mock_await_for_relation):
+        """A message with no own relations (e.g. tombstone) must still wait
+        when there are predecessor messages queued for the same (topic, key)."""
+        resolver = RelationResolver()
+        msg = message_mock()
+
+        predecessor_relation = MagicMock(spec=Relation)
+        predecessor_relation.aexists.return_value = False
+        resolver.processor = MagicMock(
+            awaiting_relations_for=AsyncMock(return_value=[predecessor_relation]),
+        )
+
+        action = await resolver.aresolve([], msg)
+
+        resolver.processor.awaiting_relations_for.assert_awaited_once_with(msg)
+        mock_await_for_relation.assert_called_once_with(msg, predecessor_relation)
+        self.assertEqual(action, RelationResolver.Action.SKIP)
 
     async def test_aresolve_relation(self):
         resolver = RelationResolver()
