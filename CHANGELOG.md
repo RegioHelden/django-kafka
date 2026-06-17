@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.3.0](https://github.com/RegioHelden/django-kafka/tree/v1.3.0) (2026-06-17)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.2.0...v1.3.0)
+
+**Implemented enhancements:**
+
+- fix: don't silently consume messages with queued predecessors [\#293](https://github.com/RegioHelden/django-kafka/pull/293) (@bodja)
+
+**Fixed bugs:**
+
+- fix: waiting message admin, refs \#291 [\#292](https://github.com/RegioHelden/django-kafka/pull/292) (@stefan-cardnell-rh)
+
 ## [v1.2.0](https://github.com/RegioHelden/django-kafka/tree/v1.2.0) (2026-06-11)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.1.1...v1.2.0)
