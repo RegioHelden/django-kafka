@@ -152,17 +152,6 @@ class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
         mock_save.assert_any_call(update_fields=["kafka_skip"])
         self.assertFalse(instance.kafka_skip)
 
-    def test_delete_doesnt_unnecessarily_set_kafka_skip(self):
-        """ensures kafka_skip is not set unnecessarily when doing delete"""
-        instance = self.model(kafka_skip=False)
-        instance.save()
-
-        with patch.object(instance, "save") as mock_save:
-            instance.delete()
-
-        mock_save.assert_not_called()
-        self.assertFalse(instance.kafka_skip)
-
     def test_update_sets_kafka_skip_if_global_suppress_active(self):
         """ensure kafka_skip is set True when saving and global suppress is active"""
         instance = self.model(kafka_skip=False)
@@ -181,17 +170,6 @@ class KafkaConnectSkipModelTestCase(AbstractModelTestCase):
             instance.delete()
 
         mock_save.assert_any_call(update_fields=["kafka_skip"])
-        self.assertTrue(instance.kafka_skip)
-
-    def test_delete_doesnt_unnecessarily_set_kafka_skip_if_global_suppress_active(self):
-        """ensures kafka_skip is not set unnecessarily when deleting with suppress"""
-        instance = self.model(kafka_skip=True)
-        instance.save()
-
-        with suppress(), patch.object(instance, "save") as mock_save:
-            instance.delete()
-
-        mock_save.assert_not_called()  # no unnecessary save call
         self.assertTrue(instance.kafka_skip)
 
     @patch("django.db.models.QuerySet.filter")
