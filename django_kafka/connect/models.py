@@ -78,18 +78,13 @@ class KafkaConnectSkipModel(models.Model):
         update_fields=None,
     ):
         if Suppression.active():
-            # Global producer suppression is enabled. Set True only if necessary.
-            if not self.kafka_skip:
-                self.kafka_skip = True
-                update_fields = self.__add_skip_to_update_fields(update_fields)
+            # Global producer suppression is enabled. Set True.
+            self.kafka_skip = True
         elif self._reset_kafka_skip:
-            # kafka_skip was not manually set. Set False only if necessary.
-            if self.kafka_skip:
-                self.kafka_skip = False
-                update_fields = self.__add_skip_to_update_fields(update_fields)
-        elif not self._reset_kafka_skip:
-            # kafka_skip was manually set, so add it to update fields.
-            update_fields = self.__add_skip_to_update_fields(update_fields)
+            # kafka_skip was not manually set. Set False.
+            self.kafka_skip = False
+
+        update_fields = self.__add_kafka_skip_to_update_fields(update_fields)
 
         ret = super().save(
             force_insert=force_insert,
@@ -105,18 +100,13 @@ class KafkaConnectSkipModel(models.Model):
         if self.pk is not None:
             # kafka_skip must be correctly set in the DB before performing delete.
             if Suppression.active():
-                # Global producer suppression is enabled. Set True only if necessary.
-                if not self.kafka_skip:
-                    self.kafka_skip = True
-                    self.save(update_fields=["kafka_skip"])
+                # Global producer suppression is enabled. Set True.
+                self.kafka_skip = True
             elif self._reset_kafka_skip:
-                # kafka_skip was not manually set. Set False only if necessary.
-                if self.kafka_skip:
-                    self.kafka_skip = False
-                    self.save(update_fields=["kafka_skip"])
-            elif not self._reset_kafka_skip:
-                # kafka skip was manually set, so save it before delete.
-                self.save(update_fields=["kafka_skip"])
+                # kafka_skip was not manually set. Set False.
+                self.kafka_skip = False
+
+            self.save(update_fields=["kafka_skip"])
 
         ret = super().delete(*args, **kwargs)
         self._reset_kafka_skip = True
@@ -124,7 +114,7 @@ class KafkaConnectSkipModel(models.Model):
         return ret
 
     @classmethod
-    def __add_skip_to_update_fields(cls, update_fields):
+    def __add_kafka_skip_to_update_fields(cls, update_fields):
         if update_fields and "kafka_skip" not in update_fields:
             return ["kafka_skip", *update_fields]
         return update_fields
