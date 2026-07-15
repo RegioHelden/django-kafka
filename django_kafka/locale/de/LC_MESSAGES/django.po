@@ -8,53 +8,97 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-31 15:31+0000\n"
+"POT-Creation-Date: 2026-07-15 12:06+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: django_kafka/connect/models.py:27
+#: django_kafka/connect/models.py:50
 msgid "Kafka skip"
 msgstr "Kafka-Skip"
 
-#: django_kafka/connect/models.py:29
+#: django_kafka/connect/models.py:52
 msgid ""
 "Used by Kafka Connect to suppress event creation.\n"
 "Gets reset to False on .save() method call, unless explicitly set."
 msgstr ""
-"Wird von Kafka Connect zur Ünterdrückung der Eventerstellung verwendet.\n"
+"Wird von Kafka Connect zur Unterdrückung der Eventerstellung verwendet.\n"
 "Wird, wenn nicht explizit angegeben, beim Aufruf von .save() auf False "
 "zurückgesetzt."
 
-#: django_kafka/models.py:27
+#: django_kafka/models/__init__.py:36 django_kafka/models/__init__.py:162
 msgid "topic"
 msgstr "Topic"
 
-#: django_kafka/models.py:28
+#: django_kafka/models/__init__.py:37 django_kafka/models/__init__.py:159
 msgid "key"
 msgstr "Key"
 
-#: django_kafka/models.py:29
+#: django_kafka/models/__init__.py:38 django_kafka/models/__init__.py:164
 msgid "offset"
 msgstr "Offset"
 
-#: django_kafka/models.py:30
+#: django_kafka/models/__init__.py:39
 msgid "create time"
 msgstr "Create-Time"
 
-#: django_kafka/models.py:31
+#: django_kafka/models/__init__.py:40
 msgid "log append time"
 msgstr "Log-Append-Time"
 
-#: django_kafka/models.py:36
+#: django_kafka/models/__init__.py:45
 msgid "key offset tracker"
 msgstr "Key-/Offset-Zuordnung"
 
-#: django_kafka/models.py:37
+#: django_kafka/models/__init__.py:46
 msgid "key offsets tracker"
 msgstr "Key-/Offsets-Zuordnung"
+
+#: django_kafka/models/__init__.py:154
+msgid "status"
+msgstr "Status"
+
+#: django_kafka/models/__init__.py:160
+msgid "value"
+msgstr "Value"
+
+#: django_kafka/models/__init__.py:161
+msgid "kafka timestamp"
+msgstr "Kafka-Timestamp"
+
+#: django_kafka/models/__init__.py:163
+msgid "partition"
+msgstr "Partition"
+
+#: django_kafka/models/__init__.py:165
+msgid "headers"
+msgstr "Headers"
+
+#: django_kafka/models/__init__.py:167
+msgid "relation model key"
+msgstr "Model-Key der Relation"
+
+#: django_kafka/models/__init__.py:168
+msgid "relation id field"
+msgstr "ID-Feld der Relation"
+
+#: django_kafka/models/__init__.py:169
+msgid "relation id value"
+msgstr "ID-Wert der Relation"
+
+#: django_kafka/models/__init__.py:171
+msgid "relation kwargs"
+msgstr "Kwargs der Relation"
+
+#: django_kafka/models/__init__.py:176
+msgid "waiting message"
+msgstr "Wartende Nachricht"
+
+#: django_kafka/models/__init__.py:177
+msgid "waiting messages"
+msgstr "Wartende Nachrichten"

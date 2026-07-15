@@ -91,6 +91,24 @@ class WaitingMessageQuerySetTestCase(TestCase):
             2,
         )
 
+    def test_relations_loads_serialized_relation(self):
+        relation = ModelRelation(Order, id_field="id", id_value=100)
+        WaitingMessageFactory.create(
+            relation_model_key=ModelRelation.get_model_key(Order),
+            relation_id_field=relation.id_field,
+            relation_id_value=relation.id_value,
+            serialized_relation=relation.serialize(),
+        )
+
+        waiting_msg = WaitingMessage.objects.relations()[0]
+
+        # .relation() must not trigger a deferred-field query per row
+        with self.assertNumQueries(0):
+            self.assertEqual(
+                waiting_msg.serialized_relation,
+                relation.serialize(),
+            )
+
     def test_waiting(self):
         for status in WaitingMessage.Status:
             WaitingMessageFactory.create_batch(
