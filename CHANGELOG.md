@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.5.0](https://github.com/RegioHelden/django-kafka/tree/v1.5.0) (2026-07-15)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.4.0...v1.5.0)
+
+**Implemented enhancements:**
+
+- fix: skip relations with null fk values in python sink [\#319](https://github.com/RegioHelden/django-kafka/pull/319) (@bodja)
+
+**Merged pull requests:**
+
+- Updates from modulesync [\#318](https://github.com/RegioHelden/django-kafka/pull/318) (@regiohelden-dev)
+
 ## [v1.4.0](https://github.com/RegioHelden/django-kafka/tree/v1.4.0) (2026-07-15)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.3.1...v1.4.0)
