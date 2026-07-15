@@ -118,7 +118,14 @@ class WaitingMessageQuerySet(models.QuerySet):
                 "relation_id_value",
             )
             .distinct("relation_model_key", "relation_id_field", "relation_id_value")
-            .only("relation_model_key", "relation_id_field", "relation_id_value")
+            # the relation_* triple is used by distinct()/order_by() above,
+            # serialized_relation is read by .relation()
+            .only(
+                "relation_model_key",
+                "relation_id_field",
+                "relation_id_value",
+                "serialized_relation",
+            )
         )
 
     def waiting(self):
@@ -170,9 +177,21 @@ class WaitingMessage(models.Model):
         verbose_name_plural = _("waiting messages")
         ordering = ("offset",)
         indexes: ClassVar = [
+            # awaiting_relations_for() looks up predecessor messages by
+            # (topic, key) for every consumed message with relations.
             models.Index(
                 fields=["topic", "key"],
                 name="%(app_label)s_topic_key_idx",
+            ),
+            # for_relation/mark_resolving filter and relations() sorts
+            # on this triple for every message with relations.
+            models.Index(
+                fields=[
+                    "relation_model_key",
+                    "relation_id_field",
+                    "relation_id_value",
+                ],
+                name="%(app_label)s_relation_idx",
             ),
         ]
 
