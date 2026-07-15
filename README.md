@@ -436,7 +436,7 @@ class OrderSync(ModelSync):
 
 `PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
-Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance.
+Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform assigns `None` to the FK.
 
 ```python
 from django_kafka.models.model_sync import (

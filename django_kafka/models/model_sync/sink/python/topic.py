@@ -34,6 +34,10 @@ class Relation:
     `lookup`: when set, `get_lookup_kwargs` rewrites `value_field` → `lookup`
     in the ORM lookup kwargs. Use when the message key name doesn't match the
     model lookup path (e.g. `user__kafka_uuid` → `customer_user__kafka_uuid`).
+
+    Null (or absent) message values yield no relation - a null FK has
+    nothing to resolve - and the emitted `RelationTransform` assigns
+    `None` to `fk`.
     """
 
     model: type[Model]
@@ -51,6 +55,22 @@ class Relation:
             target=self.fk,
             model=self.model,
             id_field=self.id_field,
+        )
+
+    def to_model_relation(self, msg_value: dict) -> ModelRelation | None:
+        """
+        Return the ModelRelation the resolver should wait for, or None when
+        the message value is null or absent - a null FK has nothing to
+        resolve, and a relation with id_value=None can never exist, so
+        waiting on it would park the message forever.
+        """
+        id_value = msg_value.get(self.value_field)
+        if id_value is None:
+            return None
+        return ModelRelation(
+            self.model,
+            id_field=self.id_field,
+            id_value=id_value,
         )
 
 
@@ -98,11 +118,8 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         if self.is_deletion(self.model, msg_key, msg_value):
             return
         for relation in self.relations:
-            yield ModelRelation(
-                relation.model,
-                id_field=relation.id_field,
-                id_value=msg_value[relation.value_field],
-            )
+            if model_relation := relation.to_model_relation(msg_value):
+                yield model_relation
 
     @property
     def use_relations_resolver(self) -> bool:
