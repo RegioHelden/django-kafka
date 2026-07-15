@@ -1,5 +1,28 @@
 # Changelog
 
+## [v1.4.0](https://github.com/RegioHelden/django-kafka/tree/v1.4.0) (2026-07-15)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.3.1...v1.4.0)
+
+**Implemented enhancements:**
+
+- fix: reduce relations resolver database load [\#316](https://github.com/RegioHelden/django-kafka/pull/316) (@bodja)
+
+**Merged pull requests:**
+
+- Updates from modulesync [\#315](https://github.com/RegioHelden/django-kafka/pull/315) (@regiohelden-dev)
+- Update git VSCode feature to 1.3.7, ruff to 0.15.20, ruff VSCode to 2026.56.0, ty to 0.0.56, ty VSCode to 2026.60.0, astral-sh/setup-uv to 8.3.0, uv to 0.11.26 [\#310](https://github.com/RegioHelden/django-kafka/pull/310) (@regiohelden-dev)
+- Update astral-sh/setup-uv action to v8.3.0 [\#309](https://github.com/RegioHelden/django-kafka/pull/309) (@renovate[bot])
+- Update dependency setuptools to v83 [\#308](https://github.com/RegioHelden/django-kafka/pull/308) (@renovate[bot])
+- Update dependency Faker to v40.28.1 [\#307](https://github.com/RegioHelden/django-kafka/pull/307) (@renovate[bot])
+- Update dependency confluent-kafka to v2.15.0 [\#306](https://github.com/RegioHelden/django-kafka/pull/306) (@renovate[bot])
+- Update ruff to 0.15.19, ty to 0.0.53, actions/setup-python to 6.3.0 and uv to 0.11.24 [\#304](https://github.com/RegioHelden/django-kafka/pull/304) (@regiohelden-dev)
+- Update actions/setup-python action to v6.3.0 [\#303](https://github.com/RegioHelden/django-kafka/pull/303) (@renovate[bot])
+- Update dependency ruff to v0.15.19 [\#302](https://github.com/RegioHelden/django-kafka/pull/302) (@renovate[bot])
+- Update ruff to 0.15.18, ruff VSCode to 2026.54.0, ty to 0.0.52, ty VSCode to 2026.58.0 and uv to 0.11.23 [\#301](https://github.com/RegioHelden/django-kafka/pull/301) (@regiohelden-dev)
+- Update actions/checkout action to v7 [\#297](https://github.com/RegioHelden/django-kafka/pull/297) (@renovate[bot])
+- Update dependency ruff to v0.15.18 [\#296](https://github.com/RegioHelden/django-kafka/pull/296) (@renovate[bot])
+
 ## [v1.3.1](https://github.com/RegioHelden/django-kafka/tree/v1.3.1) (2026-06-19)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.3.0...v1.3.1)
@@ -194,6 +217,7 @@
 - Update uv to 0.9.6 [\#172](https://github.com/RegioHelden/django-kafka/pull/172) (@regiohelden-dev)
 - Update RegioHelden/github-reusable-workflows to 2.6.0 [\#171](https://github.com/RegioHelden/django-kafka/pull/171) (@regiohelden-dev)
 - Update RegioHelden/github-reusable-workflows to 2.6.0 [\#170](https://github.com/RegioHelden/django-kafka/pull/170) (@renovate[bot])
+- Update actions/download-artifact to v5 and uv to 0.9.5 [\#169](https://github.com/RegioHelden/django-kafka/pull/169) (@regiohelden-dev)
 - Update github-reusable-workflows to 2.5.0 [\#168](https://github.com/RegioHelden/django-kafka/pull/168) (@regiohelden-dev)
 - chore\(deps\): update regiohelden/github-reusable-workflows action to v2.5.0 [\#167](https://github.com/RegioHelden/django-kafka/pull/167) (@renovate[bot])
 - Update ruff-vscode to 2025.28.0 and uv to 0.9.2 [\#166](https://github.com/RegioHelden/django-kafka/pull/166) (@regiohelden-dev)
