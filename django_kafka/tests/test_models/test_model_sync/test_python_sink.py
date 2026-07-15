@@ -7,6 +7,7 @@ from django_kafka.models.model_sync.sink.python import (
     PythonSinkAvroTopicConsumer,
     Relation,
 )
+from django_kafka.relations_resolver.relation import ModelRelation
 from django_kafka.topic import TopicConsumer
 
 from .factories import (
@@ -119,6 +120,46 @@ class PythonSinkMakeTopicTestCase(TestCase):
         relation_models = [r.model for r in topic.relations]
         self.assertIn(RelatedModel, relation_models)
         self.assertNotIn(ModelWithFK, relation_models)
+
+    def _make_nullable_fk_topic(self):
+        custom = Relation(
+            RelatedModel,
+            id_field="id",
+            value_field="nullable_related_id",
+            fk="nullable_related",
+        )
+        sync_cls = self._make_sync(
+            model=ModelWithNullableFK,
+            sink=PythonAvroSink(relations=[custom]),
+        )
+        return sync_cls().sink.make_topic()
+
+    def _get_relations(self, topic, msg_value):
+        with mock.patch.object(
+            topic,
+            "deserialize",
+            side_effect=[{"id": 1}, msg_value],
+        ):
+            return list(topic.get_relations(mock.Mock()))
+
+    def test_get_relations_yields_relation_for_value(self):
+        topic = self._make_nullable_fk_topic()
+        relations = self._get_relations(topic, {"nullable_related_id": 5})
+        self.assertEqual(len(relations), 1)
+        self.assertIsInstance(relations[0], ModelRelation)
+        self.assertIs(relations[0].model, RelatedModel)
+        self.assertEqual(relations[0].id_field, "id")
+        self.assertEqual(relations[0].id_value, 5)
+
+    def test_get_relations_skips_null_value(self):
+        topic = self._make_nullable_fk_topic()
+        relations = self._get_relations(topic, {"nullable_related_id": None})
+        self.assertEqual(relations, [])
+
+    def test_get_relations_skips_absent_value(self):
+        topic = self._make_nullable_fk_topic()
+        relations = self._get_relations(topic, {})
+        self.assertEqual(relations, [])
 
 
 class PythonSinkConsumerPathTestCase(TestCase):

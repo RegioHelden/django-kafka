@@ -300,6 +300,7 @@ class RelationTransform(FieldTransform):
 
     Replaces the message field with `model.objects.get(<id_field>=value)`,
     assigned to `target` (the FK attribute on the consuming model).
+    A null (or absent) message value assigns `None` instead of a lookup.
     """
 
     model: type[Model] | None = None
@@ -307,7 +308,10 @@ class RelationTransform(FieldTransform):
 
     def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
-        return self.model.objects.get(**{self.id_field: message[self.source]})
+        id_value = message.get(self.source)
+        if id_value is None:
+            return None
+        return self.model.objects.get(**{self.id_field: id_value})
 
 
 @dataclass
