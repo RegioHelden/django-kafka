@@ -69,8 +69,8 @@ class RelationResolverTestCase(SimpleTestCase):
         new_callable=AsyncMock,
     )
     async def test_aresolve_uses_predecessor_relations(self, mock_await_for_relation):
-        """A message with no own relations (e.g. tombstone) must still wait
-        when there are predecessor messages queued for the same (topic, key)."""
+        """A message with no own relations must still wait when there are
+        predecessor messages queued for the same (topic, key)."""
         resolver = RelationResolver()
         msg = message_mock()
 
@@ -85,6 +85,50 @@ class RelationResolverTestCase(SimpleTestCase):
         resolver.processor.awaiting_relations_for.assert_awaited_once_with(msg)
         mock_await_for_relation.assert_called_once_with(msg, predecessor_relation)
         self.assertEqual(action, RelationResolver.Action.SKIP)
+
+    @patch(
+        "django_kafka.relations_resolver.resolver.RelationResolver.await_for_relation",
+        new_callable=AsyncMock,
+    )
+    async def test_aresolve_tombstone_discards_queued_messages(
+        self,
+        mock_await_for_relation,
+    ):
+        """A tombstone supersedes messages queued for the same (topic, key)
+        and is consumed immediately - deletion needs no relations."""
+        resolver = RelationResolver()
+        resolver.processor = MagicMock(
+            adiscard_messages=AsyncMock(),
+            awaiting_relations_for=AsyncMock(return_value=[]),
+        )
+        msg = message_mock(value=None)
+
+        relation = MagicMock(spec=Relation)
+        relation.aexists.return_value = False
+
+        action = await resolver.aresolve([relation], msg)
+
+        resolver.processor.adiscard_messages.assert_awaited_once_with(msg)
+        relation.aexists.assert_not_called()
+        mock_await_for_relation.assert_not_called()
+        self.assertEqual(action, RelationResolver.Action.CONTINUE)
+
+    async def test_aresolve_tombstone_pauses_while_resolving(self):
+        """A tombstone must not overtake messages the daemon is currently
+        replaying - the deletion applies strictly after them."""
+        resolver = RelationResolver()
+        resolver.processor = MagicMock(
+            adiscard_messages=AsyncMock(),
+            awaiting_relations_for=AsyncMock(
+                return_value=[MagicMock(spec=Relation)],
+            ),
+        )
+        msg = message_mock(value=None)
+
+        action = await resolver.aresolve([], msg)
+
+        resolver.processor.adiscard_messages.assert_awaited_once_with(msg)
+        self.assertEqual(action, RelationResolver.Action.PAUSE)
 
     async def test_aresolve_relation(self):
         resolver = RelationResolver()

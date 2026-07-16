@@ -28,6 +28,9 @@ class MessageProcessor(ABC):
     ) -> list["Relation"]: ...
 
     @abstractmethod
+    async def adiscard_messages(self, msg: "cimpl.Message"): ...
+
+    @abstractmethod
     async def ato_resolve(self) -> AsyncIterator["Relation"]: ...
 
     @abstractmethod

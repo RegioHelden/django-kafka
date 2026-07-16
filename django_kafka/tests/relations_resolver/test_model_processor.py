@@ -1,11 +1,13 @@
 from unittest.mock import AsyncMock, Mock, patch
 
+from asgiref.sync import sync_to_async
 from django.test import TestCase
 
 from django_kafka.exceptions import TopicNotRegisteredError
 from django_kafka.models import WaitingMessage, WaitingMessageQuerySet
 from django_kafka.relations_resolver.processor.model import ModelMessageProcessor
-from django_kafka.tests.utils import AsyncIteratorMock
+from django_kafka.tests.relations_resolver.factories import WaitingMessageFactory
+from django_kafka.tests.utils import AsyncIteratorMock, message_mock
 
 
 class ModelMessageProcessorTestCase(TestCase):
@@ -103,13 +105,13 @@ class ModelMessageProcessorTestCase(TestCase):
         relation_a, relation_b = Mock(), Mock()
         wm1 = Mock(**{"relation.return_value": relation_a})
         wm2 = Mock(**{"relation.return_value": relation_b})
-        qs_distinct = mock_qs.filter.return_value.order_by.return_value.distinct
+        qs_distinct = mock_qs.for_msg.return_value.order_by.return_value.distinct
         qs_distinct.return_value = AsyncIteratorMock([wm1, wm2])
 
         result = await self.msg_processor.awaiting_relations_for(msg)
 
-        mock_qs.filter.assert_called_once_with(topic=msg.topic(), key=msg.key())
-        mock_qs.filter.return_value.order_by.assert_called_once_with(
+        mock_qs.for_msg.assert_called_once_with(msg)
+        mock_qs.for_msg.return_value.order_by.assert_called_once_with(
             "relation_model_key",
             "relation_id_field",
             "relation_id_value",
@@ -120,6 +122,38 @@ class ModelMessageProcessorTestCase(TestCase):
             "relation_id_value",
         )
         self.assertEqual(result, [relation_a, relation_b])
+
+    async def test_adiscard_messages(self):
+        msg = message_mock()
+        relation_kwargs = {
+            "relation_model_key": "example.order",
+            "relation_id_field": "id",
+            "relation_id_value": "1",
+            "serialized_relation": {},
+        }
+        create = sync_to_async(WaitingMessageFactory.create)
+        await create(
+            topic=msg.topic(),
+            key=msg.key(),
+            status=WaitingMessage.Status.WAITING,
+            **relation_kwargs,
+        )
+        resolving = await create(
+            topic=msg.topic(),
+            key=msg.key(),
+            status=WaitingMessage.Status.RESOLVING,
+            **relation_kwargs,
+        )
+        other_key = await create(
+            topic=msg.topic(),
+            status=WaitingMessage.Status.WAITING,
+            **relation_kwargs,
+        )
+
+        await self.msg_processor.adiscard_messages(msg)
+
+        remaining = {wm.id async for wm in WaitingMessage.objects.all()}
+        self.assertEqual(remaining, {resolving.id, other_key.id})
 
     async def test__aget_missing_relation(self):
         existing_relations = [
@@ -158,6 +192,7 @@ class ModelMessageProcessorTestCase(TestCase):
         relation = Mock()
         model_msg = AsyncMock()
 
+        mock_qs.filter.return_value.aupdate = AsyncMock(return_value=1)
         mock_sync_to_async.return_value = AsyncMock(
             return_value=AsyncIteratorMock([model_msg]),
         )
@@ -190,6 +225,7 @@ class ModelMessageProcessorTestCase(TestCase):
         model_msg = AsyncMock()
         missing_relation = Mock()
 
+        mock_qs.filter.return_value.aupdate = AsyncMock(return_value=1)
         mock_sync_to_async.return_value = AsyncMock(
             return_value=AsyncIteratorMock([model_msg]),
         )
@@ -208,6 +244,7 @@ class ModelMessageProcessorTestCase(TestCase):
         )
         model_msg.adelete.assert_called_once_with()
 
+    @patch("django_kafka.models.WaitingMessage.objects")
     @patch(
         "django_kafka.relations_resolver.processor.model.ModelMessageProcessor._aget_missing_relation",
     )
@@ -222,10 +259,12 @@ class ModelMessageProcessorTestCase(TestCase):
         mock_consumers_topic,
         mock_await_for_relation,
         mock__aget_missing_relation,
+        mock_qs,
     ):
         relation = Mock()
         model_msg = AsyncMock()
 
+        mock_qs.filter.return_value.aupdate = AsyncMock(return_value=1)
         sync_to_async_results = [
             # for model.objects.for_relation() call
             AsyncMock(return_value=AsyncIteratorMock([model_msg])),
@@ -242,3 +281,27 @@ class ModelMessageProcessorTestCase(TestCase):
         mock_sync_to_async.assert_any_call(mock_consumers_topic().consume)
         sync_to_async_results[1].assert_any_call(mock_kafka_message())
         model_msg.adelete.assert_called_once_with()
+
+    @patch("django_kafka.models.WaitingMessage.objects")
+    @patch("django_kafka.kafka.consumers.topic")
+    @patch("django_kafka.relations_resolver.processor.model.sync_to_async")
+    async def test_aprocess_messages_skips_discarded(
+        self,
+        mock_sync_to_async,
+        mock_consumers_topic,
+        mock_qs,
+    ):
+        """A row discarded by a tombstone after the queryset snapshot was
+        taken must not be replayed or re-parked."""
+        relation = Mock()
+        model_msg = AsyncMock()
+
+        mock_qs.filter.return_value.aupdate = AsyncMock(return_value=0)
+        mock_sync_to_async.return_value = AsyncMock(
+            return_value=AsyncIteratorMock([model_msg]),
+        )
+
+        await self.msg_processor.aprocess_messages(relation)
+
+        mock_consumers_topic.assert_not_called()
+        model_msg.adelete.assert_not_called()

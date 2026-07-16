@@ -321,6 +321,7 @@ class MyTopicConsumer(TopicConsumer):
 1. When `TopicConsumer.get_relations` is overwritten, then relations resolver will check for missing relations.
 2. When relation does not exist, then the message is placed to the store for later processing.
 3. When relation exists, but there are waiting messages, then the partition is paused until the messages are consumed.
+4. Tombstones (null message value) are never queued: they discard the waiting messages for the same (topic, key) and are consumed immediately, as the deletion supersedes them and needs no relations. If some of those messages are being resolved at that moment, the partition is paused so the deletion applies strictly after them.
 
 #### Requirements:
 - Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own `RelationResolverDaemon` if you want to use something else.
