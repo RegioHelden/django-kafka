@@ -54,6 +54,20 @@ class RelationResolver:
     ) -> Action:
         logger.debug("Check for missing relations.")
 
+        if msg.value() is None:
+            # A tombstone supersedes anything queued for the same (topic, key)
+            # and the deletion itself needs no relations, so it must never wait:
+            # its predecessors may depend on a relation that was cascade-deleted
+            # upstream and will never arrive.
+            await self.processor.adiscard_messages(msg)
+            if await self.processor.awaiting_relations_for(msg):
+                # messages that survived the discard are being replayed by the
+                # daemon right now - the deletion must apply strictly after them
+                logger.debug("Tombstone - predecessors are resolving, pause.")
+                return self.Action.PAUSE
+            logger.debug("Tombstone - queued predecessors discarded, consume.")
+            return self.Action.CONTINUE
+
         for relation in await self.awith_predecessors(relations, msg):
             if not await relation.aexists():
                 logger.debug("Relation is missing - send message to wait.")

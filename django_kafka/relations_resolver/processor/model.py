@@ -38,16 +38,29 @@ class ModelMessageProcessor(MessageProcessor):
         """Get relations which are still in the WaitingMessage's for current message"""
         return [
             wm.relation()
-            async for wm in self.model.objects.filter(
-                topic=msg.topic(),
-                key=msg.key(),
-            )
+            async for wm in self.model.objects.for_msg(msg)
             .order_by("relation_model_key", "relation_id_field", "relation_id_value")
             .distinct("relation_model_key", "relation_id_field", "relation_id_value")
         ]
 
+    async def adiscard_messages(self, msg: "cimpl.Message"):
+        """
+        Drop queued messages superseded by a tombstone for the same (topic, key).
+
+        Only WAITING messages are discarded: RESOLVING ones are already being
+        replayed by the daemon and must not vanish from under it.
+        """
+        await self.model.objects.for_msg(msg).waiting().adelete()
+
     async def aprocess_messages(self, relation: "Relation"):
         async for msg in await sync_to_async(self.model.objects.for_relation)(relation):
+            # Claim the row before acting on it: the queryset iterates a
+            # snapshot, and a tombstone may have discarded the row since -
+            # a superseded message must not be replayed or re-parked.
+            if not await self.model.objects.filter(pk=msg.pk).aupdate(
+                status=self.model.Status.RESOLVING,
+            ):
+                continue
             kafka_msg = Message(
                 key=msg.key,
                 value=msg.value,

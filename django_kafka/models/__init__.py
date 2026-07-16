@@ -100,6 +100,9 @@ class WaitingMessageQuerySet(models.QuerySet):
             serialized_relation=relation.serialize(),
         )
 
+    def for_msg(self, msg: "cimpl.Message"):
+        return self.filter(topic=msg.topic(), key=msg.key())
+
     def for_relation(self, relation):
         # ruff: noqa: PLC0415
         from django_kafka.relations_resolver.relation import ModelRelation

@@ -12,6 +12,7 @@ def message_mock(  # noqa: PLR0913
     error=None,
     headers=None,
     timestamp: list[MessageTimestamp, int] | None = None,
+    value=b"value",
 ):
     """mocking utility for confluent_kafka.cimpl.Message"""
     return Mock(
@@ -22,6 +23,7 @@ def message_mock(  # noqa: PLR0913
             "headers.return_value": headers,
             "error.return_value": error,
             "key.return_value": Faker().binary(length=10),
+            "value.return_value": value,
             "timestamp.return_value": timestamp
             or (MessageTimestamp.NOT_AVAILABLE, Faker().unix_time() * 1000),
         },
