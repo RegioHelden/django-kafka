@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.0.0](https://github.com/RegioHelden/django-kafka/tree/v2.0.0) (2026-07-16)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.5.0...v2.0.0)
+
+**Breaking changes:**
+
+- fix: consume tombstones immediately instead of queueing them [\#321](https://github.com/RegioHelden/django-kafka/pull/321) (@bodja)
+
 ## [v1.5.0](https://github.com/RegioHelden/django-kafka/tree/v1.5.0) (2026-07-15)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.4.0...v1.5.0)
