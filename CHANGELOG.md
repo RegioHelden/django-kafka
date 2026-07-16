@@ -4,6 +4,10 @@
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.5.0...v1.5.1)
 
+**Breaking changes:**
+
+- `MessageProcessor` has a new abstract method `adiscard_messages()` - custom `RELATION_RESOLVER_PROCESSOR` implementations must add it; the built-in `ModelMessageProcessor` is unaffected [\#321](https://github.com/RegioHelden/django-kafka/pull/321) (@bodja)
+
 **Fixed bugs:**
 
 - fix: consume tombstones immediately instead of queueing them [\#321](https://github.com/RegioHelden/django-kafka/pull/321) (@bodja)
