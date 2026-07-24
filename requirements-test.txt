@@ -2,5 +2,5 @@
 confluent-kafka[avro, schemaregistry]==2.15.0
 django==6.0.6
 django-temporalio==2.0.0
-ruff==0.15.19
+ruff==0.16.0
 setuptools==83.0.0  # without it PyCharm fails to index packages inside the Docker container
