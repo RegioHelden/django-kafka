@@ -1,5 +1,5 @@
 import contextlib
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,7 +14,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
     model: type[Model] | None = None  # override get_model for dynamic model lookups
     exclude_fields: list[str] = None  # fields to ignore from message value
-    deletion_key: str | None = None  # value field that flags deletion
+    deletion_key: str | None = "__deleted"  # value field that flags deletion
 
     def transform(self, model, value) -> dict:
         """
@@ -65,9 +65,11 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
         return False
 
-    @abstractmethod
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
+        if (pk_field := model._meta.pk.name) in key:
+            return {pk_field: key[pk_field]}
+        return key
 
     def sync(self, model, key, value) -> tuple[Model, bool] | None:
         lookup = self.get_lookup_kwargs(model, key, value)
