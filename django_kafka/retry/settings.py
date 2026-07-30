@@ -24,7 +24,6 @@ class RetrySettings:
         exclude: list[type[Exception]] | None = None,
         blocking: bool = True,
         log_every: int | None = None,
-        use_offset_tracker: bool = False,
     ):
         """
         :param max_retries: maximum number of retry attempts (use -1 for infinite)
@@ -34,7 +33,6 @@ class RetrySettings:
         :param exclude: exception types to exclude from retry
         :param blocking: block the consumer process during retry
         :param log_every: log every Nth retry attempt, default is not to log
-        :param use_offset_tracker: use the offset tracker to skip failing messages
         """
         if max_retries < -1:
             raise ValueError("max_retries must be greater than -1")
@@ -50,7 +48,6 @@ class RetrySettings:
         self.exclude = exclude
         self.blocking = blocking
         self.log_every = log_every
-        self.use_offset_tracker = use_offset_tracker
 
     def __call__(self, topic_cls: type["TopicConsumer"]):
         topic_cls.retry_settings = self
@@ -61,22 +58,7 @@ class RetrySettings:
             return False
         return attempt > self.max_retries
 
-    def skip_by_offset(self, msg, exc: Exception):
-        # avoiding import errors
-        # ruff: noqa: PLC0415
-        from django_kafka.models import KeyOffsetTracker  # Apps aren't loaded yet
-
-        return all(
-            [
-                self.use_offset_tracker,
-                isinstance(exc, self.relational_errors),
-                KeyOffsetTracker.objects.has_future_offset(msg),
-            ],
-        )
-
     def should_retry(self, msg, attempt: int, exc: Exception) -> bool:
-        if self.skip_by_offset(msg, exc):
-            return False
         if self.attempts_exceeded(attempt):
             return False
         if self.include is not None:

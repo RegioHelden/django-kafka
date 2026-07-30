@@ -1,12 +1,6 @@
 from django.contrib import admin
 
-from django_kafka.models import KeyOffsetTracker, WaitingMessage
-
-
-@admin.register(KeyOffsetTracker)
-class KeyOffsetTrackerAdmin(admin.ModelAdmin):
-    list_display = ("topic", "key", "offset")
-    search_fields = ("topic", "key")
+from django_kafka.models import WaitingMessage
 
 
 @admin.register(WaitingMessage)
