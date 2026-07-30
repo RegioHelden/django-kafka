@@ -1,5 +1,17 @@
 # Changelog
 
+## [v3.0.0](https://github.com/RegioHelden/django-kafka/tree/v3.0.0) (2026-07-30)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v2.0.0...v3.0.0)
+
+**Breaking changes:**
+
+- fix: remove KeyOffsetTracker, refs \#112 [\#331](https://github.com/RegioHelden/django-kafka/pull/331) (@stefan-cardnell-rh)
+
+**Implemented enhancements:**
+
+- fix: remove DbzModelTopicConsumer and use sensible defaults in ModelTopicConsumer, refs \#329 [\#330](https://github.com/RegioHelden/django-kafka/pull/330) (@stefan-cardnell-rh)
+
 ## [v2.0.0](https://github.com/RegioHelden/django-kafka/tree/v2.0.0) (2026-07-16)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v1.5.0...v2.0.0)
