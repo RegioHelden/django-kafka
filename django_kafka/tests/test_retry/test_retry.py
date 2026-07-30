@@ -3,7 +3,6 @@ from unittest import mock
 
 from django.test import TestCase
 
-from django_kafka.models import KeyOffsetTracker
 from django_kafka.retry.settings import RetrySettings
 from django_kafka.tests.utils import message_mock
 from django_kafka.topic import Topic
@@ -107,75 +106,6 @@ class RetrySettingTestCase(TestCase):
         self.assertEqual(settings.should_log(2), False)
         self.assertEqual(settings.should_log(5), True)
         self.assertEqual(settings.should_log(10), True)
-
-    def test_skip_by_offset(self):
-        msg = message_mock()
-        model_instance = KeyOffsetTracker.objects.create(
-            topic=msg.topic(),
-            key=msg.key(),
-            offset=msg.offset(),
-            timestamp=msg.timestamp(),
-        )
-
-        # not configured to use offset
-        settings = RetrySettings(
-            max_retries=5,
-            delay=60,
-            backoff=False,
-            use_offset_tracker=False,
-        )
-        for error in settings.relational_errors:
-            self.assertFalse(settings.skip_by_offset(msg, error()))
-
-        # configured to use offset, but exception is not among accepted
-        settings = RetrySettings(
-            max_retries=5,
-            delay=60,
-            backoff=False,
-            use_offset_tracker=True,
-        )
-        self.assertFalse(settings.skip_by_offset(msg, Exception()))
-
-        # configured to use offset, exceptions are valid but no future offset
-        settings = RetrySettings(
-            max_retries=5,
-            delay=60,
-            backoff=False,
-            use_offset_tracker=True,
-        )
-        for error in settings.relational_errors:
-            self.assertFalse(settings.skip_by_offset(self.mock_msg, error()))
-
-        # configured to use offset and everything is aligned
-        settings = RetrySettings(
-            max_retries=5,
-            delay=60,
-            backoff=False,
-            use_offset_tracker=True,
-        )
-
-        model_instance.offset += 1
-        model_instance.save(update_fields=["offset"])
-
-        for error in settings.relational_errors:
-            self.assertTrue(settings.skip_by_offset(msg, error()))
-
-    @mock.patch(
-        "django_kafka.retry.settings.RetrySettings.skip_by_offset",
-        return_value=True,
-    )
-    def test_should_retry_calls_skip_by_offset(self, skip_by_offset):
-        settings = RetrySettings(
-            max_retries=5,
-            delay=60,
-            backoff=False,
-            use_offset_tracker=True,
-        )
-        error = Exception()
-        result = settings.should_retry(self.mock_msg, 1, error)
-
-        skip_by_offset.assert_called_once_with(self.mock_msg, error)
-        self.assertIs(result, False)
 
 
 class RetryDecoratorTestCase(TestCase):

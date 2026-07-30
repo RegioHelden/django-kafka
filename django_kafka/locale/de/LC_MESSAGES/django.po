@@ -51,14 +51,6 @@ msgstr "Create-Time"
 msgid "log append time"
 msgstr "Log-Append-Time"
 
-#: django_kafka/models/__init__.py:45
-msgid "key offset tracker"
-msgstr "Key-/Offset-Zuordnung"
-
-#: django_kafka/models/__init__.py:46
-msgid "key offsets tracker"
-msgstr "Key-/Offsets-Zuordnung"
-
 #: django_kafka/models/__init__.py:154
 msgid "status"
 msgstr "Status"
