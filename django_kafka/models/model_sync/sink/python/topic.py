@@ -109,8 +109,9 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         self.transforms = transforms or []
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
+        lookup_kwargs = super().get_lookup_kwargs(model, key, value)
         rewrites = {r.value_field: r.lookup for r in self.relations if r.lookup}
-        return {rewrites.get(field, field): val for field, val in key.items()}
+        return {rewrites.get(field, field): val for field, val in lookup_kwargs.items()}
 
     def get_relations(self, msg):
         msg_key = self.deserialize(msg.key(), MessageField.KEY, msg.headers())
