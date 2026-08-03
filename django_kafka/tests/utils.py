@@ -5,7 +5,7 @@ from faker import Faker
 from django_kafka.utils.message import MessageTimestamp
 
 
-def message_mock(  # noqa: PLR0913
+def message_mock(  # noqa: PLR0913, PLR0917
     topic="topic",
     partition=0,
     offset=0,

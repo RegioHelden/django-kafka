@@ -15,13 +15,13 @@ Considering you have locally setup kafka instance with no authentication. All yo
 # ./settings.py
 
 INSTALLED_APPS = [
-  # ...
-  "django_kafka",
+    ...
+    "django_kafka",
 ]
 
 DJANGO_KAFKA = {
     "GLOBAL_CONFIG": {
-      "bootstrap.servers": "kafka1:9092",
+        "bootstrap.servers": "kafka1:9092",
     },
 }
 ```
@@ -96,7 +96,7 @@ Message are produced using a Topic instance.
 ```python
 from my_app.topics import Topic1
 
-# this will send a message to kafka, serializing it using the defined serializer 
+# this will send a message to kafka, serializing it using the defined serializer
 Topic1().produce("some message")
 ```
 Check [Confluent Python Producer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#producer) for API documentation.
@@ -110,7 +110,7 @@ Find available configs in the [SchemaRegistryClient docs](https://docs.confluent
 ```python
 DJANGO_KAFKA = {
     "SCHEMA_REGISTRY": {
-      "url": "http://schema-registry",
+        "url": "http://schema-registry",
     },
 }
 ```
@@ -128,6 +128,7 @@ from django_kafka.topic.model import ModelTopicConsumer
 
 from my_app.models import MyModel
 
+
 class MyModelConsumer(ModelTopicConsumer):
     name = "topic"
     model = MyModel
@@ -141,11 +142,11 @@ Model instances will have their attributes synced from the message value.
 ```python
 class MyModelConsumer(ModelTopicConsumer):
     ...
-        
-    exclude_fields = ['id']
+
+    exclude_fields = ["id"]
 
     def transform_name(model, key, value):
-        return 'first_name', value["name"].upper()
+        return "first_name", value["name"].upper()
 ```
 
 A few notes:
@@ -179,7 +180,9 @@ class MyModelTopic(AvroTopicProducer, TopicReproducer):
     reproduce_model = MyModel
 
     def _reproduce_upsert(self, instance, key, value):
-        self.produce(key={"id": instance.id}, value={**value, 'extra': 1}) # add extra data to value as necessary
+        self.produce(
+            key={"id": instance.id}, value={**value, "extra": 1}
+        )  # add extra data to value as necessary
 
     def _reproduce_deletion(self, instance_id, key, value):
         self.produce(key={"id": instance_id}, value=None)
@@ -189,6 +192,7 @@ class MyModelTopic(AvroTopicProducer, TopicReproducer):
 from django_kafka import kafka
 from django_kafka.consumer import Consumer, Topics
 from .topics import MyModelTopic
+
 
 @kafka.consumers()
 class MyTopicReproducerConsumer(Consumer):
@@ -262,7 +266,6 @@ from django_kafka.relations_resolver.relation import ModelRelation
 
 
 class MyTopicConsumer(TopicConsumer):
-
     def get_relations(self, msg: "cimpl.Message"):
         value = self.deserialize(msg.value(), MessageField.VALUE, msg.headers())
         yield ModelRelation(Order, id_value=value["customer_id"], id_field="id")
@@ -398,7 +401,10 @@ Provide explicit `Relation` entries only to customise auto-detection: non-defaul
 
 ```python
 from django_kafka.models.model_sync import (
-    IncludeFields, ModelSync, PythonAvroSink, Relation,
+    IncludeFields,
+    ModelSync,
+    PythonAvroSink,
+    Relation,
 )
 from my_app.models import Customer, Order
 
@@ -410,8 +416,9 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink(
         relations=[
             # non-default id_field + renamed value_field after enrich transform
-            Relation(Customer, id_field="uuid",
-                     value_field="customer__uuid", fk="customer"),
+            Relation(
+                Customer, id_field="uuid", value_field="customer__uuid", fk="customer"
+            ),
         ],
     )
 ```
@@ -420,8 +427,13 @@ class OrderSync(ModelSync):
 
 ```python
 from django_kafka.models.model_sync import (
-    DbzPostgresSource, IncludeFields, MessagePart, ModelSync,
-    PythonAvroSink, Relation, SyncMethodTransform,
+    DbzPostgresSource,
+    IncludeFields,
+    MessagePart,
+    ModelSync,
+    PythonAvroSink,
+    Relation,
+    SyncMethodTransform,
 )
 from my_app.models import Customer, Order
 
@@ -433,8 +445,9 @@ class OrderSync(ModelSync):
     source = DbzPostgresSource(msg_key_fields=["customer_id", "status"])
     sink = PythonAvroSink(
         relations=[
-            Relation(Customer, id_field="uuid",
-                     value_field="customer__uuid", fk="customer"),
+            Relation(
+                Customer, id_field="uuid", value_field="customer__uuid", fk="customer"
+            ),
         ],
     )
 
@@ -690,8 +703,7 @@ from django_kafka import producer
 
 
 @producer.suppress(["topic1"])  # suppress producers to topic1
-def my_function():
-    ...
+def my_function(): ...
 
 
 def my_function_two():
@@ -767,8 +779,8 @@ The `produce.suppress` decorator can be used to suppress messages produced durin
 from django_kafka import producer
 from django_kafka.consumer import Consumer
 
+
 class MyConsumer(Consumer):
-    
     @producer.suppress
     def consume(self, *args, **kwargs):
         super().consume(*args, **kwargs)
