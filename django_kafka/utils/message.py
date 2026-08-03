@@ -49,8 +49,7 @@ class Message:
     https://github.com/confluentinc/confluent-kafka-python/issues/1535
     """
 
-    # ruff: noqa: PLR0913
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         topic: str,
         key: bytes | str,
