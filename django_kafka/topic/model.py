@@ -67,11 +67,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
-        # obtain the pk from the value first so the key can be adjusted for partitioning
-        pk_field = model._meta.pk.name
-        if value and pk_field in value:
-            return {pk_field: value[pk_field]}
-        if pk_field in key:
+        if (pk_field := model._meta.pk.name) in key:
             return {pk_field: key[pk_field]}
         return key
 
