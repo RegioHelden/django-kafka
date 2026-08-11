@@ -1,5 +1,24 @@
 # Changelog
 
+## [v3.0.1](https://github.com/RegioHelden/django-kafka/tree/v3.0.1) (2026-08-11)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.0.0...v3.0.1)
+
+**Fixed bugs:**
+
+- fix: use the value first to obtain the lookup ID in ModelTopicConsumer.get\_lookup\_kwargs, refs \#338 [\#340](https://github.com/RegioHelden/django-kafka/pull/340) (@stefan-cardnell-rh)
+- fix: replay waiting messages in numeric offset order [\#339](https://github.com/RegioHelden/django-kafka/pull/339) (@bodja)
+
+**Merged pull requests:**
+
+- Library updates, make ssh keys and git config available in devcontainer [\#333](https://github.com/RegioHelden/django-kafka/pull/333) (@regiohelden-dev)
+- Update dependency ruff to v0.16.1 [\#328](https://github.com/RegioHelden/django-kafka/pull/328) (@renovate[bot])
+- Update astral-sh/setup-uv action to v9 [\#327](https://github.com/RegioHelden/django-kafka/pull/327) (@renovate[bot])
+- Update actions/setup-python action to v7 [\#326](https://github.com/RegioHelden/django-kafka/pull/326) (@renovate[bot])
+- Update actions/checkout action to v7.0.1 [\#325](https://github.com/RegioHelden/django-kafka/pull/325) (@renovate[bot])
+- Update dependency Faker to v40.36.0 [\#314](https://github.com/RegioHelden/django-kafka/pull/314) (@renovate[bot])
+- Update dependency django to v6.0.7 [\#312](https://github.com/RegioHelden/django-kafka/pull/312) (@renovate[bot])
+
 ## [v3.0.0](https://github.com/RegioHelden/django-kafka/tree/v3.0.0) (2026-07-30)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v2.0.0...v3.0.0)
