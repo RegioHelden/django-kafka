@@ -94,8 +94,8 @@ class WaitingMessage(models.Model):
     value = models.BinaryField(_("value"))
     timestamp = models.JSONField(_("kafka timestamp"))
     topic = models.TextField(_("topic"))
-    partition = models.TextField(_("partition"))
-    offset = models.TextField(_("offset"))
+    partition = models.IntegerField(_("partition"))
+    offset = models.BigIntegerField(_("offset"))
     _headers = models.JSONField(_("headers"), null=True, blank=True)
 
     relation_model_key = models.CharField(_("relation model key"), max_length=255)
