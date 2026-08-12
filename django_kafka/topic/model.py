@@ -13,7 +13,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
     """Syncs abstract kafka messages directly in to Django model instances"""
 
     model: type[Model] | None = None  # override get_model for dynamic model lookups
-    exclude_fields: list[str] = None  # fields to ignore from message value
+    exclude_fields: list[str] | None = None  # fields to ignore from message value
     deletion_key: str | None = "__deleted"  # value field that flags deletion
 
     def transform(self, model, value) -> dict:
@@ -22,11 +22,9 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
         Value fields can be transformed by defining a `transform_{key}` method.
         """
-        exclude_fields = self.exclude_fields or []
-
         transformed_value = {}
         for field_name, field_value in value.items():
-            if field_name in exclude_fields:
+            if self._is_field_excluded(field_name):
                 continue
             if transform_method := getattr(self, f"transform_{field_name}", None):
                 new_key, new_value = transform_method(model, field_name, field_value)
@@ -65,9 +63,21 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
         return False
 
+    def _is_field_excluded(self, field):
+        return self.exclude_fields and field in self.exclude_fields
+
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
-        if (pk_field := model._meta.pk.name) in key:
+        pk_field = model._meta.pk.name
+        if self._is_field_excluded(pk_field):
+            # if pk is excluded from usage in the value then it's most likely not being
+            # used as the identifying field; thus default to using the whole key
+            return key
+
+        # obtain the pk from the value first so the key can be adjusted for partitioning
+        if value and pk_field in value:
+            return {pk_field: value[pk_field]}
+        if pk_field in key:
             return {pk_field: key[pk_field]}
         return key
 
