@@ -152,7 +152,7 @@ class MyModelConsumer(ModelTopicConsumer):
 A few notes:
 
 1. Instance deletions are detected automatically based on a null message value or the presence of a `__deleted` field (via `deletion_key`) in the value. If you need alternate delete behaviour, override `deletion_key` or `is_deletion`.
-2. If the message key contains the model PK field, this will be used for lookup to update an existing instance – otherwise the entire message key will be used. If you need alternate lookup behaviour, override `get_lookup_kwargs`.
+2. If the model PK appears in the message value or key, and it has not been excluded via `exclude_fields`, this will be used for lookup to update an existing instance – otherwise the entire message key will be used. If you need alternate lookup behaviour, override `get_lookup_kwargs`.
 
 ### `TopicReproducer`:
 
