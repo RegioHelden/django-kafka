@@ -1,5 +1,13 @@
 # Changelog
 
+## [v3.1.0](https://github.com/RegioHelden/django-kafka/tree/v3.1.0) (2026-08-12)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.0.2...v3.1.0)
+
+**Implemented enhancements:**
+
+- fix: use the value first to obtain the lookup ID in ModelTopicConsumer.get\_lookup\_kwargs, refs \#338 [\#344](https://github.com/RegioHelden/django-kafka/pull/344) (@stefan-cardnell-rh)
+
 ## [v3.0.2](https://github.com/RegioHelden/django-kafka/tree/v3.0.2) (2026-08-11)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.0.1...v3.0.2)
