@@ -126,13 +126,19 @@ class PythonSinkTopicBase(ModelTopicConsumer):
     def use_relations_resolver(self) -> bool:
         return bool(self.relations)
 
-    def transform(self, model, msg_value) -> dict:
+    def _is_field_excluded(self, field):
+        fields = self.model_sync.fields if self.model_sync else None
+        if isinstance(fields, ExcludeFields):
+            return field in fields
+        return False
+
+    def transform(self, model, value) -> dict:
         # ModelTopicConsumer hands us only the value (key was used for the
         # lookup). Pass an empty dict for msg_key so consume_<field> methods
         # accepting both args don't break.
         for transform_step in self.transforms:
-            msg_value = transform_step.apply(self.model_sync, {}, msg_value)[1]
-        return self._field_filter(msg_value)
+            value = transform_step.apply(self.model_sync, {}, value)[1]
+        return self._field_filter(value)
 
     @cached_property
     def _field_filter(self):

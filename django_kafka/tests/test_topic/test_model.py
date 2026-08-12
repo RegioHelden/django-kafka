@@ -17,12 +17,6 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
             name = "name"
             model = self.model
 
-            def get_lookup_kwargs(self, model, key, value) -> dict:
-                return {}
-
-            def is_deletion(self, *args, **kwargs):
-                return False
-
         return SomeModelTopicConsumer()
 
     def test_get_defaults(self):
@@ -40,6 +34,39 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
         )
 
         self.assertEqual(defaults, {"name": 1})
+
+    def test_get_lookup_kwargs__pk_in_value(self):
+        """test the PK is taken from the value when available"""
+        topic_consumer = self._get_model_topic_consumer()
+        lookup = topic_consumer.get_lookup_kwargs(
+            self.model,
+            {"name": "key"},
+            {"id": 1},
+        )
+
+        self.assertEqual(lookup, {"id": 1})
+
+    def test_get_lookup_kwargs__pk_in_key(self):
+        """test the PK is taken from the key when it's not possible from the value"""
+        topic_consumer = self._get_model_topic_consumer()
+        lookup = topic_consumer.get_lookup_kwargs(
+            self.model,
+            {"id": 1},
+            {"name": "value"},
+        )
+
+        self.assertEqual(lookup, {"id": 1})
+
+    def test_get_lookup_kwargs__whole_key_when_no_pk(self):
+        """test the lookup kwargs is the whole key when the PK is not available"""
+        topic_consumer = self._get_model_topic_consumer()
+        lookup = topic_consumer.get_lookup_kwargs(
+            self.model,
+            {"name": "key", "name2": "key2"},
+            {"name": "value"},
+        )
+
+        self.assertEqual(lookup, {"name": "key", "name2": "key2"})
 
     def test_transform(self):
         """test custom transform methods are used during transformation"""
