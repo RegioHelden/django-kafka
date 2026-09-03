@@ -26,6 +26,7 @@ jobs:
           - "4.2"
           - "5.2"
           - "6.0"
+          - "6.1"
         database:
           - postgres
         exclude:
@@ -35,6 +36,8 @@ jobs:
             django: "4.2"
           - python-version: "3.11"
             django: "6.0"
+          - python-version: "3.11"
+            django: "6.1"
 
     services:
       # postgres service
