@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import reduce
+from operator import or_
 from typing import TYPE_CHECKING, Any, get_type_hints
 
+from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.schema.fields import python_type_to_avro
 
 from .base import FieldTransform
 from .utils import MessagePart
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from django.db.models import Model
 
@@ -85,6 +88,53 @@ class DateTimeFromEpochMillisTransform(FieldTransform):
 
     def output_avro_type(self, sync, schema_field):
         return schema_field["type"] if schema_field else "long"
+
+
+@dataclass
+class MappingTransform(FieldTransform):
+    """
+    Transform based on a given mapping.
+
+    Whenever the value of the source appears in the mapping keys, the target will be set
+    to that mapping key's value, or the default value if the key is not found.
+
+    If no default value is provided, the transform will fail on missing keys.
+
+    All non-None mapping values as well as the default value (if set) must be of the
+    same Python type. This is checked when the MappingTransform instance is created.
+    """
+
+    mapping: Mapping = field(default_factory=dict)
+    default_value: Any = _missing
+
+    def __post_init__(self):
+        if not self.mapping:
+            raise ValueError("Mapping must contain at least one value!")
+
+    def transform_value(self, sync, msg_key, msg_value, part):
+        message = msg_key if part == MessagePart.KEY else msg_value
+        key = message.get(self.source)
+        if self.default_value is _missing and key not in self.mapping:
+            raise DjangoKafkaError(f"Missing value for mapping key {key}.")
+        return self.mapping.get(key, self.default_value)
+
+    def output_avro_type(self, sync, schema_field):
+        python_type = reduce(or_, (type(value) for value in self.mapping.values()))
+        if self.default_value is not _missing:
+            python_type |= type(self.default_value)
+        return python_type_to_avro(python_type)
+
+
+@dataclass
+class ContentTypeTransform(MappingTransform):
+    """
+    Specialized MappingTransform for content type IDs.
+
+    It is recommended to use LazyContentTypeMapping as the mapping arg.
+    """
+
+    source: str = "content_type_id"
+    mapping: Mapping[int, int] = field(default_factory=dict)
 
 
 @dataclass

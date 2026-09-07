@@ -556,12 +556,84 @@ Transforms form the per-message pipeline between source-shape and sink-shape dat
   the Avro schema delta.
 - `RelationTransform` — replaces a field with a related model instance.
 - `CoalesceTransform`, `StaticValueTransform` — defaults and static values.
+- `MappingTransform` — replaces a value based on a specified mapping.
+- `ContentTypeTransform` — a specialized `MappingTransform` where the keys are source `ContentType` ids and the values
+  are target model classes.
 - `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` /
   `datetime`.
 
 The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a
 transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite
 live columns.
+
+## Generic relations across systems:
+
+A `GenericForeignKey` stores `content_type_id`, a value assigned per database in migration order - the producing
+system's id means nothing here. `LazyTargetContentTypeMapping` maps the producer's ids onto local models, and
+`ContentTypeTransform` swaps the producer's id for the local one as the message is consumed.
+`LazySourceContentTypeMapping` is also provided, for if you want to perform the mapping on the producer side.
+
+Take a `Comment` whose `target` is a `GenericForeignKey` onto `Order` or `Customer`. The ids belong to the producing
+database, so they are environment configuration:
+
+```python
+# settings.py — read from the producing system's database
+REMOTE_CONTENT_TYPES = {7: "my_app.Order", 12: "my_app.Customer"}
+```
+
+```python
+from django.conf import settings
+from django_kafka.models.model_sync import (
+    IncludeFields,
+    ModelSync,
+    PythonAvroSink,
+    LazyTargetContentTypeMapping,
+    ContentTypeTransform,
+)
+from my_app.models import Comment
+
+CONTENT_TYPES = LazyTargetContentTypeMapping(settings.REMOTE_CONTENT_TYPES)
+
+
+class CommentSync(ModelSync):
+    model = Comment
+    topic = "comments"
+    fields = IncludeFields(["id", "content_type_id", "object_id", "text"])
+    sink = PythonAvroSink()
+
+    consume_transforms = [ContentTypeTransform(mapping=CONTENT_TYPES)]
+```
+
+Values in the mapping passed to `LazyTargetContentTypeMapping` are expected to be model classes or `"app_label.Model"`
+paths; the whole map is resolved to local content type ids once, on first use, so a message costs a dict lookup and the
+map can live in settings, where models cannot be imported. The producing side needs no enricher and no transform —
+`content_type_id` and `object_id` travel as plain columns, and `content_type_id` is rewritten in place.
+
+Likewise, `LazySourceContentTypeMapping` expects keys to be model classes or string paths, will be evaluated on use, and
+require no transform on the consumer side.
+
+`object_id` is left alone: the sink looks a synced row up by the pk carried in the message, so a referenced row holds
+the same id on both sides. There is currently no built-in way to map object Iids based on a different column on a
+per-model level.
+
+The same system's databases disagree on these ids whenever their migration history differs, so generate the map against
+the producing database rather than editing it by hand:
+
+```python
+# run on the producing system
+{
+    ct.id: f"{ct.app_label}.{ct.model_class().__name__}"
+    for ct in ContentType.objects.all()
+}
+```
+
+It is up to the used to decide what should happen if unmapped iss are encountered. By default, such case raises
+`DjangoKafkaError` and the message follows the consumer's retry/dead-letter handling. To change this behavior, you can
+set `default_value` in the `ContentTypeTransform` — most likely to `None`. In that case, this value will be used
+whenever an unmapped id is encountered. This can be useful if not all models from the remote systems can be represented.
+
+A *stale* id never raises — it writes a reference to the wrong model — so regenerate the map whenever the producer adds
+or removes models.
 
 See [`MODEL_SYNC_*` settings](#model_sync_source_connector) for configuration.
 
