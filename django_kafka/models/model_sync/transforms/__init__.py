@@ -6,24 +6,34 @@ from .base import (
 from .field_transforms import (
     CoalesceTransform,
     ConsumeMethodTransform,
+    ContentTypeTransform,
     DateFromEpochTransform,
     DateTimeFromEpochMillisTransform,
     EnrichMethodTransform,
+    MappingTransform,
     RelationTransform,
     StaticValueTransform,
     SyncMethodTransform,
 )
 from .mixins import TopicTransformsMixin
-from .utils import MessagePart
+from .utils import (
+    LazySourceContentTypeMapping,
+    LazyTargetContentTypeMapping,
+    MessagePart,
+)
 
 __all__ = [
     "CoalesceTransform",
     "ConsumeMethodTransform",
+    "ContentTypeTransform",
     "DateFromEpochTransform",
     "DateTimeFromEpochMillisTransform",
     "EnrichMethodTransform",
     "EnricherTransform",
     "FieldTransform",
+    "LazySourceContentTypeMapping",
+    "LazyTargetContentTypeMapping",
+    "MappingTransform",
     "MessagePart",
     "RelationTransform",
     "StaticValueTransform",
