@@ -395,7 +395,7 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink()
 ```
 
-`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. A `ContentType` FK is never auto-detected: content types are never synced in from another system, so there is no relation to resolve (Django creates the rows on `migrate`). Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
 Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform assigns `None` to the FK.
 
@@ -474,10 +474,65 @@ Transforms form the per-message pipeline between source-shape and sink-shape dat
 - `SyncMethodTransform` — delegates to `enrich_<source>` / `consume_<source>` on the sync.
 - `EnricherTransform` — calls a sync method returning extras to merge; the method's `TypedDict` return annotation drives the Avro schema delta.
 - `RelationTransform` — replaces a field with a related model instance.
+- `MappingTransform` — replaces a value with the one it maps to; any `Mapping` will do. Pair it with `RemoteContentTypes` for [generic relations](#generic-relations-across-systems).
 - `CoalesceTransform`, `StaticValueTransform` — defaults and static values.
 - `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` / `datetime`.
 
 The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite live columns.
+
+### Generic relations across systems:
+
+A `GenericForeignKey` stores `content_type_id`, a value assigned per database in migration order - the producing system's id means nothing here. `RemoteContentTypes` resolves the producer's ids to local ones, and `MappingTransform` swaps them as the message is consumed.
+
+Take a `Comment` whose `target` is a `GenericForeignKey` onto `Order` or `Customer`. The ids belong to the producing database, so they are environment configuration:
+
+```python
+# settings.py — read from the producing system's database
+REMOTE_CONTENT_TYPES = {7: "my_app.Order", 12: "my_app.Customer"}
+```
+
+```python
+from django.conf import settings
+from django_kafka.models.model_sync import (
+    IncludeFields,
+    MappingTransform,
+    ModelSync,
+    PythonAvroSink,
+    RemoteContentTypes,
+)
+from my_app.models import Comment
+
+CONTENT_TYPES = RemoteContentTypes(models=settings.REMOTE_CONTENT_TYPES)
+
+
+class CommentSync(ModelSync):
+    model = Comment
+    topic = "comments"
+    fields = IncludeFields(["id", "content_type_id", "object_id", "text"])
+    sink = PythonAvroSink()
+
+    consume_transforms = [
+        MappingTransform(source="content_type_id", mapping=CONTENT_TYPES),
+    ]
+```
+
+`models` accepts a model class or an `"app_label.Model"` path; the whole map is resolved to local content type ids once, on first use, so a message costs a dict lookup and the map can live in settings, where models cannot be imported. `RemoteContentTypes` is itself a `Mapping`, so `MappingTransform` knows nothing about content types — hand it a plain dict to translate any other coded field. The producing side needs no enricher and no transform — `content_type_id` and `object_id` travel as plain columns, and `content_type_id` is rewritten in place.
+
+To map on the way out instead, `CONTENT_TYPES.inverse` reads the same declaration backwards — local content type id to remote — for use in `enrich_transforms`. That runs in the enricher consumer, so it only pays off where one is already running.
+
+`object_id` is left alone: the sink looks a synced row up by the pk carried in the message, so a referenced row holds the same id on both sides.
+
+The same system's databases disagree on these ids whenever their migration history differs, so generate the map against the producing database rather than editing it by hand:
+
+```python
+# run on the producing system
+{
+    ct.id: f"{ct.app_label}.{ct.model_class().__name__}"
+    for ct in ContentType.objects.all()
+}
+```
+
+An unmapped id raises `DjangoKafkaError` naming the field and value, and the message follows the consumer's retry/dead-letter handling. Pass `default=None` when the consumer deliberately maps only part of what the producer sends — the reference is then left empty instead of holding up the topic, which needs the column to be nullable. A *stale* id doesn't raise — it writes a reference to the wrong model — so regenerate the map whenever the producer adds or removes models.
 
 See [`MODEL_SYNC_*` settings](#model_sync_source_connector) for configuration.
 

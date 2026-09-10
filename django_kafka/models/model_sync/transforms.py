@@ -1,17 +1,23 @@
 import datetime
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from enum import Flag, auto
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, get_type_hints
 
+from django.apps import apps
 from django.db.models import Model
 
+from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.schema.avro import AvroSchema
 from django_kafka.schema.fields import python_type_to_avro
 
 if TYPE_CHECKING:
     from django_kafka.models.model_sync.sync import ModelSync
+
+
+_no_default = object()
 
 
 class MessagePart(Flag):
@@ -312,6 +318,130 @@ class RelationTransform(FieldTransform):
         if id_value is None:
             return None
         return self.model.objects.get(**{self.id_field: id_value})
+
+
+@dataclass
+class MappingTransform(FieldTransform):
+    """
+    Replace the source value with the one it maps to.
+
+    `mapping` is any Mapping, so a lazily resolved one such as
+    `RemoteContentTypes` fits without this transform knowing what it resolves.
+    A null (or absent) message value maps to `None` instead of a lookup.
+
+    `default`: what a value the mapping doesn't cover becomes. Without one such
+        a value raises, so a stale mapping fails loudly instead of writing a
+        wrong reference; set `default=None` when the mapping is meant to cover
+        only part of what the topic carries.
+    """
+
+    mapping: Mapping = field(default_factory=dict)
+    default: Any = _no_default
+
+    def transform_value(self, sync, msg_key, msg_value, part):
+        message = msg_key if part == MessagePart.KEY else msg_value
+        value = message.get(self.source)
+        if value is None:
+            return None
+        try:
+            return self.mapping[value]
+        except KeyError:
+            if self.default is not _no_default:
+                return self.default
+            raise DjangoKafkaError(
+                f"{self.source}={value!r} has no entry in the mapping.",
+            ) from None
+
+    def output_avro_type(self, sync, schema_field):
+        value_types = {type(value) for value in self.mapping.values()}
+        if self.default is not _no_default:
+            value_types.add(type(self.default))
+        nullable = type(None) in value_types
+        value_types.discard(type(None))
+        if len(value_types) != 1:
+            raise ValueError(
+                f"{type(self).__name__} needs one value type to derive a schema, "
+                f"got {sorted(value_type.__name__ for value_type in value_types)}.",
+            )
+        avro_type = python_type_to_avro(value_types.pop())
+        return ["null", avro_type] if nullable else avro_type
+
+
+@dataclass
+class RemoteContentTypes(Mapping):
+    """
+    The producing system's content type ids, mapped onto this system's.
+
+    `django_content_type` ids are assigned per database in migration order, so a
+    producer's id has no meaning here and cannot be derived - the mapping has to
+    be stated, per environment.
+
+    `models`: the remote `content_type_id` -> the model this system stores it as,
+        as a class or an "app_label.Model" path (settings cannot import models).
+    """
+
+    models: dict[int, type[Model] | str]
+
+    @cached_property
+    def _local_ids(self) -> dict[int, int]:
+        # resolved through the registry so contenttypes stays optional for
+        # projects that never map one
+        content_type = apps.get_model("contenttypes", "ContentType")
+        resolved = {
+            remote_id: apps.get_model(model) if isinstance(model, str) else model
+            for remote_id, model in self.models.items()
+        }
+        content_types = content_type.objects.get_for_models(*resolved.values())
+        return {
+            remote_id: content_types[model].id for remote_id, model in resolved.items()
+        }
+
+    @cached_property
+    def inverse(self) -> "InvertedContentTypes":
+        """The same declaration read backwards, for mapping on the way out."""
+        return InvertedContentTypes(self)
+
+    def __getitem__(self, remote_id: int) -> int:
+        return self._local_ids[remote_id]
+
+    # the remote ids are known from the declaration; only their local
+    # counterparts need the database
+    def __iter__(self) -> Iterator[int]:
+        return iter(self.models)
+
+    def __len__(self) -> int:
+        return len(self.models)
+
+
+@dataclass
+class InvertedContentTypes(Mapping):
+    """
+    `RemoteContentTypes` read backwards: this system's content type id -> the
+    producer's. Resolves on first lookup, like the declaration it reads.
+    """
+
+    content_types: RemoteContentTypes
+
+    @cached_property
+    def _remote_ids(self) -> dict[int, int]:
+        local_ids = self.content_types._local_ids
+        inverted = {local_id: remote_id for remote_id, local_id in local_ids.items()}
+        if len(inverted) != len(local_ids):
+            raise ValueError(
+                f"{type(self.content_types).__name__} points several remote ids "
+                f"at the same model, so it has no single reading backwards.",
+            )
+        return inverted
+
+    def __getitem__(self, local_id: int) -> int:
+        return self._remote_ids[local_id]
+
+    # unlike the declaration, the local ids are only known once resolved
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._remote_ids)
+
+    def __len__(self) -> int:
+        return len(self.content_types)
 
 
 @dataclass

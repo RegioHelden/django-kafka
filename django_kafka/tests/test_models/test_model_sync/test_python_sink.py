@@ -1,5 +1,7 @@
 from unittest import TestCase, mock
 
+from django.contrib.contenttypes.models import ContentType
+
 from django_kafka.models.model_sync import EnricherTransform
 from django_kafka.models.model_sync.registry import ModelSyncRegistry
 from django_kafka.models.model_sync.sink.python import (
@@ -11,6 +13,7 @@ from django_kafka.relations_resolver.relation import ModelRelation
 from django_kafka.topic import TopicConsumer
 
 from .factories import (
+    ModelWithContentTypeFK,
     ModelWithFK,
     ModelWithFKChild,
     ModelWithNullableFK,
@@ -83,6 +86,25 @@ class PythonSinkMakeTopicTestCase(TestCase):
         sync_cls = self._make_sync(model=ModelWithNullableFK)
         topic = sync_cls().sink.make_topic()
         self.assertEqual(topic.relations, [])
+
+    def test_content_type_fk_excluded_from_auto_detection(self):
+        sync_cls = self._make_sync(model=ModelWithContentTypeFK)
+        topic = sync_cls().sink.make_topic()
+        self.assertEqual(topic.relations, [])
+
+    def test_explicit_content_type_relation_is_kept(self):
+        custom = Relation(
+            ContentType,
+            id_field="id",
+            value_field="content_type_id",
+            fk="content_type",
+        )
+        sync_cls = self._make_sync(
+            model=ModelWithContentTypeFK,
+            sink=PythonAvroSink(relations=[custom]),
+        )
+        topic = sync_cls().sink.make_topic()
+        self.assertEqual(topic.relations, [custom])
 
     def test_explicit_relation_replaces_auto_detected(self):
         custom = Relation(
