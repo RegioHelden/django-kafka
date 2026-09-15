@@ -1,5 +1,32 @@
 # Changelog
 
+## [v4.0.0](https://github.com/RegioHelden/django-kafka/tree/v4.0.0) (2026-09-15)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.1.0...v4.0.0)
+
+**Breaking changes:**
+
+- Drop support for Django 4.2, use Python 3.13 on devcontainer and tests [\#356](https://github.com/RegioHelden/django-kafka/pull/356) (@regiohelden-dev)
+
+**Implemented enhancements:**
+
+- fix: requeue messages abandoned by a resolve run [\#365](https://github.com/RegioHelden/django-kafka/pull/365) (@bodja)
+
+**Merged pull requests:**
+
+- Update ruff to 0.16.6, ruff VSCode to 2026.78.0 and uv to 0.12.10 [\#358](https://github.com/RegioHelden/django-kafka/pull/358) (@regiohelden-dev)
+- Remove Django 4.2 tests [\#355](https://github.com/RegioHelden/django-kafka/pull/355) (@lociii)
+- Add tests for Django 6.1 [\#353](https://github.com/RegioHelden/django-kafka/pull/353) (@lociii)
+- Update ruff to 0.16.5, ruff VSCode to 2026.76.0, ty to 0.0.78, ty VSCode to 2026.70.0, action setup-uv to 10.0.1 and uv to 0.12.9 [\#352](https://github.com/RegioHelden/django-kafka/pull/352) (@regiohelden-dev)
+- Update dependency psycopg to v3.3.5 - autoclosed [\#351](https://github.com/RegioHelden/django-kafka/pull/351) (@renovate[bot])
+- Update dependency Faker to v40.38.0 [\#350](https://github.com/RegioHelden/django-kafka/pull/350) (@renovate[bot])
+- Update dependency django-temporalio to v3 [\#349](https://github.com/RegioHelden/django-kafka/pull/349) (@renovate[bot])
+- Update astral-sh/setup-uv action to v10 [\#348](https://github.com/RegioHelden/django-kafka/pull/348) (@renovate[bot])
+- fix: update documentation, refs \#338 [\#346](https://github.com/RegioHelden/django-kafka/pull/346) (@stefan-cardnell-rh)
+- Update dependency setuptools to v84 [\#337](https://github.com/RegioHelden/django-kafka/pull/337) (@renovate[bot])
+- Update dependency ruff to v0.16.5 [\#336](https://github.com/RegioHelden/django-kafka/pull/336) (@renovate[bot])
+- Update dependency django to v6.1.1 [\#335](https://github.com/RegioHelden/django-kafka/pull/335) (@renovate[bot])
+
 ## [v3.1.0](https://github.com/RegioHelden/django-kafka/tree/v3.1.0) (2026-08-12)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.0.2...v3.1.0)
