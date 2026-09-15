@@ -1,5 +1,5 @@
 -r requirements-ci.txt
-confluent-kafka[avro, schemaregistry]==2.15.0
+confluent-kafka[avro, schemaregistry]==2.15.1
 django==6.1.1
 django-temporalio==3.1.0
 ruff==0.16.5
