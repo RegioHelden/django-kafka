@@ -23,6 +23,11 @@ class RelationTestCase(SimpleTestCase):
         await relation.amark_resolving()
         mock_msg_processor.amark_resolving.assert_called_once_with(relation)
 
+    async def test_amark_waiting_uses_msg_processor(self, mock_msg_processor):
+        relation = Relation()
+        await relation.amark_waiting()
+        mock_msg_processor.amark_waiting.assert_called_once_with(relation)
+
     @patch(
         "django_kafka.relations_resolver.relation.sync_to_async",
         return_value=AsyncMock(),
@@ -72,6 +77,12 @@ class ModelRelationHashingTestCase(SimpleTestCase):
         a = ModelRelation(WaitingMessage, "id", 1)
         b = ModelRelation(WaitingMessage, "id", 2)
         self.assertNotEqual(a, b)
+
+    def test_differing_id_field_compare_unequal(self):
+        a = ModelRelation(WaitingMessage, "id", 1)
+        b = ModelRelation(WaitingMessage, "topic", 1)
+        self.assertNotEqual(a, b)
+        self.assertNotEqual(hash(a), hash(b))
 
     def test_compare_against_non_relation_returns_false(self):
         a = ModelRelation(WaitingMessage, "id", 1)

@@ -137,3 +137,16 @@ class RelationResolverTestCase(SimpleTestCase):
         await resolver.aresolve_relation(relation)
 
         relation.aresolve.assert_called_once_with()
+        relation.amark_waiting.assert_awaited_once_with()
+
+    async def test_aresolve_relation_releases_on_error(self):
+        """A run that dies partway must still hand its messages back, or the
+        daemon will never offer the relation again."""
+        resolver = RelationResolver()
+        relation = MagicMock(spec=Relation)
+        relation.aresolve.side_effect = ValueError
+
+        with self.assertRaises(ValueError):
+            await resolver.aresolve_relation(relation)
+
+        relation.amark_waiting.assert_awaited_once_with()

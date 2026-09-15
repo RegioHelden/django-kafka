@@ -68,6 +68,11 @@ class WaitingMessageQuerySet(models.QuerySet):
     def mark_resolving(self, relation):
         self.for_relation(relation).update(status=self.model.Status.RESOLVING)
 
+    def mark_waiting(self, relation: "ModelRelation"):
+        self.for_relation(relation).filter(
+            status=self.model.Status.RESOLVING,
+        ).update(status=self.model.Status.WAITING)
+
     async def aiter_relations_to_resolve(
         self,
         chunk_size=500,

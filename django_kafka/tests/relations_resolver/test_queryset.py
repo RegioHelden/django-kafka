@@ -155,6 +155,51 @@ class WaitingMessageQuerySetTestCase(TestCase):
         for msg in WaitingMessage.objects.for_relation(relation_b):
             self.assertEqual(msg.status, WaitingMessage.Status.WAITING)
 
+    def test_mark_waiting(self):
+        relation_a = ModelRelation(Order, id_field="id", id_value=100)
+        relation_b = ModelRelation(Order, id_field="id", id_value=200)
+
+        for relation in (relation_a, relation_b):
+            WaitingMessageFactory.create_batch(
+                3,
+                status=WaitingMessage.Status.RESOLVING,
+                relation_model_key=ModelRelation.get_model_key(Order),
+                relation_id_field=relation.id_field,
+                relation_id_value=relation.id_value,
+                serialized_relation={},
+            )
+
+        WaitingMessage.objects.mark_waiting(relation_a)
+
+        for msg in WaitingMessage.objects.for_relation(relation_a):
+            self.assertEqual(msg.status, WaitingMessage.Status.WAITING)
+
+        for msg in WaitingMessage.objects.for_relation(relation_b):
+            self.assertEqual(msg.status, WaitingMessage.Status.RESOLVING)
+
+    def test_mark_waiting_keeps_resolved(self):
+        relation = ModelRelation(Order, id_field="id", id_value=100)
+        for status in WaitingMessage.Status:
+            WaitingMessageFactory.create(
+                status=status,
+                relation_model_key=ModelRelation.get_model_key(Order),
+                relation_id_field=relation.id_field,
+                relation_id_value=relation.id_value,
+                serialized_relation={},
+            )
+
+        WaitingMessage.objects.mark_waiting(relation)
+
+        self.assertEqual(
+            sorted(
+                WaitingMessage.objects.for_relation(relation).values_list(
+                    "status",
+                    flat=True,
+                ),
+            ),
+            [WaitingMessage.Status.WAITING] * 2 + [WaitingMessage.Status.RESOLVED],
+        )
+
     async def test_aiter_relations_to_resolve(self):
         for status in WaitingMessage.Status:
             await sync_to_async(WaitingMessageFactory.create_batch)(
