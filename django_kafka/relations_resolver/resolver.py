@@ -85,4 +85,9 @@ class RelationResolver:
         return async_to_sync(self.aresolve)(relations, msg)
 
     async def aresolve_relation(self, relation: "Relation"):
-        await relation.aresolve()
+        try:
+            await relation.aresolve()
+        finally:
+            # the daemon claims the whole group up front, so messages this
+            # run never reached are still claimed
+            await relation.amark_waiting()

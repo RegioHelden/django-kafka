@@ -109,3 +109,6 @@ class ModelMessageProcessor(MessageProcessor):
 
     async def amark_resolving(self, relation: "Relation"):
         await sync_to_async(self.model.objects.mark_resolving)(relation)
+
+    async def amark_waiting(self, relation: "Relation"):
+        await sync_to_async(self.model.objects.mark_waiting)(relation)

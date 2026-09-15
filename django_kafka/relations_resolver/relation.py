@@ -31,6 +31,9 @@ class Relation(ABC):
     async def amark_resolving(self):
         await kafka.relations_resolver.processor.amark_resolving(self)
 
+    async def amark_waiting(self):
+        await kafka.relations_resolver.processor.amark_waiting(self)
+
     async def aidentifier(self) -> str:
         return await sync_to_async(self.identifier)()
 
@@ -69,7 +72,7 @@ class ModelRelation(Relation):
         self.model_key = self.get_model_key(model)
 
     def identifier(self):
-        return f"{self.model_key}-{self.id_value}".lower()
+        return f"{self.model_key}.{self.id_field}-{self.id_value}".lower()
 
     async def aexists(self) -> bool:
         return await self.model.objects.filter(

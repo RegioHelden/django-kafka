@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from django_temporalio.client import init_client
-from temporalio.common import RetryPolicy
+from temporalio.common import RetryPolicy, WorkflowIDConflictPolicy
 
 from django_kafka.conf import settings
 from django_kafka.relations_resolver.daemon import RelationResolverDaemon
@@ -21,4 +21,6 @@ class TemporalDaemon(RelationResolverDaemon):
             id=await relation.aidentifier(),
             task_queue=self.task_queue,
             retry_policy=RetryPolicy(maximum_attempts=0),  # indefinitely
+            # a failed start would abandon the relations not dispatched yet
+            id_conflict_policy=WorkflowIDConflictPolicy.USE_EXISTING,
         )

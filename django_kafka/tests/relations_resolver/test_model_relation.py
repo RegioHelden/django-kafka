@@ -21,7 +21,7 @@ class ModelRelationTestCase(TestCase):
 
         self.assertEqual(
             relation.identifier(),
-            f"{relation.model_key}-{relation.id_value}".lower(),
+            f"{relation.model_key}.{relation.id_field}-{relation.id_value}".lower(),
         )
 
     async def test_aexists(self):
