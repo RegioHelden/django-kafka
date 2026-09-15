@@ -30,10 +30,11 @@ class PythonSink(Sink):
         Falls back to MODEL_SYNC_CONSUMER setting. Required — one of the
         two must be set, otherwise registration raises.
     relations: Relation declarations for FK resolution. Auto-detected
-        from the model's non-nullable, non-blank FK fields. An explicit
-        entry with `fk` set replaces the auto-detected entry for that
-        FK field, and also forces inclusion of nullable/blank FKs that
-        would otherwise be skipped.
+        from the model's non-nullable, non-blank FK fields, ContentType
+        aside: content types are never synced in, so there is no relation
+        to resolve. An explicit entry with `fk` set replaces the
+        auto-detected entry for that FK field, and also forces inclusion
+        of nullable/blank FKs that would otherwise be skipped.
     """
 
     topic_consumer_class: type[PythonSinkTopicBase] | None = None
@@ -71,7 +72,15 @@ class PythonSink(Sink):
                     yield relation
                     break
             else:
-                if any([field.null, field.blank]):
+                if any(
+                    [
+                        # no need to resolve ContentType relations as they
+                        # never come from the outside.
+                        field.related_model._meta.label == "contenttypes.ContentType",
+                        field.null,
+                        field.blank,
+                    ],
+                ):
                     continue
                 yield Relation(
                     model=field.related_model,

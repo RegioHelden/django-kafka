@@ -3,10 +3,13 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Flag, auto
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, get_type_hints
 
+from django.apps import apps
 from django.db.models import Model
 
+from django_kafka.exceptions import DjangoKafkaError
 from django_kafka.schema.avro import AvroSchema
 from django_kafka.schema.fields import python_type_to_avro
 
@@ -312,6 +315,60 @@ class RelationTransform(FieldTransform):
         if id_value is None:
             return None
         return self.model.objects.get(**{self.id_field: id_value})
+
+
+@dataclass
+class RemoteContentTypes:
+    """
+    Content types of the system producing the messages.
+
+    `django_content_type` ids are assigned per database in migration order, so a
+    producer's id has no meaning here and cannot be derived - the mapping has to
+    be stated, per environment.
+
+    `models`: the remote `content_type_id` -> the model this system stores it as,
+        as a class or an "app_label.Model" path (settings cannot import models).
+    """
+
+    models: dict[int, type[Model] | str]
+
+    @cached_property
+    def _local_ids(self) -> dict[int, int]:
+        # lazy so contenttypes stays optional for projects that never map one
+        from django.contrib.contenttypes.models import ContentType  # noqa: PLC0415
+
+        resolved = {
+            remote_id: apps.get_model(model) if isinstance(model, str) else model
+            for remote_id, model in self.models.items()
+        }
+        content_types = ContentType.objects.get_for_models(*resolved.values())
+        return {
+            remote_id: content_types[model].id for remote_id, model in resolved.items()
+        }
+
+    def id_for(self, remote_id: int) -> int:
+        """Local content type id for a remote one."""
+        try:
+            return self._local_ids[remote_id]
+        except KeyError:
+            raise DjangoKafkaError(
+                f"Remote content type {remote_id} is not mapped to a local model.",
+            ) from None
+
+
+@dataclass
+class RemoteContentTypeTransform(FieldTransform):
+    """Replace the producing system's `content_type_id` with the local one."""
+
+    source: str = "content_type_id"
+    content_types: RemoteContentTypes | None = None
+
+    def transform_value(self, sync, msg_key, msg_value, part):
+        message = msg_key if part == MessagePart.KEY else msg_value
+        remote_id = message.get(self.source)
+        if remote_id is None:
+            return None
+        return self.content_types.id_for(remote_id)
 
 
 @dataclass

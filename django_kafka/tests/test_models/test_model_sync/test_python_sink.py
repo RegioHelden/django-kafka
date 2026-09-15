@@ -11,6 +11,7 @@ from django_kafka.relations_resolver.relation import ModelRelation
 from django_kafka.topic import TopicConsumer
 
 from .factories import (
+    ModelWithContentTypeFK,
     ModelWithFK,
     ModelWithFKChild,
     ModelWithNullableFK,
@@ -81,6 +82,11 @@ class PythonSinkMakeTopicTestCase(TestCase):
 
     def test_nullable_fk_excluded_from_auto_detection(self):
         sync_cls = self._make_sync(model=ModelWithNullableFK)
+        topic = sync_cls().sink.make_topic()
+        self.assertEqual(topic.relations, [])
+
+    def test_content_type_fk_excluded_from_auto_detection(self):
+        sync_cls = self._make_sync(model=ModelWithContentTypeFK)
         topic = sync_cls().sink.make_topic()
         self.assertEqual(topic.relations, [])
 
