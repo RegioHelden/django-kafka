@@ -1,7 +1,9 @@
 # django-kafka
-This library is using [confluent-kafka-python](https://github.com/confluentinc/confluent-kafka-python) which is a wrapper around the [librdkafka](https://github.com/confluentinc/librdkafka) (Apache Kafka C/C++ client library).
 
-It helps to integrate kafka with Django. 
+This library is using [confluent-kafka-python](https://github.com/confluentinc/confluent-kafka-python) which is a
+wrapper around the [librdkafka](https://github.com/confluentinc/librdkafka) (Apache Kafka C/C++ client library).
+
+It helps to integrate kafka with Django.
 
 ## Quick start
 
@@ -10,7 +12,10 @@ pip install django-kafka
 ```
 
 ### Configure:
-Considering you have locally setup kafka instance with no authentication. All you need is to define the bootstrap servers.
+
+Considering you have locally setup kafka instance with no authentication. All you need is to define the bootstrap
+servers.
+
 ```python
 # ./settings.py
 
@@ -29,6 +34,7 @@ DJANGO_KAFKA = {
 ### Define a Topic:
 
 Topics define how to handle incoming messages and how to produce an outgoing message.
+
 ```python
 from confluent_kafka.serialization import MessageField
 from django_kafka.topic import Topic
@@ -43,13 +49,16 @@ class Topic1(Topic):
         # ... process values
 ```
 
-`Topic` inherits from the `TopicProducer` and `TopicConsumer` classes. If you only need to consume or produce messages, inherit from one of these classes instead to avoid defining unnecessary abstract methods. 
+`Topic` inherits from the `TopicProducer` and `TopicConsumer` classes. If you only need to consume or produce messages,
+inherit from one of these classes instead to avoid defining unnecessary abstract methods.
 
 ### Define a Consumer:
 
-Consumers define which topics they take care of. Usually you want one consumer per project. If 2 consumers are defined, then they will be started in parallel.
+Consumers define which topics they take care of. Usually you want one consumer per project. If 2 consumers are defined,
+then they will be started in parallel.
 
-Consumers are auto-discovered and are expected to be located under the `some_django_app/kafka/consumers.py` or `some_django_app/consumers.py`.
+Consumers are auto-discovered and are expected to be located under the `some_django_app/kafka/consumers.py` or
+`some_django_app/consumers.py`.
 
 ```python
 # ./consumers.py
@@ -75,38 +84,48 @@ class MyAppConsumer(Consumer):
     }
 ```
 
-
 ### Start the Consumers:
+
 You can use django management command to start defined consumers.
+
 ```bash
 ./manage.py kafka_consume
 ```
+
 Or you can use `DjangoKafka` class API.
+
 ```python
 from django_kafka import kafka
 
 kafka.run_consumers()
 ```
-Check [Confluent Python Consumer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#consumer) for API documentation.
 
-
+Check [Confluent Python Consumer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#consumer)
+for API documentation.
 
 ### Produce:
+
 Message are produced using a Topic instance.
+
 ```python
 from my_app.topics import Topic1
 
 # this will send a message to kafka, serializing it using the defined serializer
 Topic1().produce("some message")
 ```
-Check [Confluent Python Producer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#producer) for API documentation.
 
+Check [Confluent Python Producer](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#producer)
+for API documentation.
 
 ### Define schema registry:
 
-The library is using [Confluent's SchemaRegistryClient](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient). In order to use it define a `SCHEMA_REGISTRY` setting. 
+The library is
+using [Confluent's SchemaRegistryClient](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient).
+In order to use it define a `SCHEMA_REGISTRY` setting.
 
-Find available configs in the [SchemaRegistryClient docs](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient).
+Find available configs in
+the [SchemaRegistryClient docs](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient).
+
 ```python
 DJANGO_KAFKA = {
     "SCHEMA_REGISTRY": {
@@ -115,13 +134,15 @@ DJANGO_KAFKA = {
 }
 ```
 
-**Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom Topic with your schema.
+**Note:** take [django_kafka.topic.AvroTopic](./django_kafka/topic.py) as an example if you want to implement a custom
+Topic with your schema.
 
 ## Specialized Topics:
 
 ### `ModelTopicConsumer`:
 
-`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class and set the model and the topic to consume from.
+`ModelTopicConsumer` can be used to sync django model instances from abstract kafka events. Simply inherit the class and
+set the model and the topic to consume from.
 
 ```py
 from django_kafka.topic.model import ModelTopicConsumer
@@ -134,7 +155,7 @@ class MyModelConsumer(ModelTopicConsumer):
     model = MyModel
 ```
 
-Model instances will have their attributes synced from the message value. 
+Model instances will have their attributes synced from the message value.
 
 1. If you need to alter a message key or value before it is assigned, define a `transform_{attr}` method.
 2. If you need to ignore a field in the message value, define an `exclude_fields` list.
@@ -151,21 +172,27 @@ class MyModelConsumer(ModelTopicConsumer):
 
 A few notes:
 
-1. Instance deletions are detected automatically based on a null message value or the presence of a `__deleted` field (via `deletion_key`) in the value. If you need alternate delete behaviour, override `deletion_key` or `is_deletion`.
-2. If the model PK appears in the message value or key, and it has not been excluded via `exclude_fields`, this will be used for lookup to update an existing instance – otherwise the entire message key will be used. If you need alternate lookup behaviour, override `get_lookup_kwargs`.
+1. Instance deletions are detected automatically based on a null message value or the presence of a `__deleted` field
+   (via `deletion_key`) in the value. If you need alternate delete behaviour, override `deletion_key` or `is_deletion`.
+2. If the model PK appears in the message value or key, and it has not been excluded via `exclude_fields`, this will be
+   used for lookup to update an existing instance – otherwise the entire message key will be used. If you need alternate
+   lookup behaviour, override `get_lookup_kwargs`.
 
 ### `TopicReproducer`:
 
 When using debezium source connectors, a common problem arises; the events need to be augmented with extra data (e.g.
-related table data) so they can be processed by the target system. This requires interacting with two closely related 
+related table data) so they can be processed by the target system. This requires interacting with two closely related
 topics:
 
 1. The internal debezium source connector topic, with the raw data.
-2. The public topic which contains the debezium source event plus some augmented data. 
+2. The public topic which contains the debezium source event plus some augmented data.
 
-The pattern is that events should be consumed from the debezium source connector topic (`1.`) and then passed through a "reproducer" which augments the data and re-produces it to the main public topic (`2.`).
+The pattern is that events should be consumed from the debezium source connector topic (`1.`) and then passed through a
+"reproducer" which augments the data and re-produces it to the main public topic (`2.`).
 
-`TopicReproducer` helps implement this pattern. `TopicReproducer.get_reproduce_topic` returns a topic consumer which consumes from the debezium source connector topic (`1.`) for a Django model and distributes the message back to the `TopicReproducer.reproduce` method which can then implement the data augmentation logic (`2.`). As a simple example:
+`TopicReproducer` helps implement this pattern. `TopicReproducer.get_reproduce_topic` returns a topic consumer which
+consumes from the debezium source connector topic (`1.`) for a Django model and distributes the message back to the
+`TopicReproducer.reproduce` method which can then implement the data augmentation logic (`2.`). As a simple example:
 
 ```py
 # topics.py
@@ -187,6 +214,7 @@ class MyModelTopic(AvroTopicProducer, TopicReproducer):
     def _reproduce_deletion(self, instance_id, key, value):
         self.produce(key={"id": instance_id}, value=None)
 ```
+
 ```py
 # consumers.py
 from django_kafka import kafka
@@ -199,26 +227,31 @@ class MyTopicReproducerConsumer(Consumer):
     topics = Topics(MyModelTopic.get_reproduce_topic())
 ```
 
-In this example, events will be consumed from the debezium source connector table for `MyModel`, and then re-produced to the `mymodel` topic with any extra
-data. This set-up still requires you to add the model table to your debezium source connector configuration as necessary.
+In this example, events will be consumed from the debezium source connector table for `MyModel`, and then re-produced to
+the `mymodel` topic with any extra
+data. This set-up still requires you to add the model table to your debezium source connector configuration as
+necessary.
 
 The following attributes/methods of `TopicReproducer` can be overridden:
 
 1. `reproduce_model` (optional) - the model class for which messages will be reproduced from events to a debezium source
-    connector topic. If not set, then `reproduce_name` must be set and `reproduce` overridden.
+   connector topic. If not set, then `reproduce_name` must be set and `reproduce` overridden.
 2. `reproduce_name` (optional) - the topic name to reproduce messages from, for when there is no `reproduce_model` or a
-    custom topic name is required.
-3. `reproduce_namespace` (optional) - if the debezium source connector prepends topic names with a namespace, 
-    specify this here.
+   custom topic name is required.
+3. `reproduce_namespace` (optional) - if the debezium source connector prepends topic names with a namespace,
+   specify this here.
 4. `reproduce` (optional) - defines default reproduce behaviour by calling `_reproduce_upsert` and `_reproduce_deletion`
-    depending on instance upsert or deletion respectively. These latter two methods must be implemented if this method 
-    is not overridden.
+   depending on instance upsert or deletion respectively. These latter two methods must be implemented if this method
+   is not overridden.
 5. `_reproduce_upsert` and `_reproduce_deletion` (required if `reproduce` not overridden) - entry point to perform
    the actual message produce with the augmented data, depending on instance upsert or deletion.
 
 ## Dead Letter Topic:
 
-Any message which fails to consume will be sent to the dead letter topic. The dead letter topic name is combined of the consumer group id, the original topic name, and a `.dlt` suffix (controllable with the `DEAD_LETTER_TOPIC_SUFFIX` setting).  So for a failed message in `topic` received by consumer `group`, the dead letter topic name would be `group.topic.dlt`.
+Any message which fails to consume will be sent to the dead letter topic. The dead letter topic name is combined of the
+consumer group id, the original topic name, and a `.dlt` suffix (controllable with the `DEAD_LETTER_TOPIC_SUFFIX`
+setting). So for a failed message in `topic` received by consumer `group`, the dead letter topic name would be
+`group.topic.dlt`.
 
 ## Retries:
 
@@ -235,17 +268,26 @@ class RetryableTopic(Topic):
     ...
 ```
 
-You can also configure retry behaviour globally for all topics with the `RETRY_SETTINGS` configuration (see [settings](#settings)).
+You can also configure retry behaviour globally for all topics with the `RETRY_SETTINGS` configuration
+(see [settings](#settings)).
 
-Retries can be either blocking or non-blocking, controlled by the `blocking` boolean parameter. By default, all retries are blocking. 
+Retries can be either blocking or non-blocking, controlled by the `blocking` boolean parameter. By default, all retries
+are blocking.
 
 ### Blocking Retries:
 
-When the consumption of a message fails in a blocking retryable topic, the consumer process will pause the partition and retry the message at a later time. Therefore, messages in that partition will be blocked until the failing message succeeds or the maximum retry attempts are reached, after which the message is sent to the dead letter topic.
+When the consumption of a message fails in a blocking retryable topic, the consumer process will pause the partition and
+retry the message at a later time. Therefore, messages in that partition will be blocked until the failing message
+succeeds or the maximum retry attempts are reached, after which the message is sent to the dead letter topic.
 
 ### Non-blocking Retries:
 
-When the consumption of a message fails in a non-blocking retryable topic, the message is re-sent to a topic with a name combined of the consumer group id, the original topic name, a `.retry` suffix (controllable with the `RETRY_TOPIC_SUFFIX` setting), and the retry number. Subsequent failed retries will then be sent to retry topics of incrementing retry number until the maximum attempts are reached, after which it will be sent to a dead letter topic. So for a failed message in topic `topic`, with a maximum retry attempts of 3 and received by consumer group `group`, the expected topic sequence would be: 
+When the consumption of a message fails in a non-blocking retryable topic, the message is re-sent to a topic with a name
+combined of the consumer group id, the original topic name, a `.retry` suffix (controllable with the
+`RETRY_TOPIC_SUFFIX` setting), and the retry number. Subsequent failed retries will then be sent to retry topics of
+incrementing retry number until the maximum attempts are reached, after which it will be sent to a dead letter topic. So
+for a failed message in topic `topic`, with a maximum retry attempts of 3 and received by consumer group `group`, the
+expected topic sequence would be:
 
 1. `topic`
 2. `group.topic.retry.1`
@@ -253,14 +295,20 @@ When the consumption of a message fails in a non-blocking retryable topic, the m
 4. `group.topic.retry.3`
 5. `group.topic.dlt`
 
-When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in parallel for any consumer containing a non-blocking retryable topic. This retry consumer will be assigned to a consumer group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry consumer and are not sent back to the original topic.
+When consumers are started using [start commands](#start-the-Consumers), an additional retry consumer will be started in
+parallel for any consumer containing a non-blocking retryable topic. This retry consumer will be assigned to a consumer
+group whose id is a combination of the original group id and a `.retry` suffix. This consumer is subscribed to the retry
+topics, and manages the message retry and delay behaviour. Please note that messages are retried directly by the retry
+consumer and are not sent back to the original topic.
 
 ### Relations resolver
+
 To make sure your consumer are not getting stuck when using blocking retries, you can use relations resolver.
 
 NOTE: Currently works only with PostgreSQL.
 
 #### Usage:
+
 ```python
 from django_kafka.relations_resolver.relation import ModelRelation
 
@@ -272,36 +320,49 @@ class MyTopicConsumer(TopicConsumer):
 ```
 
 #### Entities
-- `RelationResolver` - is an entry point of the handling of the missing relations. It knows what APIs to call to decide what to do with the message: consume, send to waiting queue or pause the consumption from the parition.
-- `Relation` - implements serialization of the relation to pass it around and holds the logic of the relation (if it exists, has waiting messages etc.)
+
+- `RelationResolver` - is an entry point of the handling of the missing relations. It knows what APIs to call to decide
+  what to do with the message: consume, send to waiting queue or pause the consumption from the parition.
+- `Relation` - implements serialization of the relation to pass it around and holds the logic of the relation (if it
+  exists, has waiting messages etc.)
 - `MessageProcessor` - defines how messages which are missing relations are stored, and processed.
 - `RelationResolverDaemon` - runs background tasks to resolve the relations.
 
 #### Brief flow:
+
 1. When `TopicConsumer.get_relations` is overwritten, then relations resolver will check for missing relations.
 2. When relation does not exist, then the message is placed to the store for later processing.
 3. When relation exists, but there are waiting messages, then the partition is paused until the messages are consumed.
-4. Tombstones (null message value) are never queued: they discard the waiting messages for the same (topic, key) and are consumed immediately, as the deletion supersedes them and needs no relations. If some of those messages are being resolved at that moment, the partition is paused so the deletion applies strictly after them.
+4. Tombstones (null message value) are never queued: they discard the waiting messages for the same (topic, key) and are
+   consumed immediately, as the deletion supersedes them and needs no relations. If some of those messages are being
+   resolved at that moment, the partition is paused so the deletion applies strictly after them.
 
 #### Requirements:
-- Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own `RelationResolverDaemon` if you want to use something else.
+
+- Current implementation uses Temporal to run background tasks and schedules, but it is possible to implement your own
+  `RelationResolverDaemon` if you want to use something else.
 
 #### Relations resolver daemons:
 
 - `TemporalDaemon`
+
 ```bash
 ./manage.py sync_temporalio_schedules
 ```
 
 ## Connectors:
 
-Connectors are auto-discovered and are expected to be located under the `some_django_app/kafka/connectors.py` or `some_django_app/connectors.py`.
+Connectors are auto-discovered and are expected to be located under the `some_django_app/kafka/connectors.py` or
+`some_django_app/connectors.py`.
 
-Connectors are defined as python classes decorated with `@kafka.connectors()` which adds the class to the global registry. 
+Connectors are defined as python classes decorated with `@kafka.connectors()` which adds the class to the global
+registry.
 
-`django_kafka.connect.connector.Connector` implements submission, validation and deletion of the connector configuration.
+`django_kafka.connect.connector.Connector` implements submission, validation and deletion of the connector
+configuration.
 
 ### Define connector:
+
 ```python
 # Connectors are discovered automatically when placed under the connectors module
 # e.g. ./connectors.py
@@ -336,13 +397,14 @@ class MyConnector(Connector):
 
 django-kafka provides `./manage.py kafka_connect` management command to manage your connectors.
 
-
 #### Manage a single connector
+
 ```bash
 ./manage.py kafka_connect path.to.my.SpecialConnector --validate --publish --check-status --ignore-failures
 ````
 
 #### Manage all connectors
+
 ```bash
 ./manage.py kafka_connect --validate --publish --check-status --ignore-failures
 ````
@@ -359,13 +421,16 @@ See `--help`.
 
 ## Model Sync:
 
-`ModelSync` is a declarative wrapper that wires a Django model to a Kafka topic in one class. From a single subclass the framework registers:
+`ModelSync` is a declarative wrapper that wires a Django model to a Kafka topic in one class. From a single subclass the
+framework registers:
 
 - a Debezium source connector (via `Source`) that emits CDC events for the model,
 - an optional enricher consumer that augments messages and re-produces them to a public topic,
-- a sink (via `Sink`) that writes incoming messages back into the model — either through a Kafka Connect JDBC sink or a Python consumer.
+- a sink (via `Sink`) that writes incoming messages back into the model — either through a Kafka Connect JDBC sink or a
+  Python consumer.
 
-Source-only, sink-only, and bidirectional configurations are all valid. `ModelSync` subclasses are auto-discovered under `some_django_app/kafka/model_syncs.py` or `some_django_app/model_syncs.py`.
+Source-only, sink-only, and bidirectional configurations are all valid. `ModelSync` subclasses are auto-discovered under
+`some_django_app/kafka/model_syncs.py` or `some_django_app/model_syncs.py`.
 
 ### One-way source:
 
@@ -380,7 +445,10 @@ class OrderSync(ModelSync):
     source = DbzPostgresSource(msg_key_fields=["uuid"])
 ```
 
-When `fields` is omitted, all model columns are synced (`column.include.list` is set to `<table>.*`). Set `IncludeFields([...])` or `ExcludeFields([...])` to constrain the column set; the value propagates to the source connector and is also enforced on the sink side as the write filter. With no enricher, Debezium reroutes raw CDC events directly to `topic`.
+When `fields` is omitted, all model columns are synced (`column.include.list` is set to `<table>.*`). Set
+`IncludeFields([...])` or `ExcludeFields([...])` to constrain the column set; the value propagates to the source
+connector and is also enforced on the sink side as the write filter. With no enricher, Debezium reroutes raw CDC events
+directly to `topic`.
 
 ### Sink with relations resolver:
 
@@ -395,9 +463,17 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink()
 ```
 
-`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the
+`MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value
+(via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank
+`ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a
+wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
-Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform assigns `None` to the FK.
+Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field),
+a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be
+skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model
+instance. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform
+assigns `None` to the FK.
 
 ```python
 from django_kafka.models.model_sync import (
@@ -464,26 +540,107 @@ class OrderSync(ModelSync):
         return str(Customer.objects.get(id=msg_key["customer_id"]).uuid)
 ```
 
-Bidirectional syncs require [`KafkaConnectSkipModel`](#kafkaconnectskipmodel) (for `kafka_skip`-based loop prevention) and an explicit `topic`. With `enrich_transforms` set, the source publishes to the raw Debezium topic; an enricher consumer (`MODEL_SYNC_ENRICHER_CONSUMER`) reads from there, runs the transforms, and produces to the public `topic`. The sink consumes the public `topic` and writes back into the model.
+Bidirectional syncs require [`KafkaConnectSkipModel`](#kafkaconnectskipmodel) (for `kafka_skip`-based loop prevention)
+and an explicit `topic`. With `enrich_transforms` set, the source publishes to the raw Debezium topic; an enricher
+consumer (`MODEL_SYNC_ENRICHER_CONSUMER`) reads from there, runs the transforms, and produces to the public `topic`. The
+sink consumes the public `topic` and writes back into the model.
 
 ### Transforms:
 
-Transforms form the per-message pipeline between source-shape and sink-shape data. Each transform declares what it reads (`source`) and what it writes (`target`). Available types:
+Transforms form the per-message pipeline between source-shape and sink-shape data. Each transform declares what it reads
+(`source`) and what it writes (`target`). Available types:
 
 - `FieldTransform` — per-field base; `apply_to=KEY|VALUE|BOTH`, `replace` controls whether `source` is removed.
 - `SyncMethodTransform` — delegates to `enrich_<source>` / `consume_<source>` on the sync.
-- `EnricherTransform` — calls a sync method returning extras to merge; the method's `TypedDict` return annotation drives the Avro schema delta.
+- `EnricherTransform` — calls a sync method returning extras to merge; the method's `TypedDict` return annotation drives
+  the Avro schema delta.
 - `RelationTransform` — replaces a field with a related model instance.
 - `CoalesceTransform`, `StaticValueTransform` — defaults and static values.
-- `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` / `datetime`.
+- `MappingTransform` — replaces a value based on a specified mapping.
+- `ContentTypeTransform` — a specialized `MappingTransform` where the keys are source `ContentType` ids and the values
+  are target model classes.
+- `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` /
+  `datetime`.
 
-The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite live columns.
+The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a
+transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite
+live columns.
+
+## Generic relations across systems:
+
+A `GenericForeignKey` stores `content_type_id`, a value assigned per database in migration order - the producing
+system's id means nothing here. `LazyTargetContentTypeMapping` maps the producer's ids onto local models, and
+`ContentTypeTransform` swaps the producer's id for the local one as the message is consumed.
+`LazySourceContentTypeMapping` is also provided, for if you want to perform the mapping on the producer side.
+
+Take a `Comment` whose `target` is a `GenericForeignKey` onto `Order` or `Customer`. The ids belong to the producing
+database, so they are environment configuration:
+
+```python
+# settings.py — read from the producing system's database
+REMOTE_CONTENT_TYPES = {7: "my_app.Order", 12: "my_app.Customer"}
+```
+
+```python
+from django.conf import settings
+from django_kafka.models.model_sync import (
+    IncludeFields,
+    ModelSync,
+    PythonAvroSink,
+    LazyTargetContentTypeMapping,
+    ContentTypeTransform,
+)
+from my_app.models import Comment
+
+CONTENT_TYPES = LazyTargetContentTypeMapping(settings.REMOTE_CONTENT_TYPES)
+
+
+class CommentSync(ModelSync):
+    model = Comment
+    topic = "comments"
+    fields = IncludeFields(["id", "content_type_id", "object_id", "text"])
+    sink = PythonAvroSink()
+
+    consume_transforms = [ContentTypeTransform(mapping=CONTENT_TYPES)]
+```
+
+Values in the mapping passed to `LazyTargetContentTypeMapping` are expected to be model classes or `"app_label.Model"`
+paths; the whole map is resolved to local content type ids once, on first use, so a message costs a dict lookup and the
+map can live in settings, where models cannot be imported. The producing side needs no enricher and no transform —
+`content_type_id` and `object_id` travel as plain columns, and `content_type_id` is rewritten in place.
+
+Likewise, `LazySourceContentTypeMapping` expects keys to be model classes or string paths, will be evaluated on use, and
+require no transform on the consumer side.
+
+`object_id` is left alone: the sink looks a synced row up by the pk carried in the message, so a referenced row holds
+the same id on both sides. There is currently no built-in way to map object Iids based on a different column on a
+per-model level.
+
+The same system's databases disagree on these ids whenever their migration history differs, so generate the map against
+the producing database rather than editing it by hand:
+
+```python
+# run on the producing system
+{
+    ct.id: f"{ct.app_label}.{ct.model_class().__name__}"
+    for ct in ContentType.objects.all()
+}
+```
+
+It is up to the used to decide what should happen if unmapped iss are encountered. By default, such case raises
+`DjangoKafkaError` and the message follows the consumer's retry/dead-letter handling. To change this behavior, you can
+set `default_value` in the `ContentTypeTransform` — most likely to `None`. In that case, this value will be used
+whenever an unmapped id is encountered. This can be useful if not all models from the remote systems can be represented.
+
+A *stale* id never raises — it writes a reference to the wrong model — so regenerate the map whenever the producer adds
+or removes models.
 
 See [`MODEL_SYNC_*` settings](#model_sync_source_connector) for configuration.
 
 ## Settings:
 
 **Defaults:**
+
 ```python
 DJANGO_KAFKA = {
     "CLIENT_ID": f"{socket.gethostname()}-python",
@@ -531,28 +688,38 @@ DJANGO_KAFKA = {
 ```
 
 #### `CLIENT_ID`
+
 Default: `f"{socket.gethostname()}-python"`
 
-An id string to pass to the server when making requests. The purpose of this is to be able to track the source of requests beyond just ip/port by allowing a logical application name to be included in server-side request logging.
+An id string to pass to the server when making requests. The purpose of this is to be able to track the source of
+requests beyond just ip/port by allowing a logical application name to be included in server-side request logging.
 
-**Note:** This parameter is included in the config of both the consumer and producer unless `client.id` is overwritten within `PRODUCER_CONFIG` or `CONSUMER_CONFIG`.
+**Note:** This parameter is included in the config of both the consumer and producer unless `client.id` is overwritten
+within `PRODUCER_CONFIG` or `CONSUMER_CONFIG`.
 
 #### `GLOBAL_CONFIG`
+
 Default: `{}`
 
-Defines configurations applied to both consumer and producer. See [configs marked with `*`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
+Defines configurations applied to both consumer and producer. See [configs marked with
+`*`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
 
 #### `PRODUCER_CONFIG`
+
 Default: `{}`
 
-Defines configurations of the producer. See [configs marked with `P`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
+Defines configurations of the producer. See [configs marked with
+`P`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
 
 #### `CONSUMER_CONFIG`
+
 Default: `{}`
 
-Defines configurations of the consumer. See [configs marked with `C`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
+Defines configurations of the consumer. See [configs marked with
+`C`](https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md).
 
 #### `RETRY_CONSUMER_CONFIG`
+
 Default:
 
 ```py
@@ -566,16 +733,18 @@ Default:
 Defines configuration for the retry consumer. See [Non-blocking retries](#non-blocking-retries).
 
 #### `RETRY_TOPIC_SUFFIX`
+
 Default: `retry`
 
 Defines the retry topic suffix. See [Non-blocking retries](#non-blocking-retries).
 
 #### `RETRY_SETTINGS`
+
 Default: `None`
 
 Defines the configuration of the default retry settings. See [retries](#retries).
 
-Supports the following parameters: 
+Supports the following parameters:
 
 - `max_retries`: maximum number of retry attempts (use -1 for infinite)
 - `delay`: delay (seconds)
@@ -588,37 +757,47 @@ Supports the following parameters:
 For example, `{ ..., "RETRY_SETTINGS": dict(max_retries=-1, delay=10) }`
 
 #### `DEAD_LETTER_TOPIC_SUFFIX`
+
 Default: `dlt`
 
 Defines the dead letter topic suffix. See [Dead Letter Topic](#dead-letter-topic).
 
 #### `POLLING_FREQUENCY`
-Default: 1  # second
+
+Default: 1 # second
 
 How often client polls for events.
 
 #### `SCHEMA_REGISTRY`
+
 Default: `{}`
 
-Configuration for [confluent_kafka.schema_registry.SchemaRegistryClient](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient).
+Configuration
+for [confluent_kafka.schema_registry.SchemaRegistryClient](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#schemaregistryclient).
 
 #### `ERROR_HANDLER`
+
 Default: `django_kafka.error_handlers.ClientErrorHandler`
 
-This is an `error_cb` hook (see [Kafka Client Configuration](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#kafka-client-configuration) for reference).
+This is an `error_cb` hook
+(see [Kafka Client Configuration](https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#kafka-client-configuration)
+for reference).
 It is triggered for client global errors and in case of fatal error it raises `DjangoKafkaError`.
 
 #### `CONNECT_HOST`
+
 Default: `None`
 
 Rest API of the kafka-connect instance.
 
 #### `CONNECT_AUTH`
+
 Default: `None`
 
 `requests.auth.AuthBase` instance or `("username", "password")` for Basic Auth.
 
 #### `CONNECT_AUTH`
+
 Default: `dict(
     connect=5,
     read=5,
@@ -630,62 +809,81 @@ Default: `dict(
 kwargs for `urllib3.util.retry.Retry` initialization.
 
 #### `CONNECT_REQUESTS_TIMEOUT`
+
 Default: `30`
 
 `django_kafka.connect.client.KafkaConnectSession` would pass this value to every request method call.
 
 #### `CONNECTOR_NAME_PREFIX`
+
 Default: `""`
 
-Prefix which will be added to the connector name when publishing the connector. 
+Prefix which will be added to the connector name when publishing the connector.
 
-`CONNECT_` settings are required for `./manage.py kafka_connect` command which talks to the Rest API of the kafka-connect instance.
+`CONNECT_` settings are required for `./manage.py kafka_connect` command which talks to the Rest API of the
+kafka-connect instance.
 
 Used by `django_kafka.connect.connector.Connector` to initialize `django_kafka.connect.client.KafkaConnectClient`.
 
 #### `TEMPORAL_TASK_QUEUE`
+
 default: `django-kafka`
 
 #### `RELATION_RESOLVER`
+
 default: `django_kafka.relations_resolver.resolver.RelationResolver`
 
 #### `RELATION_RESOLVER_PROCESSOR`
+
 default: `django_kafka.relations_resolver.processor.model.ModelMessageProcessor`
 
 #### `RELATION_RESOLVER_DAEMON`
+
 default: `django_kafka.relations_resolver.daemon.temporal.TemporalDaemon`
 
 #### `RELATION_RESOLVER_DAEMON_INTERVAL`
+
 default: `timedelta(seconds=5)`
 
 Defines how often check if relations are resolved for messages in waiting queue.
 
 #### `MODEL_SYNC_SOURCE_CONNECTOR`
+
 default: `None`
 
-Dotted path to the `Connector` that all `ModelSync` source declarations are merged into. Required when any `ModelSync` defines a `source`. See [Model Sync](#model-sync).
+Dotted path to the `Connector` that all `ModelSync` source declarations are merged into. Required when any `ModelSync`
+defines a `source`. See [Model Sync](#model-sync).
 
 #### `MODEL_SYNC_TOPIC_PREFIX`
+
 default: `None`
 
-Prefix applied to auto-generated topic names. With prefix `"myapp"` and `MODEL_SYNC_DB_SCHEMA="public"`, the default raw topic for a model with table `mytable` is `myapp.public.mytable`. Set explicitly via `ModelSync.topic` to override.
+Prefix applied to auto-generated topic names. With prefix `"myapp"` and `MODEL_SYNC_DB_SCHEMA="public"`, the default raw
+topic for a model with table `mytable` is `myapp.public.mytable`. Set explicitly via `ModelSync.topic` to override.
 
 #### `MODEL_SYNC_DB_SCHEMA`
+
 default: `"public"`
 
 PostgreSQL schema name used when building Debezium `table.include.list` entries and the auto-generated topic names.
 
 #### `MODEL_SYNC_CONSUMER`
+
 default: `None`
 
-Dotted path to the `Consumer` that runs `PythonSink` topics. Required if any `ModelSync`'s `PythonSink` doesn't pass an explicit `consumer=` — registration raises otherwise. Define a project consumer (custom group id, retry settings, etc.) and point this setting at it.
+Dotted path to the `Consumer` that runs `PythonSink` topics. Required if any `ModelSync`'s `PythonSink` doesn't pass an
+explicit `consumer=` — registration raises otherwise. Define a project consumer (custom group id, retry settings, etc.)
+and point this setting at it.
 
 #### `MODEL_SYNC_ENRICHER_CONSUMER`
+
 default: `django_kafka.models.model_sync.enricher.ModelSyncEnricherConsumer`
 
-Dotted path to the `Consumer` that runs the enricher reproduce-topics for `ModelSync`s with `enrich_transforms`. Reads from the raw Debezium topic, applies the transforms, and produces to the public `topic`.
+Dotted path to the `Consumer` that runs the enricher reproduce-topics for `ModelSync`s with `enrich_transforms`. Reads
+from the raw Debezium topic, applies the transforms, and produces to the public `topic`.
 
 #### `MODEL_SYNC_ENRICHER_GROUP`
+
 default: `"django-kafka.model-sync-enricher"`
 
 `group.id` used by the default `MODEL_SYNC_ENRICHER_CONSUMER`.
@@ -696,7 +894,8 @@ default: `"django-kafka.model-sync-enricher"`
 
 ### `producer.suppress`
 
-Use the `producer.suppress` function decorator and context manager to suppress the producing of messages during a particular context.
+Use the `producer.suppress` function decorator and context manager to suppress the producing of messages during a
+particular context.
 
 ```python
 from django_kafka import producer
@@ -711,19 +910,23 @@ def my_function_two():
         ...
 ```
 
-`producer.suppress` can take a list of topic names, or no arguments to suppress producers of all topics. 
+`producer.suppress` can take a list of topic names, or no arguments to suppress producers of all topics.
 
 Use `producer.unsuppress` to deactivate any set suppression during a specific context.
 
-
 ### `KafkaConnectSkipModel.kafka_skip`
 
-When using Kafka Connect to directly produce events from database changes, a flag must be added to the model database table which indicates if the connector should generate an event. You should then configure kafka connect to ignore events where this flag is set.
+When using Kafka Connect to directly produce events from database changes, a flag must be added to the model database
+table which indicates if the connector should generate an event. You should then configure kafka connect to ignore
+events where this flag is set.
 
 Two classes are provided subclassing Django's Model and QuerySet to manage this flag:
 
 #### KafkaConnectSkipModel
-Adds the `kafka_skip` boolean field, defaulting to `False`. This model also automatically resets `kafka_skip` to `False` when saving or deleting instances (if not explicitly set), and automatically sets it to `True` if global producer suppression is active with `producer.suppress(None)`.
+
+Adds the `kafka_skip` boolean field, defaulting to `False`. This model also automatically resets `kafka_skip` to `False`
+when saving or deleting instances (if not explicitly set), and automatically sets it to `True` if global producer
+suppression is active with `producer.suppress(None)`.
 
 Usage:
 
@@ -734,16 +937,19 @@ from django_kafka.connect.models import KafkaConnectSkipModel
 
 
 class User(KafkaConnectSkipModel, PermissionsMixin, AbstractBaseUser):
-    # ...
+# ...
 ```
 
-
 #### KafkaConnectSkipQueryset
-If you have defined a custom manager on your model then you should inherit it from `KafkaConnectSkipQueryset`. 
 
-It adds `kafka_skip=False` when using the bulk `update` method. **Note:** `kafka_skip=False` is only set when it's not provided to the `update` kwargs. E.g. `User.objects.update(first_name="John", kafka_skip=True)` will not be changed to `kafka_skip=False`.
+If you have defined a custom manager on your model then you should inherit it from `KafkaConnectSkipQueryset`.
 
-It also adjusts the bulk `delete` method to automatically update the `kafka_skip` value as necessary of all instances before performing the deletion.
+It adds `kafka_skip=False` when using the bulk `update` method. **Note:** `kafka_skip=False` is only set when it's not
+provided to the `update` kwargs. E.g. `User.objects.update(first_name="John", kafka_skip=True)` will not be changed to
+`kafka_skip=False`.
+
+It also adjusts the bulk `delete` method to automatically update the `kafka_skip` value as necessary of all instances
+before performing the deletion.
 
 Usage:
 
@@ -771,9 +977,11 @@ class User(KafkaConnectSkipModel, PermissionsMixin, AbstractBaseUser):
 
 ### Infinite loop
 
-You are likely to encounter infinite message generation when syncing data between multiple systems. Message suppression helps overcome this issue.
+You are likely to encounter infinite message generation when syncing data between multiple systems. Message suppression
+helps overcome this issue.
 
-The `produce.suppress` decorator can be used to suppress messages produced during consumption. If you wish to do this globally for all message consumption, use this decorator in your `Consumer` class:
+The `produce.suppress` decorator can be used to suppress messages produced during consumption. If you wish to do this
+globally for all message consumption, use this decorator in your `Consumer` class:
 
 ```python
 from django_kafka import producer
@@ -786,14 +994,17 @@ class MyConsumer(Consumer):
         super().consume(*args, **kwargs)
 ```
 
-When producing with Kafka Connect, the `KafkaConnectSkipModel` provides the `kafka_skip` flag; by using `producer.suppress` the record will be manually marked with `kafka_skip=True` at consumption time. Your connector should be configured not to send events when this flag is set.
+When producing with Kafka Connect, the `KafkaConnectSkipModel` provides the `kafka_skip` flag; by using
+`producer.suppress` the record will be manually marked with `kafka_skip=True` at consumption time. Your connector should
+be configured not to send events when this flag is set.
 
 ### Global message ordering
 
-To maintain global message ordering between systems, all events for the same database table should be sent to the same topic. The disadvantage is that each system will still consume its own message. 
-
+To maintain global message ordering between systems, all events for the same database table should be sent to the same
+topic. The disadvantage is that each system will still consume its own message.
 
 ## Making a new release
 
-This project makes use of [RegioHelden's reusable GitHub workflows](https://github.com/RegioHelden/github-reusable-workflows). \
+This project makes use
+of [RegioHelden's reusable GitHub workflows](https://github.com/RegioHelden/github-reusable-workflows). \
 Make a new release by manually triggering the `Open release PR` workflow.
