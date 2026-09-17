@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from django.apps import apps
 from django.db.models import ForeignKey
 
 from django_kafka.conf import settings
@@ -30,10 +31,11 @@ class PythonSink(Sink):
         Falls back to MODEL_SYNC_CONSUMER setting. Required — one of the
         two must be set, otherwise registration raises.
     relations: Relation declarations for FK resolution. Auto-detected
-        from the model's non-nullable, non-blank FK fields. An explicit
-        entry with `fk` set replaces the auto-detected entry for that
-        FK field, and also forces inclusion of nullable/blank FKs that
-        would otherwise be skipped.
+        from the model's non-nullable, non-blank FK fields, ContentType
+        aside: content types are never synced in, so there is no relation
+        to resolve. An explicit entry with `fk` set replaces the
+        auto-detected entry for that FK field, and also forces inclusion
+        of nullable/blank FKs that would otherwise be skipped.
     """
 
     topic_consumer_class: type[PythonSinkTopicBase] | None = None
@@ -57,6 +59,7 @@ class PythonSink(Sink):
         self.relations = relations
 
     def _auto_detect_relations(self, model: "type[Model]") -> "Iterator[Relation]":
+        content_type = self._content_type_model()
         for field in model._meta.fields:
             if any(
                 [
@@ -71,13 +74,28 @@ class PythonSink(Sink):
                     yield relation
                     break
             else:
-                if any([field.null, field.blank]):
+                if any(
+                    [
+                        # no need to resolve ContentType relations as they
+                        # never come from the outside.
+                        field.related_model is content_type,
+                        field.null,
+                        field.blank,
+                    ],
+                ):
                     continue
                 yield Relation(
                     model=field.related_model,
                     id_field="id",
                     value_field=field.attname,
                 )
+
+    @staticmethod
+    def _content_type_model() -> "type[Model] | None":
+        try:
+            return apps.get_model("contenttypes", "ContentType")
+        except LookupError:
+            return None
 
     @property
     def consumer_path(self) -> str:
