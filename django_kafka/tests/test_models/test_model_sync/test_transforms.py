@@ -36,3 +36,28 @@ class RelationTransformTestCase(TestCase):
 
         transform.model.objects.get.assert_not_called()
         self.assertEqual(new_value, {"related": None})
+
+    def _wait_only(self):
+        return RelationTransform(
+            source="related_id",
+            model=mock.Mock(),
+            id_field="id",
+        )
+
+    def test_without_target_leaves_the_value_untouched(self):
+        transform = self._wait_only()
+
+        new_value = transform.apply(None, {}, {"related_id": 5, "name": "n"})[1]
+
+        transform.model.objects.get.assert_not_called()
+        self.assertEqual(new_value, {"related_id": 5, "name": "n"})
+
+    def test_without_target_leaves_an_absent_value_absent(self):
+        transform = self._wait_only()
+
+        new_value = transform.apply(None, {}, {"name": "n"})[1]
+
+        self.assertEqual(new_value, {"name": "n"})
+
+    def test_without_target_produces_the_id_field(self):
+        self.assertEqual(self._wait_only().produces(None), {"related_id"})
