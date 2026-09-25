@@ -532,6 +532,7 @@ DJANGO_KAFKA = {
     "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
     "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
     "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
+    "RELATION_RESOLVER_DAEMON_BATCH_SIZE": None,
     "MODEL_SYNC_SOURCE_CONNECTOR": None,
     "MODEL_SYNC_TOPIC_PREFIX": None,
     "MODEL_SYNC_DB_SCHEMA": "public",
@@ -670,6 +671,13 @@ default: `django_kafka.relations_resolver.daemon.temporal.TemporalDaemon`
 default: `timedelta(seconds=5)`
 
 Defines how often check if relations are resolved for messages in waiting queue.
+
+#### `RELATION_RESOLVER_DAEMON_BATCH_SIZE`
+default: `None` (uncapped)
+
+How many resolved relations one daemon run dispatches. The rest wait for the next run, so a large backlog is drained at a steady rate instead of dispatching every relation at once.
+
+Together with the interval this caps the dispatch rate: `250` on the default 5 second interval is 50 per second. Set it above your sustained rate of resolved relations — below it, the waiting queue grows faster than the daemon drains it.
 
 #### `MODEL_SYNC_SOURCE_CONNECTOR`
 default: `None`

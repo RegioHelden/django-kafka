@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from django.test import SimpleTestCase
 from temporalio.common import WorkflowIDConflictPolicy
 
+from django_kafka.relations_resolver.daemon import RelationResolverDaemon
 from django_kafka.relations_resolver.daemon.temporal import TemporalDaemon
 from django_kafka.relations_resolver.relation import Relation
 from django_kafka.relations_resolver.temporalio.workflows import ResolveRelation
@@ -43,3 +44,50 @@ class TemporalDaemonTestCase(SimpleTestCase):
             start_workflow.await_args.kwargs["id_conflict_policy"],
             WorkflowIDConflictPolicy.USE_EXISTING,
         )
+
+
+class ResolveRelationsBatchTestCase(SimpleTestCase):
+    class Daemon(RelationResolverDaemon):
+        def __init__(self):
+            self.dispatched = []
+
+        async def aresolve_relation(self, relation):
+            self.dispatched.append(relation)
+
+    def _relations(self, count):
+        async def generator():
+            for _index in range(count):
+                relation = MagicMock(spec=Relation)
+                relation.amark_resolving = AsyncMock()
+                yield relation
+
+        return generator()
+
+    async def _run(self, available, batch_size):
+        daemon = self.Daemon()
+        with (
+            patch(
+                "django_kafka.conf.settings.RELATION_RESOLVER_DAEMON_BATCH_SIZE",
+                batch_size,
+            ),
+            patch("django_kafka.relations_resolver.daemon.kafka") as mock_kafka,
+        ):
+            processor = mock_kafka.relations_resolver.processor
+            processor.ato_resolve.return_value = self._relations(available)
+            await daemon.aresolve_relations()
+        return daemon.dispatched
+
+    async def test_stops_at_the_batch_size(self):
+        dispatched = await self._run(available=10, batch_size=4)
+
+        self.assertEqual(len(dispatched), 4)
+
+    async def test_dispatches_everything_below_the_batch_size(self):
+        dispatched = await self._run(available=3, batch_size=4)
+
+        self.assertEqual(len(dispatched), 3)
+
+    async def test_dispatches_everything_when_uncapped(self):
+        dispatched = await self._run(available=10, batch_size=None)
+
+        self.assertEqual(len(dispatched), 10)

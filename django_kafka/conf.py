@@ -53,6 +53,7 @@ DEFAULTS = {
     "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
     "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
     "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
+    "RELATION_RESOLVER_DAEMON_BATCH_SIZE": None,
     # Model sync
     "MODEL_SYNC_SOURCE_CONNECTOR": None,  # e.g. "myapp.connectors.MyConnector"
     "MODEL_SYNC_TOPIC_PREFIX": None,  # e.g. "myapp" → topic: "myapp.public.mytable"
