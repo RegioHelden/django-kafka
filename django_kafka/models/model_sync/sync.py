@@ -9,7 +9,11 @@ from django_kafka.models.model_sync.registry import model_sync_registry
 from django_kafka.models.model_sync.sink import ConnectorSink
 from django_kafka.models.model_sync.sink.python import PythonSink
 from django_kafka.models.model_sync.source import ConnectorSource
-from django_kafka.models.model_sync.transforms import Transform
+from django_kafka.models.model_sync.transforms import (
+    MessagePart,
+    RelationTransform,
+    Transform,
+)
 
 
 class ModelSync:
@@ -76,6 +80,20 @@ class ModelSync:
                 f"{cls.__name__} must define at least one of 'sink' or 'source'.",
             )
 
+        key_side = [
+            type(step).__name__
+            for step in cls.consume_transforms
+            if getattr(step, "apply_to", MessagePart.VALUE) & MessagePart.KEY
+        ]
+        if key_side:
+            raise ValueError(
+                f"{cls.__name__} declares {sorted(set(key_side))} with apply_to "
+                f"covering the key: the sink applies transforms to the value only, "
+                f"and the key is read untransformed for the lookup.",
+            )
+
+        cls._validate_relation_transforms()
+
         if cls.source is not None and cls.sink is not None:
             if not issubclass(cls.model, KafkaConnectSkipModel):
                 raise ValueError(
@@ -90,6 +108,26 @@ class ModelSync:
                     f"'sink' (bidirectional sync) but 'topic' "
                     f"is not set.",
                 )
+
+    @classmethod
+    def _validate_relation_transforms(cls):
+        if any(isinstance(t, RelationTransform) for t in cls.enrich_transforms):
+            raise ValueError(
+                f"{cls.__name__} declares a RelationTransform in "
+                f"'enrich_transforms'; relations are resolved on the sink side only.",
+            )
+
+        for transform in cls.consume_transforms:
+            if not isinstance(transform, RelationTransform):
+                continue
+            if any(transform.resolves(f) for f in cls.model._meta.fields):
+                continue
+
+            raise ValueError(
+                f"{cls.__name__} declares a RelationTransform for "
+                f"'{transform.target or transform.source}', "
+                f"which is not a foreign key on {cls.model.__name__}.",
+            )
 
     @classmethod
     def is_bidirectional(cls) -> bool:

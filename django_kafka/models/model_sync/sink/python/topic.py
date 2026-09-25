@@ -1,8 +1,8 @@
-from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING
 
 from confluent_kafka.serialization import MessageField
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 
 from django_kafka.models.model_sync.fields import ExcludeFields, IncludeFields
@@ -13,65 +13,6 @@ from django_kafka.topic.model import ModelTopicConsumer
 
 if TYPE_CHECKING:
     from django_kafka.models.model_sync.sync import ModelSync
-
-
-@dataclass
-class Relation:
-    """
-    Declarative FK relation for a PythonSink.
-
-    Standard FK relations are auto-detected from the model; only provide
-    explicit Relation entries to override or customise auto-detection:
-      - non-default `id_field` (e.g. lookup by `kafka_uuid` instead of `pk`)
-      - renamed message field (`value_field`) after enrich transforms
-      - nullable/blank FK fields (excluded from auto-detection by default)
-
-    `fk` is the merge key: it identifies which FK field on the model this
-    entry is for, replaces the auto-detected entry for that field, and emits
-    a `RelationTransform` that swaps the raw message value for the resolved
-    model instance assigned to `fk`.
-
-    `lookup`: when set, `get_lookup_kwargs` rewrites `value_field` → `lookup`
-    in the ORM lookup kwargs. Use when the message key name doesn't match the
-    model lookup path (e.g. `user__kafka_uuid` → `customer_user__kafka_uuid`).
-
-    Null (or absent) message values yield no relation - a null FK has
-    nothing to resolve - and the emitted `RelationTransform` assigns
-    `None` to `fk`.
-    """
-
-    model: type[Model]
-    id_field: str
-    value_field: str
-    fk: str | None = None
-    lookup: str | None = None
-
-    def to_transform(self) -> "RelationTransform | None":
-        """Return the Transform that performs FK lookup, if `fk` is set."""
-        if not self.fk:
-            return None
-        return RelationTransform(
-            source=self.value_field,
-            target=self.fk,
-            model=self.model,
-            id_field=self.id_field,
-        )
-
-    def to_model_relation(self, msg_value: dict) -> ModelRelation | None:
-        """
-        Return the ModelRelation the resolver should wait for, or None when
-        the message value is null or absent - a null FK has nothing to
-        resolve, and a relation with id_value=None can never exist, so
-        waiting on it would park the message forever.
-        """
-        id_value = msg_value.get(self.value_field)
-        if id_value is None:
-            return None
-        return ModelRelation(
-            self.model,
-            id_field=self.id_field,
-            id_value=id_value,
-        )
 
 
 class PythonSinkTopicBase(ModelTopicConsumer):
@@ -99,32 +40,60 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         name: str,
         model: type[Model],
         sync: "ModelSync",
-        relations: list[Relation] | None = None,
         transforms: list[Transform] | None = None,
     ):
         self.name = name
         self.model = model
         self.model_sync = sync
-        self.relations = relations or []
         self.transforms = transforms or []
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
         lookup_kwargs = super().get_lookup_kwargs(model, key, value)
-        rewrites = {r.value_field: r.lookup for r in self.relations if r.lookup}
+        rewrites = {t.source: t.lookup for t in self.relation_transforms if t.lookup}
         return {rewrites.get(field, field): val for field, val in lookup_kwargs.items()}
 
     def get_relations(self, msg):
+        """
+        Yield the relation each RelationTransform will wait on.
+
+        A step after a relation may depend on the instance it resolves, so the
+        walk applies the chain as it goes, and stops as soon as a lookup finds
+        no row - the relations left are yielded on the replay that follows.
+        """
         msg_key = self.deserialize(msg.key(), MessageField.KEY, msg.headers())
         msg_value = self.deserialize(msg.value(), MessageField.VALUE, msg.headers())
         if self.is_deletion(self.model, msg_key, msg_value):
             return
-        for relation in self.relations:
-            if model_relation := relation.to_model_relation(msg_value):
-                yield model_relation
+
+        remaining_relations = len(self.relation_transforms)
+        for transform in self.transforms:
+            if isinstance(transform, RelationTransform):
+                # waiting on a null id would park the message forever
+                if (id_value := msg_value.get(transform.source)) is not None:
+                    yield ModelRelation(
+                        transform.model,
+                        id_field=transform.id_field,
+                        id_value=id_value,
+                    )
+                remaining_relations -= 1
+                if not remaining_relations:
+                    return
+            try:
+                # empty key, as in `transform`, so both passes see the same input
+                msg_value = transform.apply(self.model_sync, {}, msg_value)[1]
+            except ObjectDoesNotExist:
+                # only a relation lookup means the awaited row is missing
+                if not isinstance(transform, RelationTransform):
+                    raise
+                return
+
+    @cached_property
+    def relation_transforms(self) -> list[RelationTransform]:
+        return [t for t in self.transforms if isinstance(t, RelationTransform)]
 
     @property
     def use_relations_resolver(self) -> bool:
-        return bool(self.relations)
+        return bool(self.relation_transforms)
 
     def _is_field_excluded(self, field):
         fields = self.model_sync.fields if self.model_sync else None
@@ -133,11 +102,10 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         return False
 
     def transform(self, model, value) -> dict:
-        # ModelTopicConsumer hands us only the value (key was used for the
-        # lookup). Pass an empty dict for msg_key so consume_<field> methods
-        # accepting both args don't break.
-        for transform_step in self.transforms:
-            value = transform_step.apply(self.model_sync, {}, value)[1]
+        # the resolver has let the message through, so the lookups find their rows
+        for transform in self.transforms:
+            # ModelTopicConsumer hands us no key
+            value = transform.apply(self.model_sync, {}, value)[1]
         return self._field_filter(value)
 
     @cached_property

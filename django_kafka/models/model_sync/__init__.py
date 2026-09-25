@@ -4,7 +4,6 @@ from django_kafka.models.model_sync.sink import (
     DbzJdbcSink,
     PythonAvroSink,
     PythonSink,
-    Relation,
     Sink,
 )
 from django_kafka.models.model_sync.source import (
@@ -46,7 +45,6 @@ __all__ = [
     "ModelSync",
     "PythonAvroSink",
     "PythonSink",
-    "Relation",
     "RelationTransform",
     "Sink",
     "Source",

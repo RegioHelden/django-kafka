@@ -3,7 +3,6 @@ from django_kafka.models.model_sync.sink.dbz_jdbc import DbzJdbcSink
 from django_kafka.models.model_sync.sink.python import (
     PythonAvroSink,
     PythonSink,
-    Relation,
 )
 
 __all__ = [
@@ -11,6 +10,5 @@ __all__ = [
     "DbzJdbcSink",
     "PythonAvroSink",
     "PythonSink",
-    "Relation",
     "Sink",
 ]

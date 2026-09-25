@@ -1,11 +1,16 @@
 from unittest import TestCase, mock
 
-from django_kafka.models.model_sync import EnricherTransform
+from django_kafka.models.model_sync import (
+    EnricherTransform,
+    MessagePart,
+    RelationTransform,
+    StaticValueTransform,
+)
 from django_kafka.models.model_sync.registry import ModelSyncRegistry
 from django_kafka.models.model_sync.sink.dbz_jdbc import DbzJdbcSink
 from django_kafka.models.model_sync.source.dbz_postgres import DbzPostgresSource
 
-from .factories import BidirectionalModel, SimpleModel, make_sync
+from .factories import BidirectionalModel, ModelWithFK, SimpleModel, make_sync
 
 
 class HasEnrichTestCase(TestCase):
@@ -112,3 +117,52 @@ class ValidateBidirectionalTestCase(TestCase):
     def test_sink_only_does_not_require_kafka_connect_skip_model(self):
         registry = ModelSyncRegistry()
         make_sync(registry, model=SimpleModel, source=None, sink=DbzJdbcSink())
+
+
+class ConsumeTransformValidationTestCase(TestCase):
+    def _make_sync(self, **attrs):
+        return make_sync(ModelSyncRegistry(), source=None, sink=DbzJdbcSink(), **attrs)
+
+    def test_rejects_key_side_consume_transform(self):
+        with self.assertRaisesRegex(ValueError, "apply_to"):
+            self._make_sync(
+                consume_transforms=[
+                    StaticValueTransform(
+                        source="status",
+                        value=2,
+                        apply_to=MessagePart.BOTH,
+                    ),
+                ],
+            )
+
+    def test_rejects_relation_transform_for_an_unknown_fk(self):
+        with self.assertRaisesRegex(ValueError, "not a foreign key"):
+            self._make_sync(
+                consume_transforms=[
+                    RelationTransform(source="related_uuid", target="related"),
+                ],
+            )
+
+    def test_rejects_wait_only_relation_transform_on_a_renamed_field(self):
+        with self.assertRaisesRegex(ValueError, "not a foreign key"):
+            self._make_sync(
+                model=ModelWithFK,
+                consume_transforms=[RelationTransform(source="related_uuid")],
+            )
+
+    def test_accepts_a_relation_transform_naming_a_real_fk(self):
+        self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                RelationTransform(source="related_uuid", target="related"),
+                RelationTransform(source="related_id"),
+            ],
+        )
+
+    def test_rejects_relation_transform_on_the_enrich_side(self):
+        with self.assertRaisesRegex(ValueError, "enrich_transforms"):
+            self._make_sync(
+                enrich_transforms=[
+                    RelationTransform(source="related_id", target="related"),
+                ],
+            )

@@ -1,15 +1,18 @@
 from datetime import timedelta
 
-from django_temporalio.registry import queue_workflows
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from django_kafka.conf import settings
-from django_kafka.relations_resolver.relation import SerializedRelation
-from django_kafka.relations_resolver.temporalio.activities import (
-    check_resolved_relations,
-    resolve_relation,
-)
+with workflow.unsafe.imports_passed_through():
+    # the sandbox would otherwise re-import django's whole graph on every replay
+    from django_temporalio.registry import queue_workflows
+
+    from django_kafka.conf import settings
+    from django_kafka.relations_resolver.relation import SerializedRelation
+    from django_kafka.relations_resolver.temporalio.activities import (
+        check_resolved_relations,
+        resolve_relation,
+    )
 
 
 @queue_workflows.register(settings.TEMPORAL_TASK_QUEUE)

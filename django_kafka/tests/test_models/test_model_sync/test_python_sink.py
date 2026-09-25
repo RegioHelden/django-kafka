@@ -1,16 +1,24 @@
 from unittest import TestCase, mock
 
-from django_kafka.models.model_sync import EnricherTransform
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
+
+from django_kafka.models.model_sync import (
+    EnricherTransform,
+    RelationTransform,
+    StaticValueTransform,
+)
 from django_kafka.models.model_sync.registry import ModelSyncRegistry
 from django_kafka.models.model_sync.sink.python import (
     PythonAvroSink,
     PythonSinkAvroTopicConsumer,
-    Relation,
 )
 from django_kafka.relations_resolver.relation import ModelRelation
+from django_kafka.tests.models import AbstractModelTestCase
 from django_kafka.topic import TopicConsumer
 
 from .factories import (
+    ModelWithContentTypeFK,
     ModelWithFK,
     ModelWithFKChild,
     ModelWithNullableFK,
@@ -64,10 +72,40 @@ class PythonSinkMakeTopicTestCase(TestCase):
     def test_auto_detects_fk_relations(self):
         sync_cls = self._make_sync(model=ModelWithFK)
         topic = sync_cls().sink.make_topic()
-        self.assertEqual(len(topic.relations), 1)
-        self.assertEqual(topic.relations[0].model, RelatedModel)
-        self.assertEqual(topic.relations[0].id_field, "id")
-        self.assertEqual(topic.relations[0].value_field, "related_id")
+        self.assertEqual(len(topic.relation_transforms), 1)
+        self.assertEqual(topic.relation_transforms[0].model, RelatedModel)
+        self.assertEqual(topic.relation_transforms[0].id_field, "id")
+        self.assertEqual(topic.relation_transforms[0].source, "related_id")
+        self.assertIsNone(topic.relation_transforms[0].target)
+
+    def test_auto_detected_relation_writes_the_id_without_a_lookup(self):
+        sync_cls = self._make_sync(model=ModelWithFK)
+        topic = sync_cls().sink.make_topic()
+
+        with mock.patch.object(RelatedModel, "objects") as objects:
+            result = topic.transform(ModelWithFK, {"related_id": 7})
+
+        objects.get.assert_not_called()
+        self.assertEqual(result["related_id"], 7)
+
+    def test_auto_detected_relation_leaves_an_absent_id_absent(self):
+        sync_cls = self._make_sync(model=ModelWithFK)
+        topic = sync_cls().sink.make_topic()
+
+        result = topic.transform(ModelWithFK, {"name": "x"})
+
+        self.assertNotIn("related_id", result)
+
+    def test_declared_wait_only_relation_suppresses_auto_detection(self):
+        custom = RelationTransform(
+            source="related_id",
+            model=RelatedModel,
+            id_field="uuid",
+        )
+        sync_cls = self._make_sync(model=ModelWithFK, consume_transforms=[custom])
+        topic = sync_cls().sink.make_topic()
+
+        self.assertEqual(topic.relation_transforms, [custom])
 
     def test_auto_detect_enables_resolver(self):
         sync_cls = self._make_sync(model=ModelWithFK)
@@ -76,61 +114,67 @@ class PythonSinkMakeTopicTestCase(TestCase):
 
     def test_no_fk_model_has_no_relations_and_resolver_disabled(self):
         topic = self._make_sync()().sink.make_topic()
-        self.assertEqual(topic.relations, [])
+        self.assertEqual(topic.relation_transforms, [])
         self.assertFalse(topic.use_relations_resolver)
+
+    def test_content_type_fk_excluded_from_auto_detection(self):
+        sync_cls = self._make_sync(model=ModelWithContentTypeFK)
+        topic = sync_cls().sink.make_topic()
+        self.assertEqual(topic.relation_transforms, [])
+
+    def test_declared_content_type_relation_is_kept(self):
+        custom = RelationTransform(source="content_type_id", model=ContentType)
+        sync_cls = self._make_sync(
+            model=ModelWithContentTypeFK,
+            consume_transforms=[custom],
+        )
+        topic = sync_cls().sink.make_topic()
+        self.assertEqual(topic.relation_transforms, [custom])
 
     def test_nullable_fk_excluded_from_auto_detection(self):
         sync_cls = self._make_sync(model=ModelWithNullableFK)
         topic = sync_cls().sink.make_topic()
-        self.assertEqual(topic.relations, [])
+        self.assertEqual(topic.relation_transforms, [])
 
-    def test_explicit_relation_replaces_auto_detected(self):
-        custom = Relation(
-            RelatedModel,
+    def test_declared_relation_replaces_auto_detected(self):
+        custom = RelationTransform(
+            source="related_uuid",
+            target="related",
+            model=RelatedModel,
             id_field="uuid",
-            value_field="related_uuid",
-            fk="related",
         )
-        sync_cls = self._make_sync(
-            model=ModelWithFK,
-            sink=PythonAvroSink(relations=[custom]),
-        )
+        sync_cls = self._make_sync(model=ModelWithFK, consume_transforms=[custom])
         topic = sync_cls().sink.make_topic()
-        self.assertEqual(len(topic.relations), 1)
-        self.assertIs(topic.relations[0], custom)
+        self.assertEqual(topic.relation_transforms, [custom])
 
-    def test_explicit_relation_includes_nullable_fk(self):
-        custom = Relation(
-            RelatedModel,
-            id_field="id",
-            value_field="nullable_related_id",
-            fk="nullable_related",
-        )
+    def test_declared_relation_includes_nullable_fk(self):
+        custom = self._nullable_fk_transform()
         sync_cls = self._make_sync(
             model=ModelWithNullableFK,
-            sink=PythonAvroSink(relations=[custom]),
+            consume_transforms=[custom],
         )
         topic = sync_cls().sink.make_topic()
-        self.assertEqual(len(topic.relations), 1)
-        self.assertIs(topic.relations[0], custom)
+        self.assertEqual(topic.relation_transforms, [custom])
 
     def test_auto_detects_inherited_fk_from_mti_parent(self):
         sync_cls = self._make_sync(model=ModelWithFKChild)
         topic = sync_cls().sink.make_topic()
-        relation_models = [r.model for r in topic.relations]
+        relation_models = [t.model for t in topic.relation_transforms]
         self.assertIn(RelatedModel, relation_models)
         self.assertNotIn(ModelWithFK, relation_models)
 
-    def _make_nullable_fk_topic(self):
-        custom = Relation(
-            RelatedModel,
+    def _nullable_fk_transform(self):
+        return RelationTransform(
+            source="nullable_related_id",
+            target="nullable_related",
+            model=RelatedModel,
             id_field="id",
-            value_field="nullable_related_id",
-            fk="nullable_related",
         )
+
+    def _make_nullable_fk_topic(self):
         sync_cls = self._make_sync(
             model=ModelWithNullableFK,
-            sink=PythonAvroSink(relations=[custom]),
+            consume_transforms=[self._nullable_fk_transform()],
         )
         return sync_cls().sink.make_topic()
 
@@ -141,6 +185,91 @@ class PythonSinkMakeTopicTestCase(TestCase):
             side_effect=[{"id": 1}, msg_value],
         ):
             return list(topic.get_relations(mock.Mock()))
+
+    def test_relations_are_named_from_the_transformed_value(self):
+        sync_cls = self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                StaticValueTransform(source="related_id", value=42),
+            ],
+        )
+        topic = sync_cls().sink.make_topic()
+
+        relations = self._get_relations(topic, {"related_id": 7})
+
+        self.assertEqual(relations[0].id_value, 42)
+
+    def test_relation_declared_first_is_named_from_the_raw_value(self):
+        custom = RelationTransform(
+            source="related_id",
+            target="related",
+            model=RelatedModel,
+            id_field="id",
+        )
+        sync_cls = self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                custom,
+                StaticValueTransform(source="related_id", value=42),
+            ],
+        )
+        topic = sync_cls().sink.make_topic()
+
+        relations = self._get_relations(topic, {"related_id": 7})
+
+        self.assertEqual(relations[0].id_value, 7)
+
+    def test_auto_detected_relations_resolve_last(self):
+        sync_cls = self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                StaticValueTransform(source="related_id", value=42),
+            ],
+        )
+        topic = sync_cls().sink.make_topic()
+
+        kinds = [type(step).__name__ for step in topic.transforms]
+
+        self.assertEqual(kinds, ["StaticValueTransform", "RelationTransform"])
+
+    def test_declared_relation_keeps_its_place(self):
+        custom = RelationTransform(
+            source="related_id",
+            target="related",
+            model=RelatedModel,
+            id_field="id",
+        )
+        sync_cls = self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                custom,
+                StaticValueTransform(source="name", value="b"),
+            ],
+        )
+        topic = sync_cls().sink.make_topic()
+
+        kinds = [type(step).__name__ for step in topic.transforms]
+
+        self.assertEqual(kinds, ["RelationTransform", "StaticValueTransform"])
+
+    def test_lookup_rewrites_the_instance_lookup_field(self):
+        sync_cls = self._make_sync(
+            model=ModelWithFK,
+            consume_transforms=[
+                RelationTransform(
+                    source="related_uuid",
+                    target="related",
+                    model=RelatedModel,
+                    id_field="uuid",
+                    lookup="other_related__uuid",
+                ),
+            ],
+        )
+        topic = sync_cls().sink.make_topic()
+
+        result = topic.get_lookup_kwargs(ModelWithFK, {"related_uuid": "abc"}, {})
+
+        self.assertEqual(result, {"other_related__uuid": "abc"})
 
     def test_get_relations_yields_relation_for_value(self):
         topic = self._make_nullable_fk_topic()
@@ -195,3 +324,92 @@ class PythonSinkConsumerPathTestCase(TestCase):
 
         sink = PythonAvroSink(topic_consumer_class=CustomConsumer)
         self.assertEqual(sink.topic_consumer_class, CustomConsumer)
+
+
+@mock.patch(
+    "django_kafka.conf.settings.MODEL_SYNC_CONSUMER",
+    "django_kafka.consumer.Consumer",
+)
+class GetRelationsWalkTestCase(AbstractModelTestCase):
+    """The walk resolves each relation so the ones depending on it can be yielded."""
+
+    abstract_model = models.Model
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        class SyncModel(models.Model):  # noqa: DJ008
+            first = models.ForeignKey(cls.model, models.CASCADE, related_name="+")
+            second = models.ForeignKey(cls.model, models.CASCADE, related_name="+")
+
+            class Meta:
+                app_label = cls.__module__
+
+        # only `_meta` is read - the walk never writes a row
+        cls.sync_model = SyncModel
+
+    def _topic(self, *transforms):
+        sync_cls = make_sync(
+            ModelSyncRegistry(),
+            model=self.sync_model,
+            source=None,
+            sink=PythonAvroSink(),
+            consume_transforms=list(transforms),
+        )
+        return sync_cls().sink.make_topic()
+
+    def _dependent_chain(self):
+        """Second relation's id exists only once the step before it has run."""
+        return (
+            RelationTransform(
+                source="first_id",
+                target="first",
+                model=self.model,
+                id_field="id",
+            ),
+            StaticValueTransform(source="second_id", value=5),
+            RelationTransform(
+                source="second_id",
+                target="second",
+                model=self.model,
+                id_field="id",
+            ),
+        )
+
+    def _get_relations(self, topic, msg_value):
+        with mock.patch.object(
+            topic,
+            "deserialize",
+            side_effect=[{"id": 1}, msg_value],
+        ):
+            return list(topic.get_relations(mock.Mock()))
+
+    def test_names_the_next_relation_once_the_first_row_exists(self):
+        existing = self.model.objects.create()
+        topic = self._topic(*self._dependent_chain())
+
+        relations = self._get_relations(
+            topic,
+            {"first_id": existing.id},
+        )
+
+        self.assertEqual([r.id_value for r in relations], [existing.id, 5])
+
+    def test_missing_row_of_another_transform_is_not_swallowed(self):
+        first, static, second = self._dependent_chain()
+        topic = self._topic(first, static, second)
+        existing = self.model.objects.create()
+
+        with (
+            mock.patch.object(static, "apply", side_effect=self.model.DoesNotExist),
+            self.assertRaises(self.model.DoesNotExist),
+        ):
+            self._get_relations(topic, {"first_id": existing.id})
+
+    def test_stops_at_the_first_missing_row(self):
+        topic = self._topic(*self._dependent_chain())
+
+        relations = self._get_relations(topic, {"first_id": 404})
+
+        self.assertEqual([r.id_value for r in relations], [404])

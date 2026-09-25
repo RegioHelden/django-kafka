@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Flag, auto
 from typing import TYPE_CHECKING, Any, get_type_hints
 
-from django.db.models import Model
+from django.db.models import ForeignKey, Model
 
 from django_kafka.schema.avro import AvroSchema
 from django_kafka.schema.fields import python_type_to_avro
@@ -298,13 +298,53 @@ class RelationTransform(FieldTransform):
     """
     Field transform that resolves a foreign-key relation.
 
-    Replaces the message field with `model.objects.get(<id_field>=value)`,
-    assigned to `target` (the FK attribute on the consuming model).
-    A null (or absent) message value assigns `None` instead of a lookup.
+    Either form makes the relations resolver hold the message until the
+    related row exists; `target` decides what happens to the value once it
+    does.
+
+    Without `target` the message is left untouched. A plain FK already
+    arrives under the model's own column (`customer_id: 7`), so it is written
+    as it stands and no query is made - the transform only marks where the
+    relation resolves. This is what auto-detection emits.
+
+        {"customer_id": 7, "amount": 5} -> unchanged
+
+    With `target` the id is swapped for the instance: `model.objects.get(
+    <id_field>=value)` assigned to `target`, and `source` dropped unless
+    `replace=False`. Needed when
+    the message carries something the FK column cannot take - a uuid, or a
+    field renamed by an enrich transform. A null (or absent) value assigns
+    `None` without a lookup.
+
+        {"customer__uuid": "ab-12"} -> {"customer": <Customer ab-12>}
+
+    Position in `consume_transforms` decides when the relation resolves:
+    every step before it has already run, and every step after it can count
+    on the row existing - on the instance too, where `target` is set.
+
+    `lookup`: model lookup path replacing `source` when the sink looks up the
+    row being synced. Set it when the message field name doesn't match the
+    path on the model (e.g. `user__kafka_uuid` -> `customer_user__kafka_uuid`).
     """
 
     model: type[Model] | None = None
     id_field: str = ""
+    lookup: str | None = None
+
+    def resolves(self, field) -> bool:
+        """Whether this transform resolves `field`, a foreign key on the model."""
+        if not isinstance(field, ForeignKey):
+            return False
+        if self.target:
+            return self.target == field.name
+        # writing nothing, the id can only reach the model under the fk's column
+        return self.source == field.attname
+
+    def apply(self, sync, msg_key, msg_value):
+        if self.target is None:
+            # super() would add an absent id back as None, nulling the fk
+            return msg_key, msg_value
+        return super().apply(sync, msg_key, msg_value)
 
     def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value

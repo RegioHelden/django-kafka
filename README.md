@@ -395,16 +395,18 @@ class OrderSync(ModelSync):
     sink = PythonAvroSink()
 ```
 
-`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no `relations` argument needed for standard cases. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
+`PythonAvroSink` runs as a topic on the consumer configured via `PythonAvroSink(consumer=...)` or the `MODEL_SYNC_CONSUMER` setting. Deletions are detected from null tombstones and from a `__deleted` marker in the value (via `PythonSinkTopicBase.deletion_key`). FK relations are **auto-detected** from the model's non-nullable, non-blank `ForeignKey` fields — no configuration needed for standard cases. `ContentType` relations are skipped: content types are created locally by migrations, never synced in, so there is nothing to wait for. Each detected relation registers a wait-relation in the [relations resolver](#relations-resolver) so messages are queued until the related row exists.
 
-Provide explicit `Relation` entries only to customise auto-detection: non-default `id_field` (lookup by a non-PK field), a renamed `value_field` (e.g. after enrich transforms), or to force-include a nullable FK that would otherwise be skipped. An explicit entry with `fk` set also emits a transform that swaps the raw message value for the resolved model instance. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform assigns `None` to the FK.
+**Note:** an auto-detected FK's id always reaches the model, whatever `IncludeFields` / `ExcludeFields` say — the sink waited for that row, so it writes the id it waited on.
+
+Each detected FK is appended to `consume_transforms` as a `RelationTransform`, so relations resolve **after** the declared steps and see the fields those steps produce. Declare a `RelationTransform` yourself to place it earlier in the chain, to look a relation up by a non-PK `id_field`, to read a renamed message field (e.g. after an enrich transform), or to resolve an FK auto-detection skips — a nullable one, or a `ContentType` you really do sync. A declared transform replaces the auto-detected one for the same `target`. Null (or absent) message values register no wait-relation — there is nothing to resolve — and the transform assigns `None` to the FK.
 
 ```python
 from django_kafka.models.model_sync import (
     IncludeFields,
     ModelSync,
     PythonAvroSink,
-    Relation,
+    RelationTransform,
 )
 from my_app.models import Customer, Order
 
@@ -413,15 +415,21 @@ class OrderSync(ModelSync):
     model = Order
     topic = "orders"
     fields = IncludeFields(["customer__uuid", "amount", "status"])
-    sink = PythonAvroSink(
-        relations=[
-            # non-default id_field + renamed value_field after enrich transform
-            Relation(
-                Customer, id_field="uuid", value_field="customer__uuid", fk="customer"
-            ),
-        ],
-    )
+    sink = PythonAvroSink()
+
+    consume_transforms = [
+        # non-default id_field + renamed source field after enrich transform
+        RelationTransform(
+            source="customer__uuid",
+            target="customer",
+            model=Customer,
+            id_field="uuid",
+        ),
+    ]
 ```
+
+Set `lookup` on the transform when the message field name doesn't match the model lookup path used to find the row being
+synced (e.g. `lookup="customer_user__kafka_uuid"` for a `user__kafka_uuid` message field).
 
 ### Bidirectional with enrichment:
 
@@ -432,7 +440,7 @@ from django_kafka.models.model_sync import (
     MessagePart,
     ModelSync,
     PythonAvroSink,
-    Relation,
+    RelationTransform,
     SyncMethodTransform,
 )
 from my_app.models import Customer, Order
@@ -443,13 +451,16 @@ class OrderSync(ModelSync):
     topic = "orders"
     fields = IncludeFields(["customer_id", "amount", "status"])
     source = DbzPostgresSource(msg_key_fields=["customer_id", "status"])
-    sink = PythonAvroSink(
-        relations=[
-            Relation(
-                Customer, id_field="uuid", value_field="customer__uuid", fk="customer"
-            ),
-        ],
-    )
+    sink = PythonAvroSink()
+
+    consume_transforms = [
+        RelationTransform(
+            source="customer__uuid",
+            target="customer",
+            model=Customer,
+            id_field="uuid",
+        ),
+    ]
 
     enrich_transforms = [
         SyncMethodTransform(
@@ -473,7 +484,7 @@ Transforms form the per-message pipeline between source-shape and sink-shape dat
 - `FieldTransform` — per-field base; `apply_to=KEY|VALUE|BOTH`, `replace` controls whether `source` is removed.
 - `SyncMethodTransform` — delegates to `enrich_<source>` / `consume_<source>` on the sync.
 - `EnricherTransform` — calls a sync method returning extras to merge; the method's `TypedDict` return annotation drives the Avro schema delta.
-- `RelationTransform` — replaces a field with a related model instance.
+- `RelationTransform` — replaces a field with a related model instance; its position in `consume_transforms` decides when the relation resolves.
 - `CoalesceTransform`, `StaticValueTransform` — defaults and static values.
 - `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` / `datetime`.
 
@@ -521,6 +532,7 @@ DJANGO_KAFKA = {
     "RELATION_RESOLVER_PROCESSOR": "django_kafka.relations_resolver.processor.model.ModelMessageProcessor",
     "RELATION_RESOLVER_DAEMON": "django_kafka.relations_resolver.daemon.temporal.TemporalDaemon",
     "RELATION_RESOLVER_DAEMON_INTERVAL": timedelta(seconds=5),
+    "RELATION_RESOLVER_DAEMON_BATCH_SIZE": None,
     "MODEL_SYNC_SOURCE_CONNECTOR": None,
     "MODEL_SYNC_TOPIC_PREFIX": None,
     "MODEL_SYNC_DB_SCHEMA": "public",
@@ -659,6 +671,13 @@ default: `django_kafka.relations_resolver.daemon.temporal.TemporalDaemon`
 default: `timedelta(seconds=5)`
 
 Defines how often check if relations are resolved for messages in waiting queue.
+
+#### `RELATION_RESOLVER_DAEMON_BATCH_SIZE`
+default: `None` (uncapped)
+
+How many resolved relations one daemon run dispatches. The rest wait for the next run, so a large backlog is drained at a steady rate instead of dispatching every relation at once.
+
+Together with the interval this caps the dispatch rate: `250` on the default 5 second interval is 50 per second. Set it above your sustained rate of resolved relations — below it, the waiting queue grows faster than the daemon drains it.
 
 #### `MODEL_SYNC_SOURCE_CONNECTOR`
 default: `None`
