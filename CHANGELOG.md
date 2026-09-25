@@ -1,5 +1,26 @@
 # Changelog
 
+## [v5.0.0](https://github.com/RegioHelden/django-kafka/tree/v5.0.0) (2026-09-25)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v4.0.0...v5.0.0)
+
+**Breaking changes:**
+
+- feat: resolve relations via consume transforms [\#373](https://github.com/RegioHelden/django-kafka/pull/373) (@bodja)
+
+**Merged pull requests:**
+
+- Update devcontainers/common-utils to 2.6.0, ruff to 0.16.9, ruff VSCode to 2026.84.0, ty to 0.0.84, ty VSCode to 2026.74.0, setup-uv to 10.2.0 and uv to 0.12.19 [\#374](https://github.com/RegioHelden/django-kafka/pull/374) (@regiohelden-dev)
+- Update astral-sh/setup-uv action to v10.2.0 [\#372](https://github.com/RegioHelden/django-kafka/pull/372) (@renovate[bot])
+- Update dependency ubuntu to v26 [\#371](https://github.com/RegioHelden/django-kafka/pull/371) (@renovate[bot])
+- Update dependency psycopg to v3.3.6 [\#370](https://github.com/RegioHelden/django-kafka/pull/370) (@renovate[bot])
+- Update dependency ruff to v0.16.9 [\#369](https://github.com/RegioHelden/django-kafka/pull/369) (@renovate[bot])
+- Update ruff to 0.16.7, ruff VSCode to 2026.80.0, ty to 0.0.81, uv to 0.12.14 and setup-uv to 10.1.0 [\#368](https://github.com/RegioHelden/django-kafka/pull/368) (@regiohelden-dev)
+- Update dependency Faker to v40.39.0 [\#364](https://github.com/RegioHelden/django-kafka/pull/364) (@renovate[bot])
+- Update astral-sh/setup-uv action to v10.1.0 [\#363](https://github.com/RegioHelden/django-kafka/pull/363) (@renovate[bot])
+- Update dependency ruff to v0.16.7 [\#362](https://github.com/RegioHelden/django-kafka/pull/362) (@renovate[bot])
+- Update dependency confluent-kafka to v2.15.1 [\#361](https://github.com/RegioHelden/django-kafka/pull/361) (@renovate[bot])
+
 ## [v4.0.0](https://github.com/RegioHelden/django-kafka/tree/v4.0.0) (2026-09-15)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v3.1.0...v4.0.0)
