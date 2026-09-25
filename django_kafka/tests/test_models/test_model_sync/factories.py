@@ -2,6 +2,7 @@ import uuid
 from typing import TypedDict
 from unittest import mock
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from django_kafka.connect.models import KafkaConnectSkipModel
@@ -38,6 +39,14 @@ class ModelWithFK(models.Model):  # noqa: DJ008
 
 class ModelWithFKChild(ModelWithFK):  # noqa: DJ008
     """MTI child — inherits `related` FK from ModelWithFK's table."""
+
+    class Meta:
+        app_label = "test_model_sync"
+
+
+class ModelWithContentTypeFK(models.Model):  # noqa: DJ008
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
 
     class Meta:
         app_label = "test_model_sync"
