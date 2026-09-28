@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, get_type_hints
 
+from django_kafka import DjangoKafkaError
 from django_kafka.schema.avro import AvroSchema
 
 from .utils import MessagePart
@@ -157,12 +158,13 @@ class FieldTransform(Transform, ABC):
             # keep source unless we're replacing it; drop existing target
             if (f["name"] != self.source or not self.replace) and f["name"] != target
         ]
-        result.append(
-            {
-                "name": target,
-                "type": self.output_avro_type(sync, schema_field),
-            },
-        )
+        try:
+            avro_type = self.output_avro_type(sync, schema_field)
+        except (TypeError, ValueError) as e:
+            class_name = self.__class__.__qualname__
+            message = f"{class_name} failed to determine type of field {target}."
+            raise DjangoKafkaError(message) from e
+        result.append({"name": target, "type": avro_type})
         return result
 
 
