@@ -30,11 +30,11 @@ class PythonSink(Sink):
     consumer: dotted path to the Consumer class this sink belongs to.
         Falls back to MODEL_SYNC_CONSUMER setting. Required — one of the
         two must be set, otherwise registration raises.
-    FK relations are auto-detected from the model's non-nullable, non-blank
-    fields and appended to `consume_transforms` as `RelationTransform`s, so
-    they resolve after the declared steps. Declare a `RelationTransform`
-    yourself to place it earlier, to look a relation up by a non-pk field,
-    or to resolve a nullable/blank FK that auto-detection skips.
+    FK relations are auto-detected from the model's foreign keys and appended
+    to `consume_transforms` as `RelationTransform`s, so they resolve after the
+    declared steps. Declare a `RelationTransform` yourself to place it earlier,
+    to look a relation up by a non-pk field, or to wait for a `ContentType`,
+    which auto-detection skips.
     """
 
     topic_consumer_class: type[PythonSinkTopicBase] | None = None
@@ -64,11 +64,8 @@ class PythonSink(Sink):
                 [
                     not isinstance(field, ForeignKey),
                     field.remote_field and field.remote_field.parent_link,
-                    # skipped by default, declare a RelationTransform to opt in:
                     # content types are created by migrations, never synced in
                     field.related_model is content_type,
-                    field.null,
-                    field.blank,
                 ],
             ):
                 continue

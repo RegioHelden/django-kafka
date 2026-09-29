@@ -131,10 +131,11 @@ class PythonSinkMakeTopicTestCase(TestCase):
         topic = sync_cls().sink.make_topic()
         self.assertEqual(topic.relation_transforms, [custom])
 
-    def test_nullable_fk_excluded_from_auto_detection(self):
+    def test_auto_detects_nullable_fk(self):
         sync_cls = self._make_sync(model=ModelWithNullableFK)
         topic = sync_cls().sink.make_topic()
-        self.assertEqual(topic.relation_transforms, [])
+        self.assertEqual(len(topic.relation_transforms), 1)
+        self.assertEqual(topic.relation_transforms[0].source, "nullable_related_id")
 
     def test_declared_relation_replaces_auto_detected(self):
         custom = RelationTransform(
@@ -147,7 +148,7 @@ class PythonSinkMakeTopicTestCase(TestCase):
         topic = sync_cls().sink.make_topic()
         self.assertEqual(topic.relation_transforms, [custom])
 
-    def test_declared_relation_includes_nullable_fk(self):
+    def test_declared_relation_replaces_auto_detected_nullable_fk(self):
         custom = self._nullable_fk_transform()
         sync_cls = self._make_sync(
             model=ModelWithNullableFK,
