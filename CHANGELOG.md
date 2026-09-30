@@ -1,5 +1,17 @@
 # Changelog
 
+## [v5.1.0](https://github.com/RegioHelden/django-kafka/tree/v5.1.0) (2026-09-29)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.0.0...v5.1.0)
+
+**Implemented enhancements:**
+
+- Add transforms [\#359](https://github.com/RegioHelden/django-kafka/pull/359) (@rh-sp)
+
+**Fixed bugs:**
+
+- fix: auto-detect relations for nullable fks [\#378](https://github.com/RegioHelden/django-kafka/pull/378) (@bodja)
+
 ## [v5.0.0](https://github.com/RegioHelden/django-kafka/tree/v5.0.0) (2026-09-25)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v4.0.0...v5.0.0)
