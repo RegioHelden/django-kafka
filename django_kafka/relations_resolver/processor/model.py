@@ -96,7 +96,8 @@ class ModelMessageProcessor(MessageProcessor):
         topic: "TopicConsumer",
         msg: "cimpl.Message",
     ) -> Relation | None:
-        for relation in topic.get_relations(msg):
+        # a generator defers deriving them, and deriving queries the database
+        for relation in await sync_to_async(list)(topic.get_relations(msg)):
             if not await relation.aexists():
                 return relation
         return None

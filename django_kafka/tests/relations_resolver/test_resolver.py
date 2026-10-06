@@ -1,3 +1,4 @@
+import threading
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
@@ -129,6 +130,38 @@ class RelationResolverTestCase(SimpleTestCase):
 
         resolver.processor.adiscard_messages.assert_awaited_once_with(msg)
         self.assertEqual(action, RelationResolver.Action.PAUSE)
+
+    async def test_aresolve_derives_relations_off_the_event_loop(self):
+        """Deriving a relation may query the database, which the loop rejects."""
+        resolver = RelationResolver()
+        resolver.processor = MagicMock(
+            awaiting_relations_for=AsyncMock(return_value=[]),
+        )
+        derived_on = []
+
+        def relations():
+            derived_on.append(threading.get_ident())
+            yield from ()
+
+        await resolver.aresolve(relations(), message_mock())
+
+        self.assertNotEqual(derived_on, [threading.get_ident()])
+
+    async def test_aresolve_derives_nothing_for_a_tombstone(self):
+        resolver = RelationResolver()
+        resolver.processor = MagicMock(
+            adiscard_messages=AsyncMock(),
+            awaiting_relations_for=AsyncMock(return_value=[]),
+        )
+        derived = []
+
+        def relations():
+            derived.append(True)
+            yield from ()
+
+        await resolver.aresolve(relations(), message_mock(value=None))
+
+        self.assertEqual(derived, [])
 
     async def test_aresolve_relation(self):
         resolver = RelationResolver()
