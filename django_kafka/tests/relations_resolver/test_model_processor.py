@@ -193,6 +193,20 @@ class ModelMessageProcessorTestCase(TestCase):
 
         self.assertEqual(result, existing_relations[2])
 
+    async def test__aget_missing_relation_derives_off_the_event_loop(self):
+        """Deriving a relation queries the database, which this context rejects."""
+
+        def relations(msg):
+            Order.objects.exists()  # stands in for a transform resolving one
+            yield from ()
+
+        result = await self.msg_processor._aget_missing_relation(
+            Mock(get_relations=relations),
+            Mock(),
+        )
+
+        self.assertIsNone(result)
+
     @patch("django_kafka.models.WaitingMessage.objects")
     @patch(
         "django_kafka.relations_resolver.processor.model.ModelMessageProcessor._aget_missing_relation",

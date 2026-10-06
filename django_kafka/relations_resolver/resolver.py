@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 
 from django_kafka.relations_resolver.processor import get_message_processor
 
@@ -42,6 +42,8 @@ class RelationResolver:
         Augments the message's own relations with any predecessor relations
         still queued for the same (topic, key).
         """
+        # a generator defers deriving them, and deriving queries the database
+        relations = await sync_to_async(list)(relations)
         predecessor_relations = await self.processor.awaiting_relations_for(msg)
         # dict.fromkeys dedups while preserving first-occurrence order
         # (own relations first, then predecessors).
