@@ -1,6 +1,20 @@
 # Changelog
 
-## [v5.1.0](https://github.com/RegioHelden/django-kafka/tree/v5.1.0) (2026-09-29)
+## [v5.1.1](https://github.com/RegioHelden/django-kafka/tree/v5.1.1) (2026-10-06)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.1.0...v5.1.1)
+
+**Fixed bugs:**
+
+- fix: derive relations off the event loop [\#384](https://github.com/RegioHelden/django-kafka/pull/384) (@bodja)
+
+**Merged pull requests:**
+
+- Update VSCode common-utils to 2.7.0, ruff to 0.16.10, ty VSCode to 2026.76.0 and uv to 0.12.23 [\#382](https://github.com/RegioHelden/django-kafka/pull/382) (@regiohelden-dev)
+- Update dependency ruff to v0.16.10 [\#381](https://github.com/RegioHelden/django-kafka/pull/381) (@renovate[bot])
+- Update dependency Faker to v40.40.0 [\#377](https://github.com/RegioHelden/django-kafka/pull/377) (@renovate[bot])
+
+## [v5.1.0](https://github.com/RegioHelden/django-kafka/tree/v5.1.0) (2026-09-30)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.0.0...v5.1.0)
 
