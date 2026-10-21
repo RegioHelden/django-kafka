@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from django.test import SimpleTestCase
 from django.utils import timezone
@@ -32,8 +32,8 @@ class PauseManagerTestCase(SimpleTestCase):
         mock_msg_1 = message_mock(partition=1, offset=1000)
         mock_msg_2 = message_mock(partition=2, offset=2000)
 
-        manager.set(mock_msg_1, timezone.now() - datetime.timedelta(minutes=1))
-        manager.set(mock_msg_2, timezone.now() + datetime.timedelta(minutes=1))
+        manager.set(mock_msg_1, timezone.now() - dt.timedelta(minutes=1))
+        manager.set(mock_msg_2, timezone.now() + dt.timedelta(minutes=1))
 
         ready_tps = list(manager.pop_ready())
         self.assertEqual(len(ready_tps), 1)

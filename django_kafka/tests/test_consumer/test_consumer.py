@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import traceback
 from contextlib import suppress
 from typing import ClassVar
@@ -112,7 +112,7 @@ class ConsumerTestCase(TestCase):
 
         consumer = SomeConsumer()
         mock_msg = message_mock()
-        retry_time = timezone.now() + datetime.timedelta(minutes=1)
+        retry_time = timezone.now() + dt.timedelta(minutes=1)
 
         consumer.pause_partition(mock_msg, retry_time)
         consumer.resume_partitions()
@@ -131,7 +131,7 @@ class ConsumerTestCase(TestCase):
             mock_msg.partition(),
             mock_msg.offset(),
         )
-        retry_time = timezone.now() - datetime.timedelta(minutes=1)
+        retry_time = timezone.now() - dt.timedelta(minutes=1)
 
         consumer.pause_partition(mock_msg, retry_time)
         consumer.resume_partitions()

@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from unittest import mock
 
 from django.test import TestCase
@@ -56,47 +56,47 @@ class RetrySettingTestCase(TestCase):
     @mock.patch("django.utils.timezone.now")
     def test_get_retry_time__fixed_delay(self, mock_now):
         settings = RetrySettings(max_retries=5, delay=60, backoff=False)
-        now = datetime.datetime.fromtimestamp(1000, datetime.UTC)
+        now = dt.datetime.fromtimestamp(1000, dt.UTC)
         mock_now.return_value = now
 
         self.assertEqual(
             settings.get_retry_time(1),
-            now + datetime.timedelta(seconds=60),
+            now + dt.timedelta(seconds=60),
         )
         self.assertEqual(
             settings.get_retry_time(2),
-            now + datetime.timedelta(seconds=60),
+            now + dt.timedelta(seconds=60),
         )
         self.assertEqual(
             settings.get_retry_time(3),
-            now + datetime.timedelta(seconds=60),
+            now + dt.timedelta(seconds=60),
         )
         self.assertEqual(
             settings.get_retry_time(4),
-            now + datetime.timedelta(seconds=60),
+            now + dt.timedelta(seconds=60),
         )
 
     @mock.patch("django.utils.timezone.now")
     def test_get_retry_time__backoff_delay(self, mock_now):
         settings = RetrySettings(max_retries=5, delay=60, backoff=True)
-        now = datetime.datetime.fromtimestamp(1000, datetime.UTC)
+        now = dt.datetime.fromtimestamp(1000, dt.UTC)
         mock_now.return_value = now
 
         self.assertEqual(
             settings.get_retry_time(1),
-            now + datetime.timedelta(seconds=60),
+            now + dt.timedelta(seconds=60),
         )
         self.assertEqual(
             settings.get_retry_time(2),
-            now + datetime.timedelta(seconds=120),
+            now + dt.timedelta(seconds=120),
         )
         self.assertEqual(
             settings.get_retry_time(3),
-            now + datetime.timedelta(seconds=240),
+            now + dt.timedelta(seconds=240),
         )
         self.assertEqual(
             settings.get_retry_time(4),
-            now + datetime.timedelta(seconds=480),
+            now + dt.timedelta(seconds=480),
         )
 
     def test_should_log(self):

@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from django.test import SimpleTestCase
 
@@ -9,7 +9,7 @@ class TransformsTestCase(SimpleTestCase):
     def test_days_from_epoch_to_date(self):
         # days are calculated from epoch
         result = days_from_epoch_to_date(10)
-        self.assertEqual(result, datetime.date(1970, 1, 11))
+        self.assertEqual(result, dt.date(1970, 1, 11))
 
         # None values are silently skipped
         empty_values = [None, ""]
