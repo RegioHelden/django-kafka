@@ -44,3 +44,6 @@ class AsyncIteratorMock(Mock):
             return next(self._iter)
         except StopIteration as e:
             raise StopAsyncIteration from e
+
+    async def aclose(self):
+        pass

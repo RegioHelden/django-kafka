@@ -5,7 +5,7 @@ from django.test import SimpleTestCase
 
 from django_kafka.connect.connector import Connector
 from django_kafka.consumer import Consumer, Topics
-from django_kafka.exceptions import DjangoKafkaError
+from django_kafka.exceptions import DjangoKafkaError, TopicNotRegisteredError
 from django_kafka.registry import ConnectorsRegistry, ConsumersRegistry, Registry
 
 
@@ -96,6 +96,17 @@ class ConsumersRegistryTestCase(SimpleTestCase):
 
         self.assertCountEqual(list(registry), [key_a, retry_key_a, key_b])
         self.assertIs(registry[retry_key_a], retry_consumer_mock)
+
+    @mock.patch("django_kafka.retry.consumer.RetryConsumer.build", return_value=None)
+    def test_topic_raises_when_no_consumer_handles_it(self, mock_retry_consumer_build):
+        registry = ConsumersRegistry()
+        registry()(self._get_consumer_cls("ConsumerA", "group_a"))
+
+        with self.assertRaisesMessage(
+            TopicNotRegisteredError,
+            "No topic registered for `unknown`",
+        ):
+            registry.topic("unknown")
 
 
 @patch("django_kafka.connect.client.KafkaConnectSession", new=Mock())

@@ -63,4 +63,4 @@ class ConsumersRegistry(Registry["Consumer"]):
         for key in self:
             with contextlib.suppress(KeyError, TopicNotRegisteredError):
                 return self[key].topics.get(topic_name=topic_name)
-        return None
+        raise TopicNotRegisteredError(f"No topic registered for `{topic_name}`")

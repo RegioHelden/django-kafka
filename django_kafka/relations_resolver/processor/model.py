@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import TYPE_CHECKING
 
 from asgiref.sync import sync_to_async
@@ -103,10 +104,13 @@ class ModelMessageProcessor(MessageProcessor):
         return None
 
     async def ato_resolve(self) -> AsyncIterator["Relation"]:
-        async for item in self.model.objects.aiter_relations_to_resolve(chunk_size=500):
-            relation = await sync_to_async(item.relation)()
-            if await relation.aexists():
-                yield relation
+        async with aclosing(
+            self.model.objects.aiter_relations_to_resolve(chunk_size=500),
+        ) as items:
+            async for item in items:
+                relation = await sync_to_async(item.relation)()
+                if await relation.aexists():
+                    yield relation
 
     async def amark_resolving(self, relation: "Relation"):
         await sync_to_async(self.model.objects.mark_resolving)(relation)

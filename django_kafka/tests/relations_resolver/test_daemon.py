@@ -54,12 +54,18 @@ class ResolveRelationsBatchTestCase(SimpleTestCase):
         async def aresolve_relation(self, relation):
             self.dispatched.append(relation)
 
+    def setUp(self):
+        self.relations_closed = False
+
     def _relations(self, count):
         async def generator():
-            for _index in range(count):
-                relation = MagicMock(spec=Relation)
-                relation.amark_resolving = AsyncMock()
-                yield relation
+            try:
+                for _index in range(count):
+                    relation = MagicMock(spec=Relation)
+                    relation.amark_resolving = AsyncMock()
+                    yield relation
+            finally:
+                self.relations_closed = True
 
         return generator()
 
@@ -81,6 +87,11 @@ class ResolveRelationsBatchTestCase(SimpleTestCase):
         dispatched = await self._run(available=10, batch_size=4)
 
         self.assertEqual(len(dispatched), 4)
+
+    async def test_closes_the_relations_when_stopping_at_the_batch_size(self):
+        await self._run(available=10, batch_size=4)
+
+        self.assertTrue(self.relations_closed)
 
     async def test_dispatches_everything_below_the_batch_size(self):
         dispatched = await self._run(available=3, batch_size=4)
