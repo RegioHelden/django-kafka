@@ -116,6 +116,27 @@ class ModelMessageProcessorTestCase(TestCase):
         for relation in to_resolve:
             self.assertIn(relation, result)
 
+    async def test_ato_resolve_closes_the_queryset_iterator_when_left_early(self):
+        closed = []
+
+        async def items():
+            try:
+                for _index in range(2):
+                    relation = AsyncMock(**{"aexists.return_value": True})
+                    yield Mock(**{"relation.return_value": relation})
+            finally:
+                closed.append(True)
+
+        with patch(
+            "django_kafka.models.WaitingMessage.objects",
+            aiter_relations_to_resolve=Mock(return_value=items()),
+        ):
+            relations = self.msg_processor.ato_resolve()
+            await anext(relations)
+            await relations.aclose()
+
+        self.assertEqual(closed, [True])
+
     @patch("django_kafka.models.WaitingMessage.objects", spec=WaitingMessageQuerySet)
     async def test_awaiting_relations_for(self, mock_qs):
         msg = Mock()

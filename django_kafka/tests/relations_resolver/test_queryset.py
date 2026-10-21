@@ -1,6 +1,8 @@
 import os
+import sys
 
 from asgiref.sync import sync_to_async
+from django.db import connection
 from django.test import TestCase
 from django.utils import timezone
 
@@ -227,3 +229,35 @@ class WaitingMessageQuerySetTestCase(TestCase):
         ]
 
         self.assertEqual(len(results), 2)  # 1 existing and 1 non-existing
+
+    async def test_aiter_relations_to_resolve_closes_its_cursor_when_left_early(self):
+        for relation_id in (1, 2):
+            await sync_to_async(WaitingMessageFactory.create)(
+                status=WaitingMessage.Status.WAITING,
+                relation_model_key=ModelRelation.get_model_key(Order),
+                relation_id_field="id",
+                relation_id_value=relation_id,
+                serialized_relation={},
+            )
+        # keeps abandoned generators alive, so only an explicit close shows
+        abandoned = []
+        hooks = sys.get_asyncgen_hooks()
+        sys.set_asyncgen_hooks(firstiter=hooks.firstiter, finalizer=abandoned.append)
+        try:
+            relations = WaitingMessage.objects.aiter_relations_to_resolve(chunk_size=1)
+            await anext(relations)
+            await relations.aclose()
+
+            open_cursors = await sync_to_async(self.count_open_cursors)()
+        finally:
+            sys.set_asyncgen_hooks(*hooks)
+            for generator in abandoned:
+                await generator.aclose()
+
+        self.assertEqual(open_cursors, 0)
+
+    @staticmethod
+    def count_open_cursors() -> int:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT count(*) FROM pg_cursors")
+            return cursor.fetchone()[0]

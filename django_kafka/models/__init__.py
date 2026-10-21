@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
+from itertools import islice
 from typing import TYPE_CHECKING, ClassVar
 
+from asgiref.sync import sync_to_async
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -77,10 +79,18 @@ class WaitingMessageQuerySet(models.QuerySet):
         self,
         chunk_size=500,
     ) -> AsyncIterator["WaitingMessage"]:
-        async for relation in (
-            self.waiting().relations().aiterator(chunk_size=chunk_size)
-        ):
-            yield relation
+        rows = self.waiting().relations().iterator(chunk_size=chunk_size)
+
+        def next_chunk() -> list["WaitingMessage"]:
+            return list(islice(rows, chunk_size))
+
+        try:
+            while chunk := await sync_to_async(next_chunk)():
+                for relation in chunk:
+                    yield relation
+        finally:
+            # left to the garbage collector, the cursor closes later, from any thread
+            await sync_to_async(rows.close)()
 
 
 class WaitingMessage(models.Model):
