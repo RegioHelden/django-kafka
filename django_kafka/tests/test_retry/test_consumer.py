@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import traceback
 from typing import ClassVar
 from unittest.mock import Mock, patch
@@ -167,7 +167,7 @@ class RetryConsumerTestCase(SimpleTestCase):
     ):
         retry_consumer = self._get_retry_consumer()
         retry_consumer.pause_partition = Mock()
-        retry_time = timezone.now() + datetime.timedelta(minutes=1)
+        retry_time = timezone.now() + dt.timedelta(minutes=1)
         mock_msg = message_mock(
             headers=[
                 (RetryHeader.TIMESTAMP, str(retry_time.timestamp())),
@@ -187,7 +187,7 @@ class RetryConsumerTestCase(SimpleTestCase):
     ):
         retry_consumer = self._get_retry_consumer()
         retry_consumer.pause_partition = Mock()
-        retry_time = timezone.now() - datetime.timedelta(minutes=1)
+        retry_time = timezone.now() - dt.timedelta(minutes=1)
         mock_msg = message_mock(
             headers=[
                 (RetryHeader.TIMESTAMP, str(retry_time.timestamp())),

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from dataclasses import dataclass, field
 from functools import reduce
 from operator import or_
@@ -56,14 +56,14 @@ class DateFromEpochTransform(FieldTransform):
     a topic produced by Debezium's PostgreSQL connector.
     """
 
-    epoch_date = datetime.date(1970, 1, 1)
+    epoch_date = dt.date(1970, 1, 1)
 
     def transform_value(self, sync, msg_key, msg_value, part):
         message = msg_key if part == MessagePart.KEY else msg_value
         days = message.get(self.source)
         if days is None or days == "":
             return None
-        return self.epoch_date + datetime.timedelta(days=days)
+        return self.epoch_date + dt.timedelta(days=days)
 
     def output_avro_type(self, sync, schema_field):
         # The wire type stays int — only the Python representation changes.
@@ -82,9 +82,9 @@ class DateTimeFromEpochMillisTransform(FieldTransform):
         millis = message.get(self.source)
         if millis is None or millis == "":
             return None
-        return datetime.datetime.fromtimestamp(
+        return dt.datetime.fromtimestamp(
             millis / 1000,
-            tz=datetime.UTC,
+            tz=dt.UTC,
         )
 
     def output_avro_type(self, sync, schema_field):
