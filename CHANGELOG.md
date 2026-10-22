@@ -1,5 +1,26 @@
 # Changelog
 
+## [v5.1.2](https://github.com/RegioHelden/django-kafka/tree/v5.1.2) (2026-10-22)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.1.1...v5.1.2)
+
+**Fixed bugs:**
+
+- Two fixes in the relations resolver [\#395](https://github.com/RegioHelden/django-kafka/pull/395) (@bodja)
+
+**Merged pull requests:**
+
+- Infrastructure updates 2026-10-22 [\#397](https://github.com/RegioHelden/django-kafka/pull/397) (@regiohelden-dev)
+- Update astral-sh/setup-uv action to v10.3.1 [\#396](https://github.com/RegioHelden/django-kafka/pull/396) (@renovate[bot])
+- Infrastructure updates 2026-10-21 [\#394](https://github.com/RegioHelden/django-kafka/pull/394) (@regiohelden-dev)
+- Update dependency django-temporalio to v4 [\#393](https://github.com/RegioHelden/django-kafka/pull/393) (@renovate[bot])
+- Update dependency setuptools to v84.2.1 [\#391](https://github.com/RegioHelden/django-kafka/pull/391) (@renovate[bot])
+- Update dependency ruff to v0.17.1 [\#390](https://github.com/RegioHelden/django-kafka/pull/390) (@renovate[bot])
+- Update astral-sh/setup-uv action to v10.3.0 [\#389](https://github.com/RegioHelden/django-kafka/pull/389) (@renovate[bot])
+- Update dependency Faker to v40.43.0 [\#388](https://github.com/RegioHelden/django-kafka/pull/388) (@renovate[bot])
+- Update dependency confluent-kafka to v2.16.0 [\#387](https://github.com/RegioHelden/django-kafka/pull/387) (@renovate[bot])
+- Update dependency django to v6.1.2 [\#386](https://github.com/RegioHelden/django-kafka/pull/386) (@renovate[bot])
+
 ## [v5.1.1](https://github.com/RegioHelden/django-kafka/tree/v5.1.1) (2026-10-06)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.1.0...v5.1.1)
