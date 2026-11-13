@@ -41,11 +41,13 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         model: type[Model],
         sync: "ModelSync",
         transforms: list[Transform] | None = None,
+        **kwargs,
     ):
         self.name = name
         self.model = model
         self.model_sync = sync
         self.transforms = transforms or []
+        super().__init__(**kwargs)
 
     def get_lookup_kwargs(self, model, key, value) -> dict:
         lookup_kwargs = super().get_lookup_kwargs(model, key, value)

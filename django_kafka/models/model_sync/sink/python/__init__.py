@@ -1,6 +1,7 @@
 from django_kafka.models.model_sync.sink.python.sink import (
     PythonAvroSink,
     PythonSink,
+    PythonSinkTopicKwargs,
 )
 from django_kafka.models.model_sync.sink.python.topic import (
     PythonSinkAvroTopicConsumer,
@@ -12,4 +13,5 @@ __all__ = [
     "PythonSink",
     "PythonSinkAvroTopicConsumer",
     "PythonSinkTopicBase",
+    "PythonSinkTopicKwargs",
 ]

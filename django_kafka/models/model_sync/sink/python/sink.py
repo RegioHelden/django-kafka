@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from django.apps import apps
 from django.db.models import ForeignKey
@@ -19,6 +19,11 @@ if TYPE_CHECKING:
     from django_kafka.models.model_sync.sync import ModelSync
 
 
+class PythonSinkTopicKwargs(TypedDict, total=False):
+    lookup_field: str | None
+    deletion_key: str | None
+
+
 class PythonSink(Sink):
     """
     Base for Python topic consumer sinks.
@@ -30,11 +35,14 @@ class PythonSink(Sink):
     consumer: dotted path to the Consumer class this sink belongs to.
         Falls back to MODEL_SYNC_CONSUMER setting. Required — one of the
         two must be set, otherwise registration raises.
+    topic_kwargs: overrides of `topic_consumer_class` values, e.g.
+        `{"lookup_field": "kafka_uuid"}`.
     FK relations are auto-detected from the model's foreign keys and appended
     to `consume_transforms` as `RelationTransform`s, so they resolve after the
     declared steps. Declare a `RelationTransform` yourself to place it earlier,
     to look a relation up by a non-pk field, or to wait for a `ContentType`,
     which auto-detection skips.
+
     """
 
     topic_consumer_class: type[PythonSinkTopicBase] | None = None
@@ -44,15 +52,18 @@ class PythonSink(Sink):
         instance: "ModelSync | None" = None,
         topic_consumer_class: type[PythonSinkTopicBase] | None = None,
         consumer: str | None = None,
+        topic_kwargs: PythonSinkTopicKwargs | None = None,
     ):
         super().__init__(
             instance=instance,
             topic_consumer_class=topic_consumer_class,
             consumer=consumer,
+            topic_kwargs=topic_kwargs,
         )
         if topic_consumer_class is not None:
             self.topic_consumer_class = topic_consumer_class
         self.consumer = consumer
+        self.topic_kwargs = topic_kwargs or {}
 
     def _detect_relation_transforms(self) -> "Iterator[RelationTransform]":
         declared = self.instance.consume_transforms
@@ -111,6 +122,7 @@ class PythonSink(Sink):
                 *sync.consume_transforms,
                 *self._detect_relation_transforms(),
             ],
+            **self.topic_kwargs,
         )
 
 

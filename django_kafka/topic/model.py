@@ -15,6 +15,15 @@ class ModelTopicConsumer(TopicConsumer, ABC):
     model: type[Model] | None = None  # override get_model for dynamic model lookups
     exclude_fields: list[str] | None = None  # fields to ignore from message value
     deletion_key: str | None = "__deleted"  # value field that flags deletion
+    lookup_field: str | None = "pk"  # "pk" for the model pk, None for the whole key
+
+    def __init__(self, **kwargs):
+        # local override of class values
+        for field in ("deletion_key", "lookup_field"):
+            if field in kwargs:
+                setattr(self, field, kwargs.pop(field))
+
+        super().__init__(**kwargs)
 
     def transform(self, model, value) -> dict:
         """
@@ -66,20 +75,28 @@ class ModelTopicConsumer(TopicConsumer, ABC):
     def _is_field_excluded(self, field):
         return self.exclude_fields and field in self.exclude_fields
 
+    def get_lookup_field(self, model) -> str | None:
+        """returns the field identifying the model instance, None for the whole key"""
+        if self.lookup_field == "pk":
+            return model._meta.pk.name
+        return self.lookup_field
+
     def get_lookup_kwargs(self, model, key, value) -> dict:
         """returns the lookup kwargs used for filtering the model instance"""
-        pk_field = model._meta.pk.name
-        if self._is_field_excluded(pk_field):
-            # if pk is excluded from usage in the value then it's most likely not being
-            # used as the identifying field; thus default to using the whole key
-            return key
+        lookup_field = self.get_lookup_field(model)
+        if lookup_field is None:
+            return key  # whole key has been indicated
 
-        # obtain the pk from the value first so the key can be adjusted for partitioning
-        if value and pk_field in value:
-            return {pk_field: value[pk_field]}
-        if pk_field in key:
-            return {pk_field: key[pk_field]}
-        return key
+        if self._is_field_excluded(lookup_field):
+            raise DjangoKafkaError(f"lookup_field {lookup_field} is excluded")
+
+        # grab field from the value first so the key can be adjusted for partitioning
+        if value and lookup_field in value:
+            return {lookup_field: value[lookup_field]}
+        if key and lookup_field in key:
+            return {lookup_field: key[lookup_field]}
+
+        raise DjangoKafkaError(f"lookup_field {lookup_field} missing from message")
 
     def sync(self, model, key, value) -> tuple[Model, bool] | None:
         lookup = self.get_lookup_kwargs(model, key, value)

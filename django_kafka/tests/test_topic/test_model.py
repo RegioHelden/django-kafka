@@ -57,16 +57,73 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
 
         self.assertEqual(lookup, {"id": 1})
 
-    def test_get_lookup_kwargs__whole_key_when_no_pk(self):
-        """test the lookup kwargs is the whole key when the PK is not available"""
+    def test_get_lookup_kwargs__raises_when_lookup_field_missing(self):
+        """test an error is raised when the lookup field is not in the message"""
         topic_consumer = self._get_model_topic_consumer()
+        with self.assertRaises(DjangoKafkaError):
+            topic_consumer.get_lookup_kwargs(
+                self.model,
+                {"name": "key", "name2": "key2"},
+                {"name": "value"},
+            )
+
+    def test_get_lookup_kwargs__whole_key_when_lookup_field_none(self):
+        """test the lookup kwargs is the whole key when lookup_field is None"""
+        topic_consumer = self._get_model_topic_consumer()
+        topic_consumer.lookup_field = None
         lookup = topic_consumer.get_lookup_kwargs(
             self.model,
             {"name": "key", "name2": "key2"},
-            {"name": "value"},
+            {"id": 1},
         )
 
         self.assertEqual(lookup, {"name": "key", "name2": "key2"})
+
+    def test_lookup_field__defaults_to_pk(self):
+        topic_consumer = self._get_model_topic_consumer()
+        self.assertEqual(topic_consumer.lookup_field, "pk")
+        self.assertEqual(topic_consumer.get_lookup_field(self.model), "id")
+
+    def test_lookup_field__raises_when_excluded(self):
+        class SomeModelTopicConsumer(ModelTopicConsumer):
+            name = "name"
+            model = self.model
+            exclude_fields = ("id",)
+
+        topic_consumer = SomeModelTopicConsumer()
+        with self.assertRaises(DjangoKafkaError):
+            topic_consumer.get_lookup_kwargs(self.model, {"id": 1}, {"id": 1})
+
+        # whole key lookups are unaffected by exclusions
+        topic_consumer.lookup_field = None
+        self.assertEqual(
+            topic_consumer.get_lookup_kwargs(self.model, {"id": 1}, {"id": 1}),
+            {"id": 1},
+        )
+
+    def test_get_lookup_kwargs__lookup_field_in_value(self):
+        """test a configured lookup field is used instead of the PK"""
+        topic_consumer = self._get_model_topic_consumer()
+        topic_consumer.lookup_field = "uuid"
+        lookup = topic_consumer.get_lookup_kwargs(
+            self.model,
+            {"location_id": 2},
+            {"id": 1, "uuid": "abc"},
+        )
+
+        self.assertEqual(lookup, {"uuid": "abc"})
+
+    def test_get_lookup_kwargs__lookup_field_in_key(self):
+        """test a configured lookup field is taken from the key"""
+        topic_consumer = self._get_model_topic_consumer()
+        topic_consumer.lookup_field = "uuid"
+        lookup = topic_consumer.get_lookup_kwargs(
+            self.model,
+            {"uuid": "abc", "location_id": 2},
+            None,
+        )
+
+        self.assertEqual(lookup, {"uuid": "abc"})
 
     def test_transform(self):
         """test custom transform methods are used during transformation"""
