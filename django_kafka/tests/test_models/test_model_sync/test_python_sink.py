@@ -64,9 +64,27 @@ class PythonSinkMakeTopicTestCase(TestCase):
         self.assertTrue(topic.is_deletion(SimpleModel, {}, {"__deleted": "true"}))
         self.assertFalse(topic.is_deletion(SimpleModel, {}, {"__deleted": "false"}))
 
-    def test_default_get_lookup_kwargs_uses_key_fields(self):
+    def test_default_get_lookup_kwargs_uses_pk(self):
         topic = self._make_sync()().sink.make_topic()
+        self.assertEqual(topic.lookup_field, "pk")
+        result = topic.get_lookup_kwargs(SimpleModel, {"id": 1}, {})
+        self.assertEqual(result, {"id": 1})
+
+    def test_whole_key_lookup_passed_to_topic(self):
+        sink = PythonAvroSink(topic_kwargs={"lookup_field": None})
+        topic = self._make_sync(sink=sink)().sink.make_topic()
         result = topic.get_lookup_kwargs(SimpleModel, {"kafka_uuid": "abc"}, {})
+        self.assertEqual(result, {"kafka_uuid": "abc"})
+
+    def test_lookup_field_passed_to_topic(self):
+        sink = PythonAvroSink(topic_kwargs={"lookup_field": "kafka_uuid"})
+        topic = self._make_sync(sink=sink)().sink.make_topic()
+        self.assertEqual(topic.lookup_field, "kafka_uuid")
+        result = topic.get_lookup_kwargs(
+            SimpleModel,
+            {"name": "partition"},
+            {"id": 1, "kafka_uuid": "abc"},
+        )
         self.assertEqual(result, {"kafka_uuid": "abc"})
 
     def test_auto_detects_fk_relations(self):
@@ -265,6 +283,7 @@ class PythonSinkMakeTopicTestCase(TestCase):
                     lookup="other_related__uuid",
                 ),
             ],
+            sink=PythonAvroSink(topic_kwargs={"lookup_field": "related_uuid"}),
         )
         topic = sync_cls().sink.make_topic()
 
