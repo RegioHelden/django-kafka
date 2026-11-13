@@ -1,5 +1,25 @@
 # Changelog
 
+## [v5.2.0](https://github.com/RegioHelden/django-kafka/tree/v5.2.0) (2026-11-13)
+
+[Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.1.2...v5.2.0)
+
+**Implemented enhancements:**
+
+- feat: make lookup\_field behaviour explicit in ModelTopicConsumer and allow ModelSync to override it, refs \#409 [\#410](https://github.com/RegioHelden/django-kafka/pull/410) (@stefan-cardnell-rh)
+
+**Merged pull requests:**
+
+- Update dependency psycopg to v3.3.9 [\#407](https://github.com/RegioHelden/django-kafka/pull/407) (@renovate[bot])
+- Update dependency django to v6.1.3 [\#406](https://github.com/RegioHelden/django-kafka/pull/406) (@renovate[bot])
+- Update dependency Faker to v40.54.0 [\#405](https://github.com/RegioHelden/django-kafka/pull/405) (@renovate[bot])
+- Update dependency confluent-kafka to v2.16.1 [\#404](https://github.com/RegioHelden/django-kafka/pull/404) (@renovate[bot])
+- Updates from modulesync [\#403](https://github.com/RegioHelden/django-kafka/pull/403) (@regiohelden-dev)
+- Update dependency django-temporalio to v4.1.0 [\#402](https://github.com/RegioHelden/django-kafka/pull/402) (@renovate[bot])
+- Update actions/setup-python action to v7.1.0 [\#401](https://github.com/RegioHelden/django-kafka/pull/401) (@renovate[bot])
+- Update dependency ruff to v0.17.4 [\#400](https://github.com/RegioHelden/django-kafka/pull/400) (@renovate[bot])
+- Update astral-sh/setup-uv action to v10.3.3 [\#399](https://github.com/RegioHelden/django-kafka/pull/399) (@renovate[bot])
+
 ## [v5.1.2](https://github.com/RegioHelden/django-kafka/tree/v5.1.2) (2026-10-22)
 
 [Full Changelog](https://github.com/RegioHelden/django-kafka/compare/v5.1.1...v5.1.2)
