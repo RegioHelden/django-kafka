@@ -101,6 +101,8 @@ class PythonSinkTopicBase(ModelTopicConsumer):
         fields = self.model_sync.fields if self.model_sync else None
         if isinstance(fields, ExcludeFields):
             return field in fields
+        if isinstance(fields, IncludeFields):
+            return fields not in fields
         return False
 
     def transform(self, model, value) -> dict:

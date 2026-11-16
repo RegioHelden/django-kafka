@@ -159,6 +159,8 @@ Model instances will have their attributes synced from the message value.
 
 1. If you need to alter a message key or value before it is assigned, define a `transform_{attr}` method.
 2. If you need to ignore a field in the message value, define an `exclude_fields` list.
+    - Note: fields returned from `get_lookup_kwargs` will always be included, since they are passed to the lookup
+      part of `update_or_create`.
 
 ```python
 class MyModelConsumer(ModelTopicConsumer):

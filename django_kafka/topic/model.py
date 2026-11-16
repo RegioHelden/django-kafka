@@ -87,9 +87,6 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         if lookup_field is None:
             return key  # whole key has been indicated
 
-        if self._is_field_excluded(lookup_field):
-            raise DjangoKafkaError(f"lookup_field {lookup_field} is excluded")
-
         # grab field from the value first so the key can be adjusted for partitioning
         if value and lookup_field in value:
             return {lookup_field: value[lookup_field]}
