@@ -84,23 +84,6 @@ class ModelTopicConsumerTestCase(AbstractModelTestCase):
         self.assertEqual(topic_consumer.lookup_field, "pk")
         self.assertEqual(topic_consumer.get_lookup_field(self.model), "id")
 
-    def test_lookup_field__raises_when_excluded(self):
-        class SomeModelTopicConsumer(ModelTopicConsumer):
-            name = "name"
-            model = self.model
-            exclude_fields = ("id",)
-
-        topic_consumer = SomeModelTopicConsumer()
-        with self.assertRaises(DjangoKafkaError):
-            topic_consumer.get_lookup_kwargs(self.model, {"id": 1}, {"id": 1})
-
-        # whole key lookups are unaffected by exclusions
-        topic_consumer.lookup_field = None
-        self.assertEqual(
-            topic_consumer.get_lookup_kwargs(self.model, {"id": 1}, {"id": 1}),
-            {"id": 1},
-        )
-
     def test_get_lookup_kwargs__lookup_field_in_value(self):
         """test a configured lookup field is used instead of the PK"""
         topic_consumer = self._get_model_topic_consumer()

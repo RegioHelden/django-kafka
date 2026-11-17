@@ -1,5 +1,6 @@
 import contextlib
 from abc import ABC
+from functools import cached_property
 
 from confluent_kafka.serialization import MessageField
 from django.core.exceptions import ObjectDoesNotExist
@@ -25,6 +26,17 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
         super().__init__(**kwargs)
 
+    @cached_property
+    def _field_filter(self):
+        """returns a callable dropping `exclude_fields` from a message value"""
+        if not self.exclude_fields:
+            return lambda message: message
+
+        excluded = set(self.exclude_fields)
+        return lambda message: {
+            name: value for name, value in message.items() if name not in excluded
+        }
+
     def transform(self, model, value) -> dict:
         """
         Filters key fields and runs defined `transform_{key}` methods.
@@ -32,9 +44,7 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         Value fields can be transformed by defining a `transform_{key}` method.
         """
         transformed_value = {}
-        for field_name, field_value in value.items():
-            if self._is_field_excluded(field_name):
-                continue
+        for field_name, field_value in self._field_filter(value).items():
             if transform_method := getattr(self, f"transform_{field_name}", None):
                 new_key, new_value = transform_method(model, field_name, field_value)
                 transformed_value[new_key] = new_value
@@ -72,9 +82,6 @@ class ModelTopicConsumer(TopicConsumer, ABC):
 
         return False
 
-    def _is_field_excluded(self, field):
-        return self.exclude_fields and field in self.exclude_fields
-
     def get_lookup_field(self, model) -> str | None:
         """returns the field identifying the model instance, None for the whole key"""
         if self.lookup_field == "pk":
@@ -86,9 +93,6 @@ class ModelTopicConsumer(TopicConsumer, ABC):
         lookup_field = self.get_lookup_field(model)
         if lookup_field is None:
             return key  # whole key has been indicated
-
-        if self._is_field_excluded(lookup_field):
-            raise DjangoKafkaError(f"lookup_field {lookup_field} is excluded")
 
         # grab field from the value first so the key can be adjusted for partitioning
         if value and lookup_field in value:

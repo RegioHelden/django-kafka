@@ -97,12 +97,6 @@ class PythonSinkTopicBase(ModelTopicConsumer):
     def use_relations_resolver(self) -> bool:
         return bool(self.relation_transforms)
 
-    def _is_field_excluded(self, field):
-        fields = self.model_sync.fields if self.model_sync else None
-        if isinstance(fields, ExcludeFields):
-            return field in fields
-        return False
-
     def transform(self, model, value) -> dict:
         # the resolver has let the message through, so the lookups find their rows
         for transform in self.transforms:
