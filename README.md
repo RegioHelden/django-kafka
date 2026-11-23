@@ -577,8 +577,8 @@ Transforms form the per-message pipeline between source-shape and sink-shape dat
 - `MappingTransform` — replaces a value based on a specified mapping.
 - `ContentTypeTransform` — a specialized `MappingTransform` where the keys are source `ContentType` ids and the values
   are target model classes.
-- `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform` — convert Avro logical types to Python `date` /
-  `datetime`.
+- `DateFromEpochTransform`, `DateTimeFromEpochMillisTransform`, `TimeFromEpochMicrosTransform` — convert Avro logical
+  types to Python `date` / `datetime` / `time`.
 
 The sink writes only fields that are either declared in `IncludeFields` (or not in `ExcludeFields`) **or** produced by a
 transform. Anything else is dropped before `update_or_create`, so old topic messages with stale schemas can't overwrite

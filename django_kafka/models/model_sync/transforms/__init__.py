@@ -14,6 +14,7 @@ from .field_transforms import (
     RelationTransform,
     StaticValueTransform,
     SyncMethodTransform,
+    TimeFromEpochMicrosTransform,
 )
 from .mixins import TopicTransformsMixin
 from .utils import (
@@ -38,6 +39,7 @@ __all__ = [
     "RelationTransform",
     "StaticValueTransform",
     "SyncMethodTransform",
+    "TimeFromEpochMicrosTransform",
     "TopicTransformsMixin",
     "Transform",
 ]

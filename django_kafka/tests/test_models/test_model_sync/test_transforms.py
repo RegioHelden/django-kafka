@@ -1,3 +1,4 @@
+import datetime as dt
 from unittest import TestCase, mock
 
 from django_kafka.exceptions import DjangoKafkaError
@@ -8,6 +9,7 @@ from django_kafka.models.model_sync.transforms import (
     MappingTransform,
     MessagePart,
     RelationTransform,
+    TimeFromEpochMicrosTransform,
 )
 from django_kafka.models.model_sync.transforms.field_transforms import _missing
 from django_kafka.tests.test_models.test_model_sync.factories import (
@@ -61,6 +63,29 @@ class MappingTransformTestCase(TestCase):
     def test_fails_if_no_default_given_and_key_missing(self):
         with self.assertRaisesRegex(DjangoKafkaError, "test"):
             self._transform({"": ""}, "test")
+
+
+class TimeFromEpochMicrosTransformTestCase(TestCase):
+    def _transform(self, value):
+        transform = TimeFromEpochMicrosTransform("foo")
+        return transform.transform_value(
+            mock.Mock(),
+            {},
+            {"foo": value},
+            MessagePart.VALUE,
+        )
+
+    def test_converts_micros_since_midnight(self):
+        micros = ((9 * 60 + 30) * 60 + 15) * 1_000_000 + 250
+
+        self.assertEqual(self._transform(micros), dt.time(9, 30, 15, 250))
+
+    def test_converts_midnight(self):
+        self.assertEqual(self._transform(0), dt.time(0, 0))
+
+    def test_returns_none_for_empty_values(self):
+        self.assertIsNone(self._transform(None))
+        self.assertIsNone(self._transform(""))
 
 
 class ContentTypeTransformTestCase(TestCase):
