@@ -28,6 +28,7 @@ from django_kafka.models.model_sync.transforms import (
     RelationTransform,
     StaticValueTransform,
     SyncMethodTransform,
+    TimeFromEpochMicrosTransform,
     Transform,
 )
 
@@ -58,5 +59,6 @@ __all__ = [
     "Source",
     "StaticValueTransform",
     "SyncMethodTransform",
+    "TimeFromEpochMicrosTransform",
     "Transform",
 ]

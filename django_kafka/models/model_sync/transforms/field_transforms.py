@@ -71,6 +71,28 @@ class DateFromEpochTransform(FieldTransform):
 
 
 @dataclass
+class TimeFromEpochMicrosTransform(FieldTransform):
+    """
+    Convert a Debezium `MicroTime` (Avro `long`, microseconds since midnight)
+    into a `datetime.time`.
+
+    Debezium's PostgreSQL connector emits `time` columns this way by default.
+    """
+
+    def transform_value(self, sync, msg_key, msg_value, part):
+        message = msg_key if part == MessagePart.KEY else msg_value
+        micros = message.get(self.source)
+        if micros is None or micros == "":
+            return None
+        midnight = dt.datetime.min  # noqa: DTZ901
+        return (midnight + dt.timedelta(microseconds=micros)).time()
+
+    def output_avro_type(self, sync, schema_field):
+        # The wire type stays long — only the Python representation changes.
+        return schema_field["type"] if schema_field else "long"
+
+
+@dataclass
 class DateTimeFromEpochMillisTransform(FieldTransform):
     """
     Convert an Avro `long` (`logicalType: timestamp-millis`) into a
